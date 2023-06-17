@@ -1,0 +1,9 @@
+/.debhelper/
+/debhelper-build-stamp
+/files
+/librga-dev/
+/librga-dev.substvars
+/librga2/
+/librga2.substvars
+/tmp/
+*.log

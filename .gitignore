@@ -13,3 +13,5 @@ build_android_ndk/
 .DS_Store
 local_*
 *.cpp.*
+obj-*
+*.deb
