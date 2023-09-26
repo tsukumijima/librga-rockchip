@@ -103,6 +103,7 @@ const struct format_table_entry format_table[] = {
     { RK_FORMAT_ABGR_4444,          "abgr4444" },
 
     { RK_FORMAT_RGBA2BPP,           "rgba2bpp" },
+    { RK_FORMAT_A8,                 "alpha-8" },
 
     { RK_FORMAT_UNKNOWN,            "unknown" }
 };
@@ -178,6 +179,7 @@ float get_bpp_from_format(int format) {
         case RK_FORMAT_BPP4:
         case RK_FORMAT_BPP8:
         case RK_FORMAT_YCbCr_400:
+        case RK_FORMAT_A8:
             bpp = 1;
             break;
         case RK_FORMAT_YCbCr_420_SP:
@@ -275,6 +277,7 @@ int get_perPixel_stride_from_format(int format) {
         case RK_FORMAT_BPP4:
         case RK_FORMAT_BPP8:
         case RK_FORMAT_YCbCr_400:
+        case RK_FORMAT_A8:
         case RK_FORMAT_YCbCr_420_SP:
         case RK_FORMAT_YCbCr_420_P:
         case RK_FORMAT_YCrCb_420_P:

@@ -990,6 +990,13 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
             return IM_STATUS_NOT_SUPPORTED;
         }
+    } else if (format == RK_FORMAT_A8) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT) {
+            IM_LOGW("%s unsupported Alpha-8bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
     } else {
         IM_LOGW("%s unsupported this format, format = 0x%x(%s)\n%s",
                 name, info.format, translate_format_str(info.format),

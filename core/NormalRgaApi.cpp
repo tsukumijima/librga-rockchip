@@ -603,6 +603,7 @@ bool NormalRgaFormatHasAlpha(int format) {
         case RK_FORMAT_ABGR_5551:
         case RK_FORMAT_ABGR_4444:
         case RK_FORMAT_RGBA2BPP:
+        case RK_FORMAT_A8:
             ret = true;
             break;
         default:
