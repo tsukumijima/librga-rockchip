@@ -117,6 +117,13 @@ enum {
     bicubic  = 0x2,     /* x_mirror  */
 };
 
+enum rga_scale_interp {
+    RGA_INTERP_DEFAULT   = 0x0,
+    RGA_INTERP_LINEAR    = 0x1,
+    RGA_INTERP_BICUBIC   = 0x2,
+    RGA_INTERP_AVERAGE   = 0x3,
+};
+
 /* RGA rotate mode */
 enum {
     rotate_mode0             = 0x0,     /* no rotate */
@@ -391,6 +398,11 @@ struct rga_feature {
     uint32_t user_close_fence:1;
 };
 
+struct rga_interp {
+    uint8_t horiz:4;
+    uint8_t verti:4;
+};
+
 struct rga_req {
     uint8_t render_mode;                  /* (enum) process mode sel */
 
@@ -419,7 +431,10 @@ struct rga_req {
                                           /* ([8] = 1 nn_quantize)            */
                                           /* ([9] = 1 Real color mode)        */
 
-    uint8_t  scale_mode;                  /* 0 nearst / 1 bilnear / 2 bicubic */
+    union {
+        struct rga_interp interp;
+        uint8_t scale_mode;               /* 0 nearst / 1 bilnear / 2 bicubic */
+    };
 
     uint32_t color_key_max;               /* color key max */
     uint32_t color_key_min;               /* color key min */
