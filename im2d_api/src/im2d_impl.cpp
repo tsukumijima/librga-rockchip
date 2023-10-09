@@ -1629,6 +1629,20 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     if(ret != IM_STATUS_NOERROR)
         return (IM_STATUS)ret;
 
+    /* scaling interpolation */
+    if (opt.interp & IM_INTERP_HORIZ_FLAG ||
+        opt.interp & IM_INTERP_VERTI_FLAG) {
+        if (opt.interp & IM_INTERP_HORIZ_FLAG) {
+            srcinfo.scale_mode |= opt.interp & (IM_INTERP_MASK << IM_INTERP_HORIZ_SHIFT);
+        }
+        if (opt.interp & IM_INTERP_VERTI_FLAG) {
+            srcinfo.scale_mode |= opt.interp & (IM_INTERP_MASK << IM_INTERP_VERTI_SHIFT);
+        }
+    } else {
+        srcinfo.scale_mode |= (opt.interp & IM_INTERP_MASK) << IM_INTERP_HORIZ_SHIFT;
+        srcinfo.scale_mode |= (opt.interp & IM_INTERP_MASK) << IM_INTERP_VERTI_SHIFT;
+    }
+
     /* Transform */
     if (usage & IM_HAL_TRANSFORM_MASK) {
         switch (usage & (IM_HAL_TRANSFORM_ROT_90 + IM_HAL_TRANSFORM_ROT_180 + IM_HAL_TRANSFORM_ROT_270)) {

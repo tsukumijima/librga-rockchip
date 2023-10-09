@@ -810,7 +810,9 @@ IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx, d
             }
         }
     }
-    UNUSED(interpolation);
+
+    opt.version = RGA_CURRENT_API_VERSION;
+    opt.interp = interpolation;
 
     if (sync == 0)
         usage |= IM_ASYNC;

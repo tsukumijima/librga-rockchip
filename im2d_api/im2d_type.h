@@ -157,11 +157,25 @@ typedef enum {
     IM_DOWN_SCALE,
 } IM_SCALE;
 
+/* legacy */
 typedef enum {
     INTER_NEAREST,
     INTER_LINEAR,
     INTER_CUBIC,
 } IM_SCALE_MODE;
+
+typedef enum {
+    IM_INTERP_DEFAULT = 0,
+    IM_INTERP_LINEAR = 1,
+    IM_INTERP_CUBIC = 2,
+    IM_INTERP_AVERAGE = 3,
+
+    IM_INTERP_MASK = 0xf,
+    IM_INTERP_HORIZ_SHIFT = 0,
+    IM_INTERP_VERTI_SHIFT = 4,
+    IM_INTERP_HORIZ_FLAG = 0x1 << 8,
+    IM_INTERP_VERTI_FLAG = 0x1 << 9,
+} IM_INTER_MODE;
 
 typedef enum {
     IM_CONFIG_SCHEDULER_CORE,
@@ -424,7 +438,9 @@ typedef struct im_opt {
 
     im_intr_config_t intr_config;
 
-    char reserve[128];
+    int interp;
+
+    char reserve[124];
 } im_opt_t;
 
 typedef struct im_handle_param {
@@ -432,5 +448,9 @@ typedef struct im_handle_param {
     uint32_t height;
     uint32_t format;
 } im_handle_param_t;
+
+#define IM_INTERP_HORIZ(x) ( ((x) & IM_INTERP_MASK) << IM_INTERP_HORIZ_SHIFT | IM_INTERP_HORIZ_FLAG )
+#define IM_INTERP_VERTI(x) ( ((x) & IM_INTERP_MASK) << IM_INTERP_VERTI_SHIFT | IM_INTERP_VERTI_FLAG )
+#define IM_INTERP(h,v) ( IM_INTERP_HORIZ(h) | IM_INTERP_VERTI(v) )
 
 #endif /* _RGA_IM2D_TYPE_H_ */
