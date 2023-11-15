@@ -545,6 +545,8 @@ bool NormalRgaIsYuvFormat(int format) {
         case RK_FORMAT_YCrCb_420_SP_10B:
         case RK_FORMAT_YCrCb_422_10b_SP:
         case RK_FORMAT_YCbCr_422_10b_SP:
+        case RK_FORMAT_YCbCr_444_SP:
+        case RK_FORMAT_YCrCb_444_SP:
             ret = true;
             break;
     }

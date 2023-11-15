@@ -997,6 +997,17 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
             return IM_STATUS_NOT_SUPPORTED;
         }
+    } else if (format == RK_FORMAT_YCrCb_444_SP || format == RK_FORMAT_YCbCr_444_SP) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT) {
+            IM_LOGW("%s unsupported YUV444 semi-planner 8bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        ret = rga_yuv_legality_check(name, info, rect);
+        if (ret != IM_STATUS_SUCCESS)
+            return ret;
     } else {
         IM_LOGW("%s unsupported this format, format = 0x%x(%s)\n%s",
                 name, info.format, translate_format_str(info.format),
