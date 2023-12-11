@@ -68,6 +68,7 @@ pkgconfig.generate(
     name : 'librga',
     version : meson.project_version(),
     description : 'Userspace interface to Rockchip RGA 2D accelerator',
+    extra_cflags : ['-I${includedir}/rga'],
 )
 
 librga_demo_option = get_option('librga_demo')
