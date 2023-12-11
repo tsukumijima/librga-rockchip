@@ -711,7 +711,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
          * configuration for the src channel, while the other modes do not
          * support globalAlpha configuration.
          */
-        switch (blend) {
+        switch (blend & 0xfff) {
             case 0x405:
                 fg_global_alpha = (blend >> 16) & 0xff;
                 bg_global_alpha = 0xff;
