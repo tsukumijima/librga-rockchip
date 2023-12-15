@@ -371,6 +371,7 @@ IM_API const char* querystring(int name) {
         "RGA_2_lite0 ",
         "RGA_2_lite1 ",
         "RGA_2_Enhance ",
+        "RGA_2_PRO ",
         "RGA_3 ",
     };
     const char *output_resolution[] = {
@@ -400,7 +401,10 @@ IM_API const char* querystring(int name) {
         "YUV422_p_10bit ",
         "YUYV420 ",
         "YUYV422 ",
-        "YUV400/Y4 "
+        "YUV400/Y4 ",
+        "RGB2BPP",
+        "ALPHA-8bit",
+        "YUV444_sp_8bit ",
     };
     const char *feature[] = {
         "unknown ",
@@ -460,6 +464,8 @@ IM_API const char* querystring(int name) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX];
                     if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_ENHANCE)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX];
+                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_PRO)
+                        out << output_version[IM_RGA_HW_VERSION_RGA_2_PRO_INDEX];
                     if (rga_info.version & IM_RGA_HW_VERSION_RGA_3)
                         out << output_version[IM_RGA_HW_VERSION_RGA_3_INDEX];
                 }

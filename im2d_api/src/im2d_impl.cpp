@@ -640,6 +640,17 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
+        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
+                   rgaCtx->mHwVersions.version[i].minor == 0xe) {
+            switch (rgaCtx->mHwVersions.version[i].revision) {
+                case 0x19357:
+                    // RK3576
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
         } else if (rgaCtx->mHwVersions.version[i].major == 4 &&
                    rgaCtx->mHwVersions.version[i].minor == 0) {
             switch (rgaCtx->mHwVersions.version[i].revision) {
