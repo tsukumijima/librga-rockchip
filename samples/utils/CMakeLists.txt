@@ -4,6 +4,7 @@ SET(THIRD_PARTY_PATH ${CMAKE_CURRENT_LIST_DIR}/3rdparty)
 SET(UTILS_LIBRGA_SOURCE_PATH ${CMAKE_CURRENT_LIST_DIR}/../..)
 
 include(${CMAKE_CURRENT_LIST_DIR}/allocator/CMakeLists.txt)
+include(${CMAKE_CURRENT_LIST_DIR}/3rdparty/CMakeLists.txt)
 
 target_sources(utils_obj
     PRIVATE
