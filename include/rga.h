@@ -144,6 +144,7 @@ typedef enum _Rga_SURF_FORMAT {
 	RK_FORMAT_YCrCb_444_SP = 0x33 << 8, /*  2 plane YCrCb little endian
                                          * plane 0: [0:7] Y
                                          * plane 1: non-subsampled [0:15] Cr:Cb 8:8  */
+    RK_FORMAT_Y8           = 0x34 << 8, /* [0:7] zero:Y 4:4 little endian */
 
     RK_FORMAT_UNKNOWN      = 0x100 << 8,
 } RgaSURF_FORMAT;

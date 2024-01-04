@@ -547,6 +547,7 @@ bool NormalRgaIsYuvFormat(int format) {
         case RK_FORMAT_YCbCr_422_10b_SP:
         case RK_FORMAT_YCbCr_444_SP:
         case RK_FORMAT_YCrCb_444_SP:
+        case RK_FORMAT_Y8:
             ret = true;
             break;
     }
@@ -984,7 +985,7 @@ int NormalRgaDitherMode(struct rga_req *msg, rga_info *dst, int format)
         msg->alpha_rop_flag |= (dst->dither.enable << 5);
     }
 
-    if (format == RK_FORMAT_Y4)
+    if (format == RK_FORMAT_Y4 || format == RK_FORMAT_Y8)
     {
         msg->dither_mode = dst->dither.mode;
 

@@ -67,6 +67,7 @@ typedef enum {
     IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX,
     IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX,
     IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_Y8_INDEX,
     IM_RGA_SUPPORT_FORMAT_MASK_INDEX,
 } IM_RGA_SUPPORT_FORMAT_INDEX;
 
@@ -90,6 +91,7 @@ typedef enum {
     IM_RGA_SUPPORT_FORMAT_RGBA2BPP                      = 1 << IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX,
     IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT                   = 1 << IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX,
     IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT    = 1 << IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX,
+    IM_RGA_SUPPORT_FORMAT_Y8                            = 1 << IM_RGA_SUPPORT_FORMAT_Y8_INDEX,
     IM_RGA_SUPPORT_FORMAT_MASK                          = ~((~(unsigned int)0x0 << IM_RGA_SUPPORT_FORMAT_MASK_INDEX) | 1),
 } IM_RGA_SUPPORT_FORMAT;
 
@@ -311,7 +313,8 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT |
                                         IM_RGA_SUPPORT_FORMAT_YUYV_420 |
-                                        IM_RGA_SUPPORT_FORMAT_YUYV_422,
+                                        IM_RGA_SUPPORT_FORMAT_YUYV_422 |
+                                        IM_RGA_SUPPORT_FORMAT_Y8,
                                         /* feature */
                                         IM_RGA_SUPPORT_FEATURE_COLOR_FILL |
                                         IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE |
