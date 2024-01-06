@@ -184,12 +184,12 @@ https://eyun.baidu.com/s/3i6sbsDR
   - set log level：
 
     The log level is divided into full print (0), DEFAULT (1), DEBUG (3), INFO (4), WRANING (5), ERROR (6).
-  
+
   ```
   setprop vendor.rga.log_level 6
   ```
-  
-  
+
+
 
 - Linux
 
@@ -200,16 +200,16 @@ https://eyun.baidu.com/s/3i6sbsDR
   ```
   export ROCKCHIP_RGA_LOG=1
   ```
-  
+
   - set log level：
-  
+
     The log level is divided into full print (0), DEFAULT (1), DEBUG (3), INFO (4), WRANING (5), ERROR (6).
-  
+
   ```
   export ROCKCHIP_RGA_LOG_LEVEL=6
   ```
-  
-   
+
+
 
 #### Log Description
 
@@ -454,9 +454,9 @@ For RGA problem debugging, logs are needed to confirm work of RGA hardware. When
   rga2: cmd is RGA2_GET_VERSION							//Get version number, which queries hardware version the first time each process calls librga.
   rga2: cmd is RGA_BLIT_SYNC								//Current working mode.
   rga2: render_mode:bitblt,bitblit_mode=0,rotate_mode:0	//Render_mode: display calling interface, bitblit_mode: current blending mode（0：two-channel mode A+B->B, 1: three-channel mode A+B->C, rotate_mode: rotation angle.
-  rga2: src : y=0 uv=b4000072cc8bc040 v=b4000072cc99d040 aw=1280 ah=720 vw=1280 vh=720 xoff=0 yoff=0 format=RGBA8888	
+  rga2: src : y=0 uv=b4000072cc8bc040 v=b4000072cc99d040 aw=1280 ah=720 vw=1280 vh=720 xoff=0 yoff=0 format=RGBA8888
   														//Parameters of src channel of image data y:fd, uv:virtual address, v：vw * vh + uv, aw and ah：actual width and height, the actual area of image. operation, vw、vh:virtual width and height, the size of image itself, xoff、yoff: offset in the x and y directions, format：image format.
-  rga2: dst : y=0 uv=b4000072cc535040 v=b4000072cc616040 aw=1280 ah=720 vw=1280 vh=720 xoff=0 yoff=0 format=RGBA8888	
+  rga2: dst : y=0 uv=b4000072cc535040 v=b4000072cc616040 aw=1280 ah=720 vw=1280 vh=720 xoff=0 yoff=0 format=RGBA8888
   														//Parameters of dst channel of image data.
   rga2: mmu : src=01 src1=00 dst=01 els=00				//MMU enabled flag，0 for close，1 for open.
   rga2: alpha : flag 0 mode0=0 mode1=0					//Configuration of blending.
@@ -565,16 +565,30 @@ rga2: 00000000 00000000 00000000 00000000
   rga2: sync one cmd end time 2414					//Print the RGA. hardware time of the work,in us.
   ```
 
-  - multi
+  - multi-rga
 
+  > Versions below 1.3.0
+  
   ```
   rga3_reg: set cmd use time = 196					//Time elapsed from start processing request to configuration register.
   rga_job: hw use time = 554							//Time-consuming from hardware startup to hardware interrupt return.
   rga_job: (pid:3197) job done use time = 751			//Time-consuming from the start of processing the request to the completion of the request.
   rga_job: (pid:3197) job clean use time = 933		//Time-consuming from the start of processing the request to the completion of the request resource processing.
   ```
-
-
+  
+  > Version 1.3.0 and above
+  
+  ```
+  rga_mm: request[3300], get buffer_handle info cost 188 us
+  rga3_reg: request[3300], generate register cost time 2 us
+  rga3_reg: request[3300], set register cost time 301 us
+  rga_job: request[3300], hardware[RGA3_core0] cost time 539 us
+  rga_mm: request[3300], put buffer_handle info cost 153 us
+  rga_job: request[3300], job done total cost time 1023 us
+  rga_job: request[3300], job cleanup total cost time 1030 us
+  ```
+  
+  
 
 ##### Version Information Query
 
@@ -760,7 +774,7 @@ This section introduces common questions about RGA in the form of Q&A. If the pr
 
 ​						RGA3 ： 1920 × 1080 / （4 × 300000000） = 0.001728s
 
-​			The actual consuming time depends on the type of memory used. The efficiency of different memory types from high to low is physical address > dma_fd > virtual address.			
+​			The actual consuming time depends on the type of memory used. The efficiency of different memory types from high to low is physical address > dma_fd > virtual address.
 
 ​			When the system is in no load, the actual time consuming of physical address is about 1.1-1.2 times of the theoretical time consuming, the actual time consuming of dma_fd is about 1.3-1.5 times of the theoretical time consuming, and the actual time consuming of virtual address is about 1.8-2.1 times of the theoretical time consuming, and is greatly affected by CPU. In general, we recommend developers to use dma_fd as the memory type passed in, which achieves great balance between accessibility and efficiency. Virtual addresses are only used as a simple and easy-to-use memory type when learning about RGA. The following table shows the actual test data of different RGA frequencies when the system is in no load on RK3566.
 
@@ -807,7 +821,7 @@ This section introduces common questions about RGA in the form of Q&A. If the pr
 
 **Q1.4**：The efficiency of RGA cannot meet the needs of our products. Is there any way to improve it?
 
-**A1.4**：The RGA frequency of the factory firmware of some chips is not the highest frequency. For example, the RGA frequency of chips such as 3399 and 1126 can be up to 400M. The RGA frequency can be improved in the following two ways:
+**A1.4**：The RGA frequency of the factory firmware of some chips(Before 2021) is not the highest frequency. For example, the RGA frequency of chips such as 3399 and 1126 can be up to 400M. The RGA frequency can be improved in the following two ways:
 
 - Set by command (temporarily modified, frequency restored upon device restart)
 
@@ -862,9 +876,21 @@ index 02938b0..10a1dc4 100644
 
 
 
-**Q1.8**： When carrying 8G DDR, why is RGA efficiency worse than 4G?
+**Q1.8:** Why is there a high CPU load when calling RGA?
 
-**A1.8**：Since the current RGA1/RGA2 MMU only supports a maximum of 32 bits of physical address, therefore, with devices equipped with DDR of 4G or more, when a buffer with memory greater than 4G is passed to RGA, the RGA driver copies the data from the memory with the highest address to the memory reserved by swiotlb through the DMA interface and returns the corresponding address for RGA to read and write. After the work is finished, the result is copied to the previous high target address through dma, so the CPU involvement was increased, leading to a serious increase in the working time of the librga. If only RGA2/RGA1 is configured and the DDR of the device is greater than 4 GB, you are advised to use less than 4 GB memory when calling RGA to ensure RGA efficiency.
+**A1.8:** In addition to the basic necessary CPU load when calling RGA, the following situations can cause additional high CPU load:
+
+​			1). When calling RGA using virtual addresses, the virtual address itself is the CPU's access address, which needs to be converted into a hardware-recognizable discrete physical address table through the current process's mapping table by CPU querying and calculation. Therefore, additional CPU load will be introduced. It is generally not recommended to call RGA using virtual addresses in actual product scenarios, and it is recommended to use dma-buf fd to call RGA, unless the business logic only exists in virtual addresses and does not care about this part of CPU load.
+
+​			2). When the virtual address used is cacheable, the RGA driver will force synchronization of cache data before and after hardware memory access due to the enabled cache, which will increase the CPU load of synchronizing cache and memory. Since common virtual address allocators are not designed for other hardware access and there is an interface for synchronizing cache, it is necessary for the driver to force synchronization of cache for virtual addresses.
+
+​			3). When calling RGA using a dma-buf fd, some allocators by default allocate cacheable buffers, and the kernel's dma-buf handling enforces cache synchronization, which can result in significant CPU load every time RGA is called. This is due to the CPU load introduced by cache and memory synchronization. In this case, it is recommended to allocate a dma-buf with cache disabled.
+
+
+
+**Q1.9**： When carrying 8G DDR, why is RGA efficiency worse than 4G?
+
+**A1.9**：Since the current RGA1/RGA2 MMU only supports a maximum of 32 bits of physical address, therefore, with devices equipped with DDR of 4G or more, when a buffer with memory greater than 4G is passed to RGA, the RGA driver copies the data from the memory with the highest address to the memory reserved by swiotlb through the DMA interface and returns the corresponding address for RGA to read and write. After the work is finished, the result is copied to the previous high target address through dma, so the CPU involvement was increased, leading to a serious increase in the working time of the librga. If only RGA2/RGA1 is configured and the DDR of the device is greater than 4 GB, you are advised to use less than 4 GB memory when calling RGA to ensure RGA efficiency.
 
 In the RGA Multicore Device Driver, the swiotlb mechanism will be disabled for access-restricted memory, and the caller will be notified directly to apply for a reasonable memory re-call by displaying the failure of the call to ensure the efficiency of RGA. Usually accompanied by the following logs:
 
@@ -904,6 +930,54 @@ Therefore, for this scenario, it is recommended to apply for memory within 4G to
  **<librga_souce_path>/samples/allocator_demo/src/rga_allocator_dma32_demo.cpp**
 
  **<librga_souce_path>/samples/allocator_demo/src/rga_allocator_graphicbuffer_demo.cpp**
+
+
+
+**Q1.10**: Why is the API time-consuming higher than the hardware time printed in the log?
+
+ **Q1.10.1**: Through the "TIME" running log, it is found that the map/unmap buffer takes too much time.
+ **Q1.10.2**: A comparison of the kernel log timestamps reveals a large gap between the timestamps of the "MSG" log and the "REG" log.
+ **Q1.10.3**: The same parameter configuration, but using different memory allocators only results in a large difference in running time.
+
+**A1.10**: The reasons for the time-consuming exception here are all caused by the memory mapping behavior (map/unmap) of the external buffer. All external buffers need to be mapped and bound to the RGA driver to ensure that the hardware can eventually access the specified buffer. The differences in the underlying implementations corresponding to the different allocators can lead to different time consumptions when the driver maps and binds the memory, resulting in a situation where it looks as if the API time consumptions will be much larger than the hardware time consumptions. Common dma-buf allocators with high extra time consumption are ION, V4L2, etc. Usually these differences are related to the synchronization of the cache, and this type of problem can be confirmed by comparing the time consumption of using different allocators.
+
+This type of issue can usually be optimized in the following ways:
+
+ 1). You can choose a memory allocator that is relatively more reasonable in terms of time consumption for the map/unmap process. Common ones are dma_heap, DRM, and the corresponding wrapper memory allocator. The following is sample code for calling RGA using memory allocated by these memory allocators:
+
+**<librga_souce_path>/samples/allocator_demo/src/rga_allocator_dma_demo.cpp**
+
+**<librga_souce_path>/samples/allocator_demo/src/rga_allocator_drm_demo.cpp**
+
+2). The calling scenario corresponding to this problem is to encapsulate rga_buffer_t through wrapbuffer_fd() or use importbuffer_fd to run only one frame and then immediately releasebuffer_handle. This is normal for temporary tests or scenarios where the buffer changes every frame, but it itself In actual products, repeated buffer reallocation has poor performance and is unreasonable. It is recommended to optimize the buffer process as a whole.
+
+Generally we recommend that the overall process be designed in the following way:
+
+> 1. Construct buffer_pool and allocate <n> buffers to be used as rotation buffers. The size of <n> is configured according to the actual scenario.
+> 2. Import this buffer into RGA through importbuffer_fd() and obtain the buffer_handle of RGA.
+> 3. Use the rotated buffer_handle to call RGA to perform image operations, and repeatedly rotate and loop.
+> 4. When the buffer in this buffer_pool is no longer needed, call releasebuffer_handle() to release the reference of this part of the buffer in RGA to ensure that the buffer can be released and destroyed subsequently.
+> 5. Release unnecessary buffers in buffer_pool.
+
+According to the above process design, even if the allocator's map/unmap behavior will cause abnormal time-consuming, it will be converged to the call of importbuffer_fd()/releasebuffer_handle(), and the call will no longer have an impact on each frame of the actual runtime. This is A good way to avoid performance differences due to differences in memory allocator implementation.
+
+ 3). For scenarios where the memory allocator and business process cannot be changed, the time-consuming optimization can only be done by modifying the map/unmap process of the memory allocator used. This is a very dangerous behavior, and you need to ensure that you are aware of all use of the memory. After applying the behavior of the allocator module, submit it to redmine to consult the corresponding memory allocator maintainer for technical support.
+
+
+
+**Q1.11**: Why is the importbuffer_fd()/importbuffer_virtualaddr() call time-consuming? Why do we need to call this API?
+
+**A1.11**: The related usage and instructions of this interface can be viewed in the "Overview" chapter of ["Rockchip_Developer_Guide_RGA_EN"](./Rockchip_Developer_Guide_RGA_EN.md) in the docs folder in the source code directory - "[Image Buffer Preprocessing ](./Rockchip_Developer_Guide_RGA_EN.md#Image Buffer Preprocessing)" for usage instructions. The function of importbuffer_xx() is to import the external buffer into the RGA driver, so that every subsequent frame RGA call can quickly access the buffer through buffer_handle. Importing an external buffer is a time-consuming operation. It is necessary to map the external buffer to the RGA driver and save the corresponding physical address and buffer information. This is indispensable behavior for calling RGA.
+
+
+
+**Q1.12**: Does RGA support parallel operations? Why does the time consumption of individual frames increase or double when calling RGA from multiple threads?
+
+**A1.12**: The RGA API can support parallel calls by multiple threads/processes, but whether image operations can be executed in parallel on the actual hardware depends on the number of RGA cores currently used on the chip. That is, the number of cores installed is the maximum supported number of parallel tasks. Tasks that exceed the number of cores will enter the waiting state until a core enters the idle state. Therefore, when the number of parallel calls exceeds the maximum number of parallel calls supported by the hardware, some frame calls will increase the time spent waiting for the hardware to become idle. Specifically, you can obtain the number of cores and supported functions of the current chip through the following debugging nodes (for specific instructions, please see the "Hardware Information Query" section in the "Drive Debugging Node" section):
+
+```shell
+/# cat hardware
+```
 
 
 
@@ -1178,11 +1252,23 @@ Date:   Tue Nov 24 19:50:17 2020 +0800
 
 
 
-**A2.21**：Small black or green stripes appear after calling RGA to process the image. What is the reason?
+**Q2.21**：Small black or green stripes appear after calling RGA to process the image. What is the reason?
 
 ​			![image-cache-abnormal](RGA_FAQ.assets/image-cache-abnormal.png)
 
-**Q2.21**：This is caused by the buffer enabling the cache when using a call that is not a virtual address, and the cache is not synchronized before and after the CPU operation. If you don't know how to synchronize the cache, you can refer to the usage in samples/allocator_demo/src/rga_allocator_dma_cache_demo.cpp.
+**A2.21**：This is caused by the buffer enabling the cache when using a call that is not a virtual address, and the cache is not synchronized before and after the CPU operation. If you don't know how to synchronize the cache, you can refer to the usage in samples/allocator_demo/src/rga_allocator_dma_cache_demo.cpp.
+
+
+
+**Q2.22**: What causes screen jitter when using RGA scaling on the same display area on RK3588?
+
+**A2.22**: Due to the special design of RK3588, which is equipped with two types of RGA cores (one RGA2 and two RGA3), there are differences in the sampling behavior of their scaling algorithms, resulting in an overall shift of the image to the upper left or lower right. In scenarios where display quality is important, it is recommended to specify the core to avoid jitter caused by algorithmic differences.
+
+​			You can refer to the following sample code for specifying the core:
+
+​			**<librga_souce_path>/samples/config_demo/src/rga_config_single_core_demo.cpp**
+
+​			**<librga_souce_path>/samples/config_demo/src/rga_config_thread_core_demo.cpp**
 
 
 
@@ -1358,6 +1444,10 @@ When this error occurs, there are usually the following scenarios and correspond
 3. On chip platforms that only carry one RGA (such as RK3399, RK3568, and Rk3566 that only carry RGA2):
 
     When the chip platform is only equipped with a core with limited memory access, you must apply for memory that meets the memory requirements of the core when calling RGA. The solution is the same as scenario 2 above.
+
+4. When using DRM, malloc, new and other memory allocators that do not support the allocation of memory within 4G, it can also be solved by modifying the memory mapping range of uboot.
+
+    For uboot-related modifications, please refer to **uboot开发文档->Chapter-8 调试手段->修改DDR容量** in the SDK documentation, and limit the memory mapping range globally to within 0~4G memory space.
 
 
 

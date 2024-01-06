@@ -125,6 +125,22 @@ enum {
     rotate_mode3             = 0x3,     /* y_mirror  */
 };
 
+enum rga_alpha_blend_mode {
+	RGA_ALPHA_NONE			= 0,
+	RGA_ALPHA_BLEND_SRC,
+	RGA_ALPHA_BLEND_DST,
+	RGA_ALPHA_BLEND_SRC_OVER,
+	RGA_ALPHA_BLEND_DST_OVER,
+	RGA_ALPHA_BLEND_SRC_IN,
+	RGA_ALPHA_BLEND_DST_IN,
+	RGA_ALPHA_BLEND_SRC_OUT,
+	RGA_ALPHA_BLEND_DST_OUT,
+	RGA_ALPHA_BLEND_SRC_ATOP,
+	RGA_ALPHA_BLEND_DST_ATOP,
+	RGA_ALPHA_BLEND_XOR,
+	RGA_ALPHA_BLEND_CLEAR,
+};
+
 typedef struct rga_img_info_t {
     uint64_t yrgb_addr;          /* yrgb    mem addr         */
     uint64_t uv_addr;            /* cb/cr   mem addr         */
@@ -211,6 +227,16 @@ typedef struct full_csc_t {
     csc_coe_t coe_u;
     csc_coe_t coe_v;
 } full_csc_t;
+
+struct rga_csc_range {
+	uint16_t max;
+	uint16_t min;
+};
+
+struct rga_csc_clip {
+	struct rga_csc_range y;
+	struct rga_csc_range uv;
+};
 
 typedef struct rga_mosaic_info_ioctl {
     uint8_t enable;
@@ -359,6 +385,12 @@ struct rga_buffer_pool {
     uint32_t size;
 };
 
+struct rga_feature {
+    uint32_t global_alpha_en:1;
+    uint32_t full_csc_clip_en:1;
+    uint32_t user_close_fence:1;
+};
+
 struct rga_req {
     uint8_t render_mode;                  /* (enum) process mode sel */
 
@@ -453,7 +485,15 @@ struct rga_req {
 
     rga_pre_intr_info_t pre_intr_info;
 
-    uint8_t reservr[59];
+    /* global alpha */
+    uint8_t fg_global_alpha;
+    uint8_t bg_global_alpha;
+
+    struct rga_feature feature;
+
+    struct rga_csc_clip full_csc_clip;
+
+    uint8_t reservr[43];
 };
 
 struct rga_user_request {

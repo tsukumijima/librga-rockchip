@@ -42,12 +42,10 @@
 #include <pthread.h>
 
 #include <stdint.h>
-#include <math.h>
 #include <memory.h>
 #include <sys/time.h>
 
 #include "dma_alloc.h"
-#include "RgaUtils.h"
 
 typedef unsigned long long __u64;
 typedef  unsigned int __u32;

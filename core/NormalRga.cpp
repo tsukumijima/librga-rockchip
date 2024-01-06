@@ -60,6 +60,11 @@ int get_int_property(void) {
     return atoi(level);
 }
 
+static void rga_set_driver_feature(struct rgaContext *ctx) {
+    if (rga_version_compare(ctx->mDriverVersion, (struct rga_version_t){ 1, 3, 0, {0} }) >= 0)
+        ctx->driver_feature |= RGA_DRIVER_FEATURE_USER_CLOSE_FENCE;
+}
+
 int NormalRgaOpen(void **context) {
     struct rgaContext *ctx = NULL;
     int fd = -1;
@@ -125,6 +130,8 @@ int NormalRgaOpen(void **context) {
             ctx->driver = RGA_DRIVER_IOC_RGA2;
             ALOGE("librga fail to get driver version! Compatibility mode will be enabled.\n");
         }
+
+        rga_set_driver_feature(ctx);
 
         NormalRgaInitTables();
 
@@ -374,7 +381,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
     int src1VirW,src1VirH,src1ActW,src1ActH,src1XPos,src1YPos;
     int scaleMode,rotateMode,orientation,ditherEn;
     int srcType,dstType,src1Type,srcMmuFlag,dstMmuFlag,src1MmuFlag;
-    int planeAlpha;
+    int fg_global_alpha, bg_global_alpha;
     int dstFd = -1;
     int srcFd = -1;
     int src1Fd = -1;
@@ -403,6 +410,8 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
 
     //init
     memset(&rgaReg, 0, sizeof(struct rga_req));
+    if (rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE)
+        rgaReg.feature.user_close_fence = true;
 
     srcType = dstType = srcMmuFlag = dstMmuFlag = 0;
     src1Type = src1MmuFlag = 0;
@@ -686,73 +695,63 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
     }
 #endif
 
-    /* blend bit[16:23] is to set global alpha. */
-    planeAlpha = (blend & 0xFF0000) >> 16;
-
     /* determined by format, need pixel alpha or not. */
     perpixelAlpha = NormalRgaFormatHasAlpha(RkRgaGetRgaFormat(relSrcRect.format));
 
     if(is_out_log())
         ALOGE("blend = %x , perpixelAlpha = %d",blend,perpixelAlpha);
 
-    /* blend bit[0:15] is to set which way to blend,such as whether need glabal alpha,and so on. */
-    switch ((blend & 0xFFFF)) {
-        case 0x0001:/* src */
-            NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 1, 0);
-            break;
+    if (blend & 0xfff) {
+        /* blend bit[16:23] is to set global alpha. */
+        fg_global_alpha = (blend >> 16) & 0xff;
+        bg_global_alpha = (blend >> 24) & 0xff;
 
-        case 0x0002:/* dst */
-            NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 2, 0);
-            break;
+        /*
+         * In the legacy interface, the src-over mode supports globalAlpha
+         * configuration for the src channel, while the other modes do not
+         * support globalAlpha configuration.
+         */
+        switch (blend) {
+            case 0x405:
+                fg_global_alpha = (blend >> 16) & 0xff;
+                bg_global_alpha = 0xff;
 
-        case 0x0105:/* src over , no need to Premultiplied. */
-            if (perpixelAlpha && planeAlpha < 255) {
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha, 1, 9, 0);
-            } else if (perpixelAlpha)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, 0, 1, 3, 0);
-            else
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 0, planeAlpha, 0, 0, 0);
-            break;
+                blend = RGA_ALPHA_BLEND_SRC_OVER;
+                blend |= 0x1 << 12;
+                break;
+            case 0x504:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
 
-        case 0x0405:/* src over , need to Premultiplied. */
-            if (perpixelAlpha && planeAlpha < 255)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha, 1, 9, 0);
-            else if (perpixelAlpha)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, 0, 1, 3, 0);
-            else
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 0, planeAlpha, 0, 0, 0);
+                blend = RGA_ALPHA_BLEND_DST_OVER;
+                blend |= 0x1 << 12;
+                break;
+            case 0x105:
+                fg_global_alpha = (blend >> 16) & 0xff;
+                bg_global_alpha = 0xff;
 
-            rgaReg.alpha_rop_flag |= (1 << 9);  //real color mode
+                blend = RGA_ALPHA_BLEND_SRC_OVER;
+                break;
+            case 0x501:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
 
-            break;
+                blend = RGA_ALPHA_BLEND_DST_OVER;
+                break;
+            case 0x100:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
 
-        case 0x0501:/* dst over , no need premultiplied. */
-            if (perpixelAlpha && planeAlpha < 255)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 4, 0);
-            else if (perpixelAlpha)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, planeAlpha , 1, 4, 0);
-            else
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 3, planeAlpha , 1, 4, 0);
-            break;
+                blend = RGA_ALPHA_BLEND_SRC;
+                break;
+        }
 
-        case 0x0504:/* dst over, need premultiplied. */
-            if (perpixelAlpha && planeAlpha < 255)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 2, planeAlpha , 1, 4, 0);
-            else if (perpixelAlpha)
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, planeAlpha , 1, 4, 0);
-            else
-                NormalRgaSetAlphaEnInfo(&rgaReg, 1, 3, planeAlpha , 1, 4, 0);
+        rgaReg.feature.global_alpha_en = true;
+        NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, fg_global_alpha, bg_global_alpha , 1, blend & 0xfff, 0);
 
-            rgaReg.alpha_rop_flag |= (1 << 9);  //real color mode
-            break;
-
-        case 0x0100:
-        default:
-            /* Tips: BLENDING_NONE is non-zero value, handle zero value as
-             * BLENDING_NONE. */
-            /* C = Cs
-             * A = As */
-            break;
+        /* need to pre-multiply. */
+        if ((blend >> 12) & 0x1)
+            rgaReg.alpha_rop_flag |= (1 << 9);
     }
 
     /* discripe a picture need high stride.If high stride not to be set, need use height as high stride. */
@@ -1296,7 +1295,14 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
         NormalRgaSetPatActiveInfo(&rgaReg, src1ActW, src1ActH, src1XPos, src1YPos);
 
     if (dst->color_space_mode & full_csc_mask) {
-        NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode);
+        ret = NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode);
+        if (ret < 0) {
+            ALOGE("Not support full csc mode [%x]\n", dst->color_space_mode);
+            return -EINVAL;
+        }
+
+        if (dst->color_space_mode == rgb2yuv_709_limit)
+            yuvToRgbMode |= 0x3 << 2;
     } else {
         if (src1) {
             /* special config for yuv + rgb => rgb */
@@ -1470,6 +1476,11 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
 
     dst->out_fence_fd = rgaReg.out_fence_fd;
 
+    if (rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE &&
+        dst->in_fence_fd > 0 &&
+        sync_mode == RGA_BLIT_ASYNC)
+        close(dst->in_fence_fd);
+
     return 0;
 }
 
@@ -1521,6 +1532,7 @@ int RgaCollorFill(rga_info *dst) {
     }
 
     memset(&rgaReg, 0, sizeof(struct rga_req));
+    rgaReg.feature.user_close_fence = true;
 
     dstType = dstMmuFlag = 0;
 
@@ -1770,6 +1782,11 @@ int RgaCollorFill(rga_info *dst) {
 
     dst->out_fence_fd = rgaReg.out_fence_fd;
 
+    if (rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE &&
+        dst->in_fence_fd > 0 &&
+        sync_mode == RGA_BLIT_ASYNC)
+        close(dst->in_fence_fd);
+
     return 0;
 }
 
@@ -1801,6 +1818,7 @@ int RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut) {
 
     //init
     memset(&rgaReg, 0, sizeof(struct rga_req));
+    rgaReg.feature.user_close_fence = true;
 
     srcType = dstType = lutType = srcMmuFlag = dstMmuFlag = lutMmuFlag = 0;
 
@@ -2384,8 +2402,6 @@ int RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut) {
         ALOGE(" %s(%d) RGA_COLOR_PALETTE fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         return -errno;
     }
-
-    dst->out_fence_fd = rgaReg.out_fence_fd;
 
     return 0;
 }

@@ -24,7 +24,6 @@
 #define LOG_TAG "im2d_rga"
 #endif
 
-#include <math.h>
 #include <sstream>
 
 #include "RgaUtils.h"
@@ -144,6 +143,21 @@ IM_API IM_STATUS releasebuffer_handle(rga_buffer_handle_t handle) {
     return rga_release_buffer(handle);
 }
 
+static inline void set_default_rga_buffer(rga_buffer_t *buffer,
+                                          int width, int height, int format,
+                                          int wstride, int hstride) {
+
+    buffer->width = width;
+    buffer->height = height;
+    buffer->wstride = wstride;
+    buffer->hstride = hstride;
+    buffer->format = format;
+
+    buffer->global_alpha = 0xff;
+    buffer->color_space_mode = IM_COLOR_SPACE_DEFAULT;
+    buffer->rd_mode = IM_RASTER_MODE;
+}
+
 #undef wrapbuffer_virtualaddr
 static rga_buffer_t wrapbuffer_virtualaddr(void* vir_addr,
                                            int width, int height, int format,
@@ -153,11 +167,9 @@ static rga_buffer_t wrapbuffer_virtualaddr(void* vir_addr,
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
     buffer.vir_addr = vir_addr;
-    buffer.width    = width;
-    buffer.height   = height;
-    buffer.format   = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    set_default_rga_buffer(&buffer, width, height, format,
+                           wstride ? wstride : width,
+                           hstride ? hstride : height);
 
     return buffer;
 }
@@ -171,11 +183,9 @@ static rga_buffer_t wrapbuffer_physicaladdr(void* phy_addr,
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
     buffer.phy_addr = phy_addr;
-    buffer.width    = width;
-    buffer.height   = height;
-    buffer.format   = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    set_default_rga_buffer(&buffer, width, height, format,
+                           wstride ? wstride : width,
+                           hstride ? hstride : height);
 
     return buffer;
 }
@@ -188,12 +198,10 @@ static rga_buffer_t wrapbuffer_fd(int fd,
 
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
-    buffer.fd      = fd;
-    buffer.width   = width;
-    buffer.height  = height;
-    buffer.format  = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    buffer.fd = fd;
+    set_default_rga_buffer(&buffer, width, height, format,
+                           wstride ? wstride : width,
+                           hstride ? hstride : height);
 
     return buffer;
 }
@@ -206,12 +214,10 @@ IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t  handle,
 
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
-    buffer.handle  = handle;
-    buffer.width   = width;
-    buffer.height  = height;
-    buffer.format  = format;
-    buffer.wstride = wstride ? wstride : width;
-    buffer.hstride = hstride ? hstride : height;
+    buffer.handle = handle;
+    set_default_rga_buffer(&buffer, width, height, format,
+                           wstride ? wstride : width,
+                           hstride ? hstride : height);
 
     return buffer;
 }
@@ -292,11 +298,9 @@ IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
         goto INVAILD;
     }
 
-    buffer.width   = dstAttrs.at(AWIDTH);
-    buffer.height  = dstAttrs.at(AHEIGHT);
-    buffer.wstride = dstAttrs.at(ASTRIDE);
-    buffer.hstride = dstAttrs.at(AHEIGHT);
-    buffer.format  = dstAttrs.at(AFORMAT);
+    set_default_rga_buffer(&buffer,
+                           dstAttrs.at(AWIDTH), dstAttrs.at(AHEIGHT), dstAttrs.at(AFORMAT),
+                           dstAttrs.at(ASTRIDE), dstAttrs.at(AHEIGHT));
 
     if (buffer.wstride % 16) {
         IM_LOGE("Graphicbuffer wstride needs align to 16, please align to 16 or use other buffer types, wstride = %d", buffer.wstride);
@@ -308,45 +312,7 @@ INVAILD:
 }
 
 IM_API rga_buffer_t wrapbuffer_GraphicBuffer(sp<GraphicBuffer> buf) {
-    int ret = 0;
-    rga_buffer_t buffer;
-    std::vector<int> dstAttrs;
-
-    RockchipRga& rkRga(RockchipRga::get());
-
-    memset(&buffer, 0, sizeof(rga_buffer_t));
-
-    ret = rkRga.RkRgaGetBufferFd(buf->handle, &buffer.fd);
-    if (ret)
-        IM_LOGE("rga_im2d: get buffer fd fail: %s, hnd=%p", strerror(errno), (void*)(buf->handle));
-
-    if (buffer.fd <= 0) {
-        ret = rkRga.RkRgaGetHandleMapCpuAddress(buf->handle, &buffer.vir_addr);
-        if(!buffer.vir_addr) {
-            IM_LOGE("invaild GraphicBuffer, can not get fd and virtual address, hnd = %p", (void *)(buf->handle));
-            goto INVAILD;
-        }
-    }
-
-    ret = RkRgaGetHandleAttributes(buf->handle, &dstAttrs);
-    if (ret) {
-        IM_LOGE("handle get Attributes fail, ret = %d, hnd = %p", ret, (void *)(buf->handle));
-        goto INVAILD;
-    }
-
-    buffer.width   = dstAttrs.at(AWIDTH);
-    buffer.height  = dstAttrs.at(AHEIGHT);
-    buffer.wstride = dstAttrs.at(ASTRIDE);
-    buffer.hstride = dstAttrs.at(AHEIGHT);
-    buffer.format  = dstAttrs.at(AFORMAT);
-
-    if (buffer.wstride % 16) {
-        IM_LOGE("Graphicbuffer wstride needs align to 16, please align to 16 or use other buffer types, wstride = %d", buffer.wstride);
-        goto INVAILD;
-    }
-
-INVAILD:
-    return buffer;
+    return wrapbuffer_handle(buf->handle);
 }
 
 #if USE_AHARDWAREBUFFER
@@ -358,50 +324,20 @@ IM_API rga_buffer_handle_t importbuffer_AHardwareBuffer(AHardwareBuffer *buf) {
 }
 
 IM_API rga_buffer_t wrapbuffer_AHardwareBuffer(AHardwareBuffer *buf) {
-    int ret = 0;
-    rga_buffer_t buffer;
-    std::vector<int> dstAttrs;
-
-    RockchipRga& rkRga(RockchipRga::get());
-
-    memset(&buffer, 0, sizeof(rga_buffer_t));
-
     GraphicBuffer *gbuffer = reinterpret_cast<GraphicBuffer*>(buf);
 
-    ret = rkRga.RkRgaGetBufferFd(gbuffer->handle, &buffer.fd);
-    if (ret)
-        IM_LOGE("rga_im2d: get buffer fd fail: %s, hnd=%p", strerror(errno), (void*)(gbuffer->handle));
-
-    if (buffer.fd <= 0) {
-        ret = rkRga.RkRgaGetHandleMapCpuAddress(gbuffer->handle, &buffer.vir_addr);
-        if(!buffer.vir_addr) {
-            IM_LOGE("invaild GraphicBuffer, can not get fd and virtual address, hnd = %p", (void *)(gbuffer->handle));
-            goto INVAILD;
-        }
-    }
-
-    ret = RkRgaGetHandleAttributes(gbuffer->handle, &dstAttrs);
-    if (ret) {
-        IM_LOGE("handle get Attributes fail, ret = %d, hnd = %p", ret, (void *)(gbuffer->handle));
-        goto INVAILD;
-    }
-
-    buffer.width   = dstAttrs.at(AWIDTH);
-    buffer.height  = dstAttrs.at(AHEIGHT);
-    buffer.wstride = dstAttrs.at(ASTRIDE);
-    buffer.hstride = dstAttrs.at(AHEIGHT);
-    buffer.format  = dstAttrs.at(AFORMAT);
-
-    if (buffer.wstride % 16) {
-        IM_LOGE("Graphicbuffer wstride needs align to 16, please align to 16 or use other buffer types, wstride = %d", buffer.wstride);
-        goto INVAILD;
-    }
-
-INVAILD:
-    return buffer;
+    return wrapbuffer_handle(gbuffer->handle);
 }
 #endif
 #endif
+
+void imsetOpacity(rga_buffer_t *buf, uint8_t alpha) {
+    buf->global_alpha = alpha;
+}
+
+void imsetColorSpace(rga_buffer_t *buf, IM_COLOR_SPACE_MODE mode) {
+    buf->color_space_mode = mode;
+}
 
 IM_API const char* querystring(int name) {
     bool all_output = 0, all_output_prepared = 0;
@@ -903,7 +839,8 @@ IM_API IM_STATUS imcvtcolor(rga_buffer_t src, rga_buffer_t dst, int sfmt, int df
     src.format = sfmt;
     dst.format = dfmt;
 
-    dst.color_space_mode = mode;
+    if (dst.color_space_mode == 0)
+        dst.color_space_mode = mode;
 
     if (sync == 0)
         usage |= IM_ASYNC;

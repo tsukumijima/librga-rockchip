@@ -29,7 +29,6 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/mman.h>
-#include <math.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
@@ -117,7 +116,8 @@ int main() {
         goto release_buffer;
     }
 
-    ret = imcopy(src_img, tmp_img, 1, &release_fence_fd);
+    release_fence_fd = -1;
+    ret = imcopy(src_img, tmp_img, 0, &release_fence_fd);
     if (ret == IM_STATUS_SUCCESS) {
         printf("%s src->tmp running success!\n", LOG_TAG);
     } else {

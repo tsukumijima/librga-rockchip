@@ -193,7 +193,7 @@ https://eyun.baidu.com/s/3i6sbsDR
   setprop vendor.rga.log_level 6
   ```
 
-  
+
 
 - Linux平台
 
@@ -213,7 +213,7 @@ https://eyun.baidu.com/s/3i6sbsDR
   export ROCKCHIP_RGA_LOG_LEVEL=6
   ```
 
-   
+
 
 #### 日志说明
 
@@ -453,7 +453,7 @@ help:
 
 - msg模式
   - RGA Device Driver、RGA2 Device Driver
-  
+
   ```
   rga2: open rga2 test MSG!								//msg日志开启打印。
   rga2: cmd is RGA2_GET_VERSION							//获取版本号功能，每个进程第一次调用librga时会查询硬件版本。
@@ -467,11 +467,11 @@ help:
   rga2: yuv2rgb mode is 0									//csc模式
   rga2: *** rga2_blit_sync proc ***
   ```
-  
+
   - RGA multicore Device Driver
-  
+
     - 内存管理器日志
-  
+
     ```
     rga: import buffer info:
     rga_common: external: memory = 0xb400007458406000, type = virt_addr
@@ -480,9 +480,9 @@ help:
     													//w/h/f：以图像画布的形式描述内存大小，size：内存大小
     rga_dma_buf: iova_align size = 3686400				//iova对齐后的大小
     ```
-  
+
     - 任务请求日志
-  
+
     ```
     rga: Blit mode: request id = 192732					//运行模式以及request id
     rga_debugger: render_mode = 0, bitblit_mode=0, rotate_mode = 0
@@ -500,9 +500,9 @@ help:
     rga_debugger: set core = 0, priority = 0, in_fence_fd = -1
         												//set_core：用户态指定的核心，priority：用户态指定的优先级，in_fence_fd：用户态传递的acquire_fence fd
     ```
-  
+
     - 硬件匹配日志
-  
+
     ```
     rga_policy: start policy on core = 1
     rga_policy: start policy on core = 2
@@ -511,9 +511,9 @@ help:
     rga_policy: optional_cores = 3						//当前请求可匹配的硬件核心合集
     rga_policy: assign core: 1							//匹配后绑定的硬件核心标识
     ```
-  
+
     - 对应硬件参数日志
-  
+
     ```
     rga3_reg: render_mode:bitblt, bitblit_mode=0, rotate_mode:0
     rga3_reg: win0: y = ffc70000 uv = ffd51000 v = ffd89400 src_w = 1280 src_h = 720
@@ -568,13 +568,27 @@ rga2: 00000000 00000000 00000000 00000000
   rga2: sync one cmd end time 2414					//打印本次工作RGA硬件的耗时，单位为us
   ```
 
-  - multi
+  - multi-rga
 
+  > 1.3.0以下版本
+  
   ```
-  rga3_reg: set cmd use time = 196					//开始处理请求到配置寄存器的耗时
-  rga_job: hw use time = 554							//硬件启动到硬件中断返回耗时
-  rga_job: (pid:3197) job done use time = 751			//开始处理请求到请求完成的耗时
-  rga_job: (pid:3197) job clean use time = 933		//开始处理请求到请求资源处理完毕的耗时
+  rga3_reg: set cmd use time = 196					//开始处理请求到配置寄存器的耗时，单位为us
+  rga_job: hw use time = 554							//硬件启动到硬件中断返回耗时，单位为us
+  rga_job: (pid:3197) job done use time = 751			//开始处理请求到请求完成的耗时，单位为us
+  rga_job: (pid:3197) job clean use time = 933		//开始处理请求到请求资源处理完毕的耗时，单位为us
+  ```
+  
+  > 1.3.0及以上版本
+  
+  ```
+  rga_mm: request[3300], get buffer_handle info cost 188 us		//获取当前buffer_handle信息耗时（虚拟地址则包含cache同步的耗时）
+  rga3_reg: request[3300], generate register cost time 2 us		//生成寄存器配置耗时
+  rga3_reg: request[3300], set register cost time 301 us			//配置寄存器耗时
+  rga_job: request[3300], hardware[RGA3_core0] cost time 539 us	//对应的硬件核心完成任务耗时
+  rga_mm: request[3300], put buffer_handle info cost 153 us		//释放当前buffer_handle信息耗时（虚拟地址则包含cache同步的耗时）
+  rga_job: request[3300], job done total cost time 1023 us		//当前job从提交到完成返回用户态的全部耗时
+  rga_job: request[3300], job cleanup total cost time 1030 us		//当前job从提交到资源释放完毕的全部耗时
   ```
 
 
@@ -813,7 +827,7 @@ rga_debugger: dump image to: /data/rga_image/1_core1_dst_plane0_virt_addr_w1280_
 
 **Q1.4**：RGA的效率不能满足我们产品的需求，有什么办法可以提升么？
 
-**A1.4**：部分芯片的出厂固件的RGA频率并不是最高频率，例如3399、1126等芯片RGA的频率最高可以到400M，可以通过以下两种方式实现RGA提频：
+**A1.4**：部分芯片早期（2021年之前）的出厂固件的RGA频率并不是最高频率，例如3399、1126等芯片RGA的频率最高可以到400M，可以通过以下两种方式实现RGA提频：
 
 - 通过命令设置（临时修改，设备重启则恢复频率）
 
@@ -868,11 +882,23 @@ index 02938b0..10a1dc4 100644
 
 
 
-**Q1.8**：为什么当搭载8G DDR时，RGA效率较于4G时性能下降严重？
+**Q1.8**：调用RGA时为什么会有较高的CPU负载？
 
-**A1.8**：由于部分RGA1/RGA2的IOMMU仅支持最大32位的物理地址，而RGA Device Driver、RGA2 Device Driver中对于不满足硬件内存要求的调用申请，默认是通过swiotlb机制进行访问访问受限制的内存（原理上相当于通过CPU将高位内存拷贝至复合硬件要求的低位内存中，再交由硬件进行处理，处理完毕后再通过CPU将低位内存搬运回目标的高位内存上。）因此效率十分低下，通常在正常耗时的3-4倍之间浮动，并且引入受CPU负载影响。
+**A1.8**：调用RGA时除了基础必要的CPU负载外，有以下几种情况会导致增加较高的额外CPU负载：
 
-RGA Multicore Device Driver中针对访问受限制的内存会禁用swiotlb机制，直接通过调用失败的方式显示的通知调用者申请合理的内存再调用，来保证RGA的高效。通常伴随着以下日志：
+​			1). 当使用虚拟地址调用RGA时，虚拟地址本身是CPU的访问地址，要通过当前进程的映射表转换为硬件可识别的离散的物理地址表是通过CPU查询、计算的，因此会引入额外的CPU负载。通常不建议在实际的产品场景中使用虚拟地址调用RGA，更建议使用dma-buf fd来调用RGA，除非业务逻辑上仅存在虚拟地址并不在意这部分CPU负载损耗。
+
+​			2). 当使用的虚拟地址是cacheable的，由于使能了cache，RGA驱动会在硬件访问内存前后强制同步cache数据，因此会增加CPU同步cache和内存的负载。由于常见的虚拟地址分配器并不是设计用于给其他硬件访问的，并存在同步cache的接口，因此驱动针对虚拟地址强制同步cache也是必要的。
+
+​			3). 当使用dma-buf fd调用RGA时，有些分配器默认分配的是cacheable的buffer，并且kernel中dma-buf的处理会强制同步cache的情况，这是也会存在每次调用RGA时会有较大的CPU负载，也是因为CPU同步cache和内存引入的负载。该种情况下建议分配禁用cache的dma-buf。
+
+
+
+**Q1.9**：为什么当搭载8G DDR时，RGA效率较于4G时性能下降严重？
+
+**A1.9**：由于部分RGA1/RGA2的IOMMU仅支持最大32位的物理地址，而RGA Device Driver、RGA2 Device Driver中对于不满足硬件内存要求的调用申请，默认是通过swiotlb机制进行访问访问受限制的内存（原理上相当于通过CPU将高位内存拷贝至复合硬件要求的低位内存中，再交由硬件进行处理，处理完毕后再通过CPU将低位内存搬运回目标的高位内存上。）因此效率十分低下，通常在正常耗时的3-4倍之间浮动，并且引入受CPU负载影响。
+
+RGA Multicore Device Driver中针对访问受限制的内存会禁用swiotlb机制，直接通过调用失败的方式显示的通知调用者申请符合要求的内存再调用，来保证RGA的高效。通常伴随着以下日志：
 
 > HAL层日志：
 
@@ -910,6 +936,56 @@ rga_policy: start policy on core = 4
  **<librga_souce_path>/samples/allocator_demo/src/rga_allocator_dma32_demo.cpp**
 
  **<librga_souce_path>/samples/allocator_demo/src/rga_allocator_graphicbuffer_demo.cpp**
+
+
+
+**Q1.10**：为什么调用RGA API时发现API返回耗时远高于驱动打印硬件耗时？
+
+​			**Q1.10.1**：通过“TIME”运行日志发现map/unmap buffer耗时过大。
+​			**Q1.10.2**：对比kernel日志时间戳发现打印参数日志到寄存器打印之间存在较大的空白时间。
+​			**Q1.10.3**：相同的参数配置，仅使用不同的内存分配器得到的运行耗时差异较大。
+
+**A1.10**：这里的耗时异常的原因均为外部buffer的内存映射行为（map/unmap）导致。所有的外部buffer都需要映射、绑定到RGA驱动中才能保证硬件最终能够访问指定的buffer。而不同的分配器对应的底层实现差异会导致驱动映射、绑定内存时耗时不一，从而导致看起来好像API耗时会比硬件实际耗时高很多的情况。常见的会存在较高额外耗时的dma-buf分配器有ION、V4L2等，通常这些差异与cache的同步有关，针对这类型问题可以通过横向对比不同分配器进行确认。
+
+这类问题通常可以通过以下几种方式进行优化：
+
+​			1). 使用map/unmap耗时合理的内存分配器，常见的有dma_heap、DRM以及对应的封装内存分配器，以下是对应内存分配器分配内存调用RGA的示例代码：
+
+**<librga_souce_path>/samples/allocator_demo/src/rga_allocator_dma_demo.cpp**
+
+**<librga_souce_path>/samples/allocator_demo/src/rga_allocator_drm_demo.cpp**
+
+​			2). 该问题对应的调用场景为通过wrapbuffer_fd()封装rga_buffer_t或者使用importbuffer_fd后仅运行一帧就立即releasebuffer_handle，这对于临时的测试或者每一帧buffer都是变化的场景是正常的，但本身在实际产品中buffer反复的重新分配这个行为就是性能较差且不合理的，建议整体性的进行优化buffer流程。
+
+通常我们建议整体流程按照以下方式进行设计：
+
+> 1. 构造buffer_pool，分配n个buffer用于作为轮转buffer，n的大小视实际场景进行配置。
+>
+> 2. 将这部分buffer 通过importbuffer_fd()导入RGA，获取到RGA的buffer_handle。
+>
+> 3. 使用轮转到的buffer_handle调用RGA执行图像操作，反复轮转、循环。
+> 4. 当不再需要这个buffer_pool内的buffer时，调用releasebuffer_handle()释放这部分buffer在RGA内部的引用，以保证后续该buffer能够被释放、销毁。
+> 5. 释放buffer_pool内不需要的buffer。
+
+按照上述流程设计，那么即使分配器的map/unmap行为会导致异常耗时也被收敛到importbuffer_fd()/releasebuffer_handle()的调用上，对于实际运行时每一帧调用将不再会有影响，这是一种很好的规避由于内存分配器实现差异引入性能差异的方案。
+
+​			3). 对于无法更改内存分配器以及业务流程的场景，将只能通过修改使用的内存分配器map/unmap流程进行优化耗时，这是十分危险的行为，需要确保自己知晓全部使用该内存分配器的模块的应用行为后，提交redmine咨询对应内存分配器维护者来获取技术支持。
+
+
+
+**Q1.11**：为什么importbuffer_fd()/importbuffer_virtualaddr()调用耗时很高，为什么要调用该API？
+
+**A1.11**：该接口相关用法以及说明可以查看源码目录下docs文件夹内的[《Rockchip_Developer_Guide_RGA_CN》](./Rockchip_Developer_Guide_RGA_CN.md)中 “概述” 章节——“[图像缓冲区预处理](./Rockchip_Developer_Guide_RGA_CN.md#图像缓冲区预处理)” 了解用法说明。importbuffer_xx()的作用是将外部的buffer导入到RGA驱动内，使后续每一帧RGA调用都可以通过buffer_handle快速的访问该buffer，而导入外部buffer是比较耗时的操作，需要将外部的buffer映射到RGA驱动内，并保存对应的物理地址以及buffer信息，这对于调用RGA来说是不可缺少的行为。
+
+
+
+**Q1.12**：RGA支持并行的操作么？为什么多线程调用RGA时会出现个别帧耗时增多、翻倍的情况？
+
+**A1.12**：RGA API是可以支持多线程/进程并行调用的，但实际硬件上是否并行执行图像操作取决于当前使用芯片搭载的RGA核心数量，即搭载的核心数量则为最大支持的并行任务数量，超过核心数量的任务则会进入等待状态，直到有核心进入空闲状态。因此当并行调用的数量超过了硬件最大支持的并行数量后，那么个别帧的调用将会增加等待硬件空闲的耗时。具体可以通过以下调试节点（具体说明可以查看“驱动调试节点”小节中“硬件信息查询”部分）获取当前芯片搭载的核心数量以及支持的功能：
+
+```shell
+/# cat hardware
+```
 
 
 
@@ -1189,11 +1265,23 @@ Date:   Tue Nov 24 19:50:17 2020 +0800
 
 
 
-**A2.21**：调用RGA处理图像后出现黑色或绿色的小条纹，这是什么原因？
+**Q2.21**：调用RGA处理图像后出现黑色或绿色的小条纹，这是什么原因？
 
 ​			![image-cache-abnormal](RGA_FAQ.assets/image-cache-abnormal.png)
 
-**Q2.21**：这是使用非虚拟地址调用时，buffer使能了cache，并且在CPU操作前后没有同步cache导致的。如果不了解如何同步cache可以参考samples/allocator_demo/src/rga_allocator_dma_cache_demo.cpp中的用法。
+**A2.21**：这是使用非虚拟地址调用时，buffer使能了cache，并且在CPU操作前后没有同步cache导致的。如果不了解如何同步cache可以参考samples/allocator_demo/src/rga_allocator_dma_cache_demo.cpp中的用法。
+
+
+
+**Q2.22**：在RK3588上出现同一显示区域使用RGA缩放后画面抖动，这是什么原因导致的？
+
+**A2.22**：由于RK3588比较特殊，搭载有两种RGA核心（一颗RGA2，两颗RGA3），它们在缩放算法上存在一些取数行为的差异导致结果会出现整体左上移/右下移的现象，因为在这种对显示效果有要求的场景上，建议指定核心的方式来避免出现算法差异引入的抖动问题。
+
+​			指定核心可以参考以下示例代码：
+
+​			**<librga_souce_path>/samples/config_demo/src/rga_config_single_core_demo.cpp**
+
+​			**<librga_souce_path>/samples/config_demo/src/rga_config_thread_core_demo.cpp**
 
 
 
@@ -1238,15 +1326,15 @@ Fatal error: Failed to call RockChipRga interface, please use 'dmesg' command to
 
 **A3.2.2**：出现该标头报错说明当前RGA任务在驱动运行失败返回，具体原因需要通过dmesg查看驱动日志。
 
-​				**Q3.2.2.1**：“RgaBlit(1027) RGA_BLIT fail: Not a typewriter” 
+​				**Q3.2.2.1**：“RgaBlit(1027) RGA_BLIT fail: Not a typewriter”
 
 ​				**A3.2.2.1**：该报错通常为参数错误导致，建议检查一下缩放倍数、虚宽是否小于实宽与对应方向的偏移的和、对齐是否符合要求。建议新开发项目使用IM2D API，拥有更全面的检测报错机制，方便开发者节省大量的调试时间。
 
-​				**Q3.2.2.2**：“RgaBlit(1349) RGA_BLIT fail: Bad file descriptor” 
+​				**Q3.2.2.2**：“RgaBlit(1349) RGA_BLIT fail: Bad file descriptor”
 
 ​				**A3.2.2.2**：该报错为ioctl报错，标识当前传入的设备节点的fd无效，请尝试更新librga或确认RGA的初始化流程是否有被修改。
 
-​				**Q3.2.2.3**：“RgaBlit(1360) RGA_BLIT fail: Bad address” 
+​				**Q3.2.2.3**：“RgaBlit(1360) RGA_BLIT fail: Bad address”
 
 ​				**A3.2.2.4**：该报错通常为传入内核的src/src1/dst通道的内存地址存在问题导致（常见为越界），可以参照本文档 “日志获取与说明” —— “驱动调试节点” 小节，开启驱动日志，并定位出错的内存。
 
@@ -1278,7 +1366,7 @@ E rockchiprga: This output the user parameters when rga call blit fail		//报错
 
 ### kernel层报错
 
-**Q4.1**：“RGA2 failed to get vma, result = 32769, pageCount = 65537”报错是什么导致的？
+**Q4.1**：“RGA2 failed to get pte, result = -14, pageCount = 112”、“RGA2 failed to get vma, result = 32769, pageCount = 65537”报错是什么导致的？
 
 **A4.1**：该报错通常为使用虚拟地址调用RGA时，虚拟地址的实际内存小于实际需要的内存大小（即根据图像参数计算出当前通道的图像需要多大的内存），只需检查buffer的大小即可，在一些申请和调用不是在同一处的场景下，可以在调用RGA前执行一遍memset对应图像的大小，确认是否为内存大小不足导致的问题。
 
@@ -1366,6 +1454,10 @@ Failed to call RockChipRga interface, please use 'dmesg' command to view driver 
 3. 仅搭载一种RGA的芯片平台（例如仅搭载RGA2的RK3399、RK3568、Rk3566）上：
 
    当芯片平台上仅搭载内存访问受限制的核心时，则调用RGA时必须申请符合搭载核心对内存要求的内存，解决方案同上场景2。
+
+4. 当使用DRM、malloc、new等不支持指定分配4G以内内存空间的内存的内存分配器时，也可以通过修改uboot的内存映射范围来解决。
+
+   uboot相关修改可以参考SDK文档中 **uboot开发文档->Chapter-8 调试手段->修改DDR容量** ，将内存映射范围全局限制在0~4G内存空间以内即可。
 
 
 
