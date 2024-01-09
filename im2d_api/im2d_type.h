@@ -22,6 +22,7 @@
 #include <stdint.h>
 
 #include "rga.h"
+#include "im2d_version.h"
 
 #define IM_API /* define API export as needed */
 
@@ -53,6 +54,8 @@ typedef enum {
     IM_HAL_TRANSFORM_FLIP_V     = 1 << 4,
     IM_HAL_TRANSFORM_FLIP_H_V   = 1 << 5,
     IM_HAL_TRANSFORM_MASK       = 0x3f,
+    IM_HAL_TRANSFORM_ROT_MASK   = 0x7,
+    IM_HAL_TRANSFORM_FLIP_MASK  = 0x38,
 
     /*
      * Blend
