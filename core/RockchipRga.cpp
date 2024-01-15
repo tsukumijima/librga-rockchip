@@ -106,7 +106,7 @@ RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
 #ifdef ANDROID
         property_set("vendor.rga_api.version", RGA_API_VERSION);
 #endif
-        ALOGE("%s", RGA_API_FULL_VERSION);
+        ALOGI("%s", RGA_API_FULL_VERSION);
     }
 
     RockchipRga::~RockchipRga() {
@@ -276,7 +276,6 @@ RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
             RkRgaLogOutUserPara(src);
             RkRgaLogOutUserPara(dst);
             RkRgaLogOutUserPara(src1);
-            ALOGE("This output the user parameters when rga call blit fail");
         }
         return ret;
     }
@@ -302,7 +301,6 @@ RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
         if (ret) {
             RkRgaLogOutUserPara(src);
             RkRgaLogOutUserPara(dst);
-            ALOGE("This output the user parameters when rga call CollorPalette fail");
         }
         return ret;
     }
