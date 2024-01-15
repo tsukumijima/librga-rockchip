@@ -1516,15 +1516,10 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     im_opt_t opt;
 
     is_debug_log();
-    if (is_out_log()) {
-        rga_dump_channel_info(IM_LOG_DEBUG | IM_LOG_FORCE, "src", srect, src);
-        if (rga_is_buffer_valid(pat))
-            rga_dump_channel_info(IM_LOG_DEBUG | IM_LOG_FORCE, "src1/pat", prect, pat);
-        rga_dump_channel_info(IM_LOG_DEBUG | IM_LOG_FORCE, "dst", drect, dst);
-
-        if (opt_ptr != NULL)
-            rga_dump_opt(IM_LOG_DEBUG | IM_LOG_FORCE, *opt_ptr, usage);
-    }
+    if (is_out_log())
+        rga_dump_info(IM_LOG_DEBUG | IM_LOG_FORCE,
+                      job_handle, &src, &dst, &pat, &srect, &drect, &prect,
+                      acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
     if (rga_get_opt(&opt, opt_ptr) == IM_STATUS_FAILED)
         memset(&opt, 0x0, sizeof(opt));
@@ -2078,16 +2073,11 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
     if (ret) {
         IM_LOGE("Failed to call RockChipRga interface, please use 'dmesg' command to view driver error log.");
-        rga_dump_channel_info(IM_LOG_ERROR | IM_LOG_FORCE, "src", srect, src);
-        if (rga_is_buffer_valid(pat))
-            rga_dump_channel_info(IM_LOG_ERROR | IM_LOG_FORCE, "src1/pat", prect, pat);
-        rga_dump_channel_info(IM_LOG_ERROR | IM_LOG_FORCE, "dst", drect, dst);
 
-        if (opt_ptr != NULL)
-            rga_dump_opt(IM_LOG_ERROR | IM_LOG_FORCE, *opt_ptr, usage);
-
-        IM_LOGFE("acquir_fence[%d], release_fence_ptr[0x%lx], usage[0x%x]\n",
-                 acquire_fence_fd, (unsigned long)release_fence_fd, usage);
+        if (!is_out_log())
+            rga_dump_info(IM_LOG_ERROR | IM_LOG_FORCE,
+                          job_handle, &src, &dst, &pat, &srect, &drect, &prect,
+                          acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
         return IM_STATUS_FAILED;
     }
