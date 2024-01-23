@@ -132,7 +132,7 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td rowspan="2">8192x8192</td>
       <td rowspan="2">2x2</td>
       <td rowspan="2">4096x4096</td>
-      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
+      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
       <td rowspan="2">2</td>
    </tr>
    <tr>
@@ -147,7 +147,7 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td rowspan="2">8192x8192</td>
       <td rowspan="2">2x2</td>
       <td rowspan="2">4096x4096</td>
-      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
+      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
       <td rowspan="2">2</td>
    </tr>
    <tr>
@@ -162,7 +162,7 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td rowspan="4">8192x8192</td>
       <td rowspan="4">2x2</td>
       <td rowspan="4">4096x4096</td>
-      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>IOMMU(32bit)</td>
+      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>IOMMU(32bit)</td>
       <td rowspan="4">2</td>
    </tr>
    <tr>
@@ -185,7 +185,7 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td rowspan="8">8192x8192</td>
       <td rowspan="8">2x2</td>
       <td rowspan="8">4096x4096</td>
-      <td rowspan="8">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP(NA for RV1108/RV1109/RK3566)<br/>NN quantize(NA for RK3399/RV1108)<br/>osd (only RV1106/RV1103/RK3562/RK3528)<br/>mosaic(only RV1106/RV1103/RK3562/RK3528)<br/>IOMMU(32bit, RK3528/RK3562为40bit，NA for RV1106/1103)</td>
+      <td rowspan="8">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP(NA for RV1108/RV1109/RK3566)<br/>NN quantize(NA for RK3399/RV1108)<br/>osd (only RV1106/RV1103/RK3562/RK3528)<br/>mosaic(only RV1106/RV1103/RK3562/RK3528)<br/>IOMMU(32bit, RK3528/RK3562为40bit，NA for RV1106/1103)</td>
       <td rowspan="8">2</td>
    </tr>
    <tr>
@@ -217,6 +217,17 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td>RK3562</td>
    </tr>
    <tr>
+      <td rowspan="1">RGA2-Pro</td>
+      <td>Heron</td>
+      <td>RK3576</td>
+      <td rowspan="1">2x2</td>
+      <td rowspan="1">8192x8192</td>
+      <td rowspan="1">2x2</td>
+      <td rowspan="1">8192x8192</td>
+      <td rowspan="1">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(bi-linear/average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>osd<br/>mosaic<br/>rkfbc64x4(only input)<br/>afbc32x8 splice mode(only input)<br/>tile4x4<br/>IOMMU(40bit)</td>
+      <td rowspan="1">2</td>
+   </tr>
+   <tr>
       <td rowspan="1">RGA3</td>
       <td>Orion</td>
       <td>RK3588</td>
@@ -224,12 +235,10 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td rowspan="1">8176x8176</td>
       <td rowspan="1">68x2</td>
       <td rowspan="1">8128x8128</td>
-      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>Alpha blend<br/>Color key<br/>FBC<br/>IOMMU(40bit)</td>
+      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>scale-up(bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>afbc16x16<br/>IOMMU(40bit)</td>
       <td rowspan="1">3 (by pass)<br/>2 (scale)</td>
    </tr>
 </table>
-
-
 
 > Note:
 >
@@ -365,18 +374,29 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMA
       <td>RK3566/RK3568</td>
    </tr>
    <tr>
-   <td>Orion</td>
+      <td>Orion</td>
       <td>RK3588</td>
    </tr>
    <tr>
-   <td>Otter</td>
+      <td>Otter</td>
       <td>RV1106/1103</td>
    </tr>
-   <td>Bull</td>
+   <tr>
+      <td>Bull</td>
       <td>RK3528</td>
    </tr>
-   <td>Snipe</td>
+   <tr>
+      <td>Snipe</td>
       <td>RK3562</td>
+   </tr>
+   <tr>
+      <td rowspan="1">RGA2-Pro</td>
+      <td>Heron</td>
+      <td>RK3576</td>
+      <td rowspan="1"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_RGBA_4444<br/>RK_FORMAT_BGRA_4444<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_RGBA_5551<br/>RK_FORMAT_BGRA_5551<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B<br/>RK_FORMA_A8 (only src for alpha blend)<br/>RK_FORMAT_BPP1 (only for color palette)<br/>RK_FORMAT_BPP2 (only for color palette)<br/>RK_FORMAT_BPP4 (only for color palette)<br/>RK_FORMAT_BPP8 (only for color palette)
+      </td>
+      <td rowspan="1"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_RGBA_4444<br/>RK_FORMAT_BGRA_4444<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_RGBA_5551<br/>RK_FORMAT_BGRA_5551<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4<br/>RK_FORMAT_Y8
+      </td>
    </tr>
    <tr>
       <td rowspan="1">RGA3</td>
@@ -392,12 +412,11 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMA
 </table>
 
 
-
 > Note:
 >
 > 1). The "RK_FORMAT_YCbCr_400" format means that the YUV format only takes the Y channel, and is often used in 256 (2 to the 8th power) grayscale images. Here, it should be noted that since the YUV format exists in the RGB/YUV color space conversion, you need to pay attention to the color space configuration , for example, a full 256-level grayscale image needs to be configured as full range during conversion.
 >
-> 2). The "RK_FORMAT_Y4" format means that the YUV format only takes the Y channel and dithers to 4 bits. It is often used in 16 (2 to the 4th power) grayscale images. The precautions involved in the configuration of the color space conversion are the same as “RK_FORMAT_YCbCr_400”.
+> 2). The "RK_FORMAT_Y4" format means that the YUV format only takes the Y channel and dithers to 4 bits. It is often used in 16 (2 to the 4th power) grayscale images. The precautions involved in the configuration of the color space conversion are the same as “RK_FORMAT_YCbCr_400”. "RK_FORMAT_Y8" is similar to "RK_FORMAT_Y4", also only 4 bits are valid, the difference is that only the high 4 bits are valid data, the low 4 bits are invalid data.
 
 
 
@@ -411,7 +430,7 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMA
         <td>Alignment</td>
     </tr>
 	<tr>
-        <td rowspan="4">RGA1<br/>RGA1_Plus</td>
+        <td rowspan="4">RGA1<br/>RGA1-Plus</td>
         <td rowspan="4">4</td>
         <td>
 RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888
@@ -437,7 +456,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
         <td>width stride must be 4-aligned，x_offset、y_offset、width、height、height stride must be 2-aligned</td>
     </tr>
     <tr>
-        <td rowspan="6">RGA2<br/>RGA2_Lite0<br/>RGA2_Lite1<br/>RGA2_Enhance</td>
+        <td rowspan="6">RGA2<br/>RGA2-Lite0<br/>RGA2-Lite1<br/>RGA2-Enhance<br/>RGA2-Pro</td>
         <td rowspan="6">4</td>
         <td>
 RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888
@@ -458,13 +477,13 @@ RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_V
     </tr>
     <tr>
         <td>
-RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888
+RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_A8
         </td>
         <td>width stride must be 4-aligned</td>
     </tr>
     <tr>
         <td>
-RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4
+RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4<br/>RK_FORMAT_Y8
         </td>
         <td>width stride must be 4-aligned，x_offset、y_offset、width、height、height stride must be 2-aligned</td>
     </tr>
@@ -521,7 +540,6 @@ RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_42
         <td>In addition to the format alignment requirements above，width、height must be 8-aligned，input channel width stride、height stride must be 16-aligned。</td>
     </tr>
 </table>
-
 
 > Note:
 >

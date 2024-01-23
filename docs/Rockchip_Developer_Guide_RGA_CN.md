@@ -138,7 +138,7 @@ RGA (Raster Graphic Acceleration Unit)是一个独立的2D硬件加速器，可�
       <td rowspan="2">8192x8192</td>
       <td rowspan="2">2x2</td>
       <td rowspan="2">4096x4096</td>
-      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
+      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
       <td rowspan="2">2</td>
    </tr>
    <tr>
@@ -153,7 +153,7 @@ RGA (Raster Graphic Acceleration Unit)是一个独立的2D硬件加速器，可�
       <td rowspan="2">8192x8192</td>
       <td rowspan="2">2x2</td>
       <td rowspan="2">4096x4096</td>
-      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
+      <td rowspan="2">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>IOMMU(32bit)</td>
       <td rowspan="2">2</td>
    </tr>
    <tr>
@@ -168,7 +168,7 @@ RGA (Raster Graphic Acceleration Unit)是一个独立的2D硬件加速器，可�
       <td rowspan="4">8192x8192</td>
       <td rowspan="4">2x2</td>
       <td rowspan="4">4096x4096</td>
-      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>IOMMU(32bit)</td>
+      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>IOMMU(32bit)</td>
       <td rowspan="4">2</td>
    </tr>
    <tr>
@@ -191,7 +191,7 @@ RGA (Raster Graphic Acceleration Unit)是一个独立的2D硬件加速器，可�
       <td rowspan="8">8192x8192</td>
       <td rowspan="8">2x2</td>
       <td rowspan="8">4096x4096</td>
-      <td rowspan="8">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP(NA for RV1108/RV1109/RK3566)<br/>NN quantize(NA for RK3399/RV1108)<br/>osd (only RV1106/RV1103/RK3562/RK3528)<br/>mosaic(only RV1106/RV1103/RK3562/RK3528)<br/>IOMMU(32bit, RK3528/RK3562为40bit，NA for RV1106/1103)</td>
+      <td rowspan="8">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP(NA for RV1108/RV1109/RK3566)<br/>NN quantize(NA for RK3399/RV1108)<br/>osd (only RV1106/RV1103/RK3562/RK3528)<br/>mosaic(only RV1106/RV1103/RK3562/RK3528)<br/>IOMMU(32bit, RK3528/RK3562为40bit，NA for RV1106/1103)</td>
       <td rowspan="8">2</td>
    </tr>
    <tr>
@@ -222,6 +222,18 @@ RGA (Raster Graphic Acceleration Unit)是一个独立的2D硬件加速器，可�
        <td>Snipe</td>
        <td>RK3562</td>
     </tr>
+    <tr>
+      <td rowspan="1">RGA2-Pro</td>
+      <td>Heron</td>
+      <td>RK3576</td>
+      <td rowspan="1">2x2</td>
+      <td rowspan="1">8192x8192</td>
+      <td rowspan="1">2x2</td>
+      <td rowspan="1">8192x8192</td>
+      <td rowspan="1">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(bi-linear/average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>ROP<br/>osd<br/>mosaic<br/>rkfbc64x4(only input)<br/>afbc32x8 splice mode(only input)<br/>tile4x4<br/>IOMMU(40bit)</td>
+      <td rowspan="1">2</td>
+   </tr>
+   <tr>
       <td rowspan="1">RGA3</td>
       <td>Orion</td>
       <td>RK3588</td>
@@ -229,11 +241,10 @@ RGA (Raster Graphic Acceleration Unit)是一个独立的2D硬件加速器，可�
       <td rowspan="1">8176x8176</td>
       <td rowspan="1">68x2</td>
       <td rowspan="1">8128x8128</td>
-      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>Alpha blend<br/>Color key<br/>FBC<br/>IOMMU(40bit)</td>
+      <td rowspan="4">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/8~8 scale<br/>scale-up(bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>afbc16x16<br/>IOMMU(40bit)</td>
       <td rowspan="1">3 (by pass)<br/>2 (scale)</td>
    </tr>
 </table>
-
 
 > 注：
 >
@@ -368,18 +379,29 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMA
       <td>RK3566/RK3568</td>
    </tr>
    <tr>
-   <td>Orion</td>
+   	  <td>Orion</td>
       <td>RK3588</td>
    </tr>
    <tr>
-   <td>Otter</td>
+      <td>Otter</td>
       <td>RV1106/1103</td>
    </tr>
-   <td>Bull</td>
+   <tr>
+      <td>Bull</td>
       <td>RK3528</td>
    </tr>
-   <td>Snipe</td>
+   <tr>
+      <td>Snipe</td>
       <td>RK3562</td>
+   </tr>
+   <tr>
+      <td rowspan="1">RGA2-Pro</td>
+      <td>Heron</td>
+      <td>RK3576</td>
+      <td rowspan="1"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_RGBA_4444<br/>RK_FORMAT_BGRA_4444<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_RGBA_5551<br/>RK_FORMAT_BGRA_5551<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B<br/>RK_FORMA_A8 (only src for alpha blend)<br/>RK_FORMAT_BPP1 (only for color palette)<br/>RK_FORMAT_BPP2 (only for color palette)<br/>RK_FORMAT_BPP4 (only for color palette)<br/>RK_FORMAT_BPP8 (only for color palette)
+      </td>
+      <td rowspan="1"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_RGBA_4444<br/>RK_FORMAT_BGRA_4444<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_RGBA_5551<br/>RK_FORMAT_BGRA_5551<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4<br/>RK_FORMAT_Y8
+      </td>
    </tr>
    <tr>
       <td rowspan="1">RGA3</td>
@@ -399,7 +421,7 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMA
 >
 > 1). ”RK_FORMAT_YCbCr_400“格式即YUV格式仅取Y通道，常用于256（2的8次方）阶灰度图，这里需要注意由于是YUV格式存在RGB/YUV色域转换时需要留意色域配置，例如需要完整的256阶灰度图需要在转换时配置为full range。
 >
-> 2). “RK_FORMAT_Y4”格式即YUV格式仅取Y通道，并dither至4bit，常用于16（2的4次方）阶灰度图，涉及色域转换时配置的注意事项同“RK_FORMAT_YCbCr_400”。
+> 2). “RK_FORMAT_Y4”格式即YUV格式仅取Y通道，并dither至4bit，常用于16（2的4次方）阶灰度图，涉及色域转换时配置的注意事项同“RK_FORMAT_YCbCr_400”。“RK_FORMAT_Y8”格式与“RK_FORMAT_Y4”类似，同样只有4bit有效，差异在于只是其中高4bit为有效数据，低4bit为无效数据。
 
 
 
@@ -413,7 +435,7 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMA
         <td>Alignment</td>
     </tr>
 	<tr>
-        <td rowspan="4">RGA1<br/>RGA1_Plus</td>
+        <td rowspan="4">RGA1<br/>RGA1-Plus</td>
         <td rowspan="4">4</td>
         <td>
 RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888
@@ -439,7 +461,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
         <td>width stride须4对齐，x_offset、y_offset、width、height、height stride均须2对齐</td>
     </tr>
     <tr>
-        <td rowspan="6">RGA2<br/>RGA2_Lite0<br/>RGA2_Lite1<br/>RGA2_Enhance</td>
+        <td rowspan="6">RGA2<br/>RGA2-Lite0<br/>RGA2-Lite1<br/>RGA2-Enhance<br/>RGA2-Pro</td>
         <td rowspan="6">4</td>
         <td>
 RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888
@@ -460,13 +482,13 @@ RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_V
     </tr>
     <tr>
         <td>
-RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888
+RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_A8
         </td>
         <td>width stride须4对齐</td>
     </tr>
     <tr>
         <td>
-RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4
+RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4<br/>RK_FORMAT_Y8
         </td>
         <td>width stride须4对齐，x_offset、y_offset、width、height、height stride均须2对齐</td>
     </tr>
@@ -523,7 +545,6 @@ RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_42
         <td>除上述格式对齐要求外，width、height须8对齐，输入通道width stride、height stride须16对齐。</td>
     </tr>
 </table>
-
 
 > 注：
 >
