@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#include <stdbool.h>
+
 #include "android_utils/android_utils.h"
 #include "drm_utils/drm_utils.h"
 
@@ -28,5 +30,10 @@
 #define u64_to_ptr(var) ((void *)(uintptr_t)(var))
 
 #define is_rga_format(format) ((format) & 0xff00 || (format) == 0)
+
+bool is_bpp_format(int format);
+bool is_yuv_format(int format);
+bool is_rgb_format(int format);
+bool is_alpha_format(int format);
 
 int convert_to_rga_format(int ex_format);

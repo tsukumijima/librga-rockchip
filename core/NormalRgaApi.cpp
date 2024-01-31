@@ -23,6 +23,8 @@
 #include "GrallocOps.h"
 #endif
 
+#include "utils/utils.h"
+
 int         sina_table[360];
 int         cosa_table[360];
 /**********************************************************************
@@ -132,6 +134,22 @@ uint32_t bytesPerPixel(int format) {
             return 1;
     }
     return 0;
+}
+
+bool NormalRgaIsBppFormat(int format) {
+    return is_bpp_format(format);
+}
+
+bool NormalRgaIsYuvFormat(int format) {
+    return is_yuv_format(format);
+}
+
+bool NormalRgaIsRgbFormat(int format) {
+    return is_rgb_format(format);
+}
+
+bool NormalRgaFormatHasAlpha(int format) {
+    return is_alpha_format(format);
 }
 
 int checkRectForRga(rga_rect_t rect) {
@@ -500,120 +518,6 @@ int NormalRgaSetSrcTransModeInfo(struct rga_req *msg,
     msg->color_key_max = color_key_max;
     msg->alpha_rop_mode |= (zero_mode_en << 4);
     return 1;
-}
-
-bool NormalRgaIsBppFormat(int format) {
-    bool ret = false;
-
-    switch (format) {
-        case RK_FORMAT_BPP1:
-        case RK_FORMAT_BPP2:
-        case RK_FORMAT_BPP4:
-        case RK_FORMAT_BPP8:
-            ret = true;
-            break;
-        default:
-            break;
-    }
-
-    return ret;
-}
-
-bool NormalRgaIsYuvFormat(int format) {
-    bool ret = false;
-
-    switch (format) {
-        case RK_FORMAT_YCbCr_422_SP:
-        case RK_FORMAT_YCbCr_422_P:
-        case RK_FORMAT_YCbCr_420_SP:
-        case RK_FORMAT_YCbCr_420_P:
-        case RK_FORMAT_YCrCb_422_SP:
-        case RK_FORMAT_YCrCb_422_P:
-        case RK_FORMAT_YCrCb_420_SP:
-        case RK_FORMAT_YCrCb_420_P:
-        case RK_FORMAT_YVYU_422:
-        case RK_FORMAT_YVYU_420:
-        case RK_FORMAT_VYUY_422:
-        case RK_FORMAT_VYUY_420:
-        case RK_FORMAT_YUYV_422:
-        case RK_FORMAT_YUYV_420:
-        case RK_FORMAT_UYVY_422:
-        case RK_FORMAT_UYVY_420:
-        case RK_FORMAT_Y4:
-        case RK_FORMAT_YCbCr_400:
-        case RK_FORMAT_YCbCr_420_SP_10B:
-        case RK_FORMAT_YCrCb_420_SP_10B:
-        case RK_FORMAT_YCbCr_422_SP_10B:
-        case RK_FORMAT_YCrCb_422_SP_10B:
-        case RK_FORMAT_YCbCr_444_SP:
-        case RK_FORMAT_YCrCb_444_SP:
-        case RK_FORMAT_Y8:
-            ret = true;
-            break;
-    }
-
-    return ret;
-}
-
-bool NormalRgaIsRgbFormat(int format) {
-    bool ret = false;
-
-    switch (format) {
-        case RK_FORMAT_RGBA_8888:
-        case RK_FORMAT_RGBX_8888:
-        case RK_FORMAT_RGBA_5551:
-        case RK_FORMAT_RGBA_4444:
-        case RK_FORMAT_RGB_888:
-        case RK_FORMAT_RGB_565:
-        case RK_FORMAT_BGRA_8888:
-        case RK_FORMAT_BGRX_8888:
-        case RK_FORMAT_BGRA_5551:
-        case RK_FORMAT_BGRA_4444:
-        case RK_FORMAT_BGR_888:
-        case RK_FORMAT_BGR_565:
-        /*ARGB*/
-        case RK_FORMAT_ARGB_8888:
-        case RK_FORMAT_XRGB_8888:
-        case RK_FORMAT_ARGB_5551:
-        case RK_FORMAT_ARGB_4444:
-        case RK_FORMAT_ABGR_8888:
-        case RK_FORMAT_XBGR_8888:
-        case RK_FORMAT_ABGR_5551:
-        case RK_FORMAT_ABGR_4444:
-            ret = true;
-            break;
-        default:
-            break;
-    }
-
-    return ret;
-}
-
-bool NormalRgaFormatHasAlpha(int format) {
-    bool ret = false;
-
-    switch (format) {
-        case RK_FORMAT_RGBA_8888:
-        case RK_FORMAT_RGBA_5551:
-        case RK_FORMAT_RGBA_4444:
-        case RK_FORMAT_BGRA_8888:
-        case RK_FORMAT_BGRA_5551:
-        case RK_FORMAT_BGRA_4444:
-        case RK_FORMAT_ARGB_8888:
-        case RK_FORMAT_ARGB_5551:
-        case RK_FORMAT_ARGB_4444:
-        case RK_FORMAT_ABGR_8888:
-        case RK_FORMAT_ABGR_5551:
-        case RK_FORMAT_ABGR_4444:
-        case RK_FORMAT_RGBA2BPP:
-        case RK_FORMAT_A8:
-            ret = true;
-            break;
-        default:
-            break;
-    }
-
-    return ret;
 }
 
 // 0/near  1/bilnear  2/bicubic
