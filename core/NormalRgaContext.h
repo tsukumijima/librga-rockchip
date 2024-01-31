@@ -47,7 +47,7 @@ struct rgaContext {
     int Is_debug;
     struct rga_hw_versions_t mHwVersions;
     struct rga_version_t mDriverVersion;
-    RGA_DRIVER_IOC_TYPE driver = RGA_DRIVER_IOC_DEFAULT;
+    RGA_DRIVER_IOC_TYPE driver;
     uint32_t driver_feature;
 };
 #endif
