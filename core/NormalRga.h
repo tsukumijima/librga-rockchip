@@ -20,7 +20,6 @@
 #define _rockchip_normal_rga_h_
 
 #include <stdint.h>
-#include <vector>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,7 +51,7 @@ int         RgaDeInit(void **ctx);
 int         RgaBlit(rga_info_t *src, rga_info_t *dst, rga_info_t *src1);
 int         RgaFlush();
 int         RgaCollorFill(rga_info_t *dst);
-int         RgaCollorPalette(rga_info *src, rga_info *dst, rga_info *lut);
+int         RgaCollorPalette(rga_info_t *src, rga_info_t *dst, rga_info_t *lut);
 
 
 int         NormalRgaInitTables();
@@ -284,11 +283,11 @@ int         NormalRgaUpdatePattenBuffMode(struct rga_req *msg,
         unsigned int pat_addr, unsigned int w,
         unsigned int h,        unsigned int format);
 
-int NormalRgaNNQuantizeMode(struct rga_req *msg, rga_info *dst);
+int NormalRgaNNQuantizeMode(struct rga_req *msg, rga_info_t *dst);
 
 int NormalRgaFullColorSpaceConvert(struct rga_req *msg, int color_space_mode);
 
-int NormalRgaDitherMode(struct rga_req *msg, rga_info *dst, int format);
+int NormalRgaDitherMode(struct rga_req *msg, rga_info_t *dst, int format);
 
 #if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaMmuInfo(struct rga_req *msg,
@@ -307,4 +306,4 @@ int         NormalRgaMmuFlag(struct rga_req *msg,
 
 #endif
 
-void NormalRgaCompatModeConvertRga2(rga2_req *req, rga_req *orig_req);
+void NormalRgaCompatModeConvertRga2(struct rga2_req *req, struct rga_req *orig_req);

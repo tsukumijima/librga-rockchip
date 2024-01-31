@@ -752,7 +752,7 @@ int NormalRgaMmuFlag(struct rga_req *msg,
     return 1;
 }
 
-int NormalRgaNNQuantizeMode(struct rga_req *msg, rga_info *dst) {
+int NormalRgaNNQuantizeMode(struct rga_req *msg, rga_info_t *dst) {
     if (dst->nn.nn_flag == 1) {
         msg->alpha_rop_flag |= (dst->nn.nn_flag << 8);
 
@@ -881,7 +881,7 @@ int NormalRgaFullColorSpaceConvert(struct rga_req *msg, int color_space_mode) {
 }
 
 
-int NormalRgaDitherMode(struct rga_req *msg, rga_info *dst, int format)
+int NormalRgaDitherMode(struct rga_req *msg, rga_info_t *dst, int format)
 {
     if (dst->dither.enable == 1)
     {
@@ -1102,7 +1102,7 @@ static inline void NormalRgaCompatModeConvertRga2FullCsc(rga2_full_csc_t *csc, f
     NormalRgaCompatModeConvertRga2FullCscCoe(&csc->coe_v, &orig_csc->coe_v);
 }
 
-void NormalRgaCompatModeConvertRga2(rga2_req *req, rga_req *orig_req) {
+void NormalRgaCompatModeConvertRga2(struct rga2_req *req, struct rga_req *orig_req) {
     req->render_mode = orig_req->render_mode;
 
     NormalRgaCompatModeConvertRga2ImgeInfo(&req->src, &orig_req->src);
