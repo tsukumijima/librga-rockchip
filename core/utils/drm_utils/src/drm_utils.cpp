@@ -16,14 +16,26 @@
  * limitations under the License.
  */
 
-#include <unordered_map>
-#include <stdint.h>
-#include "drm_fourcc.h"
-
 #include "rga.h"
 #include "im2d_type.h"
 
-const static std::unordered_map<uint32_t, uint32_t> drm_fourcc_table = {
+#include "drm_fourcc.h"
+#include "drm_utils/drm_utils.h"
+
+#ifdef __cplusplus
+#include <unordered_map>
+
+typedef std::unordered_map<uint32_t, uint32_t> rga_drm_fourcc_map_t;
+#else
+struct drm_fourcc_format {
+    uint32_t drm_format;
+    uint32_t rga_format;
+};
+
+typedef struct drm_fourcc_format rga_drm_fourcc_map_t[];
+#endif /* #ifdef __cplusplus */
+
+const static rga_drm_fourcc_map_t drm_fourcc_table = {
     { DRM_FORMAT_RGBA8888, RK_FORMAT_ABGR_8888 },
     { DRM_FORMAT_BGRA8888, RK_FORMAT_ARGB_8888 },
     { DRM_FORMAT_ARGB8888, RK_FORMAT_BGRA_8888 },
@@ -81,11 +93,22 @@ const static std::unordered_map<uint32_t, uint32_t> drm_fourcc_table = {
 };
 
 uint32_t get_format_from_drm_fourcc(uint32_t drm_fourcc) {
+#ifdef __cplusplus
     auto entry = drm_fourcc_table.find(drm_fourcc);
     if (entry == drm_fourcc_table.end())
         return RK_FORMAT_UNKNOWN;
 
     return entry->second;
+#else
+    int i;
+
+    for (i = 0; i < sizeof(drm_fourcc_table) / sizeof(drm_fourcc_table[0]); i++) {
+        if (drm_fourcc_table[i].drm_format == drm_fourcc)
+            return drm_fourcc_table[i].rga_format;
+    }
+
+    return RK_FORMAT_UNKNOWN;
+#endif /* #ifdef __cplusplus */
 }
 
 int get_mode_from_drm_modifier(uint64_t modifier) {

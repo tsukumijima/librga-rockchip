@@ -16,19 +16,32 @@
  * limitations under the License.
  */
 
-#include <unordered_map>
-#include <set>
-#include <stdint.h>
-
 #include "rga.h"
 #include "im2d_type.h"
-
-#ifdef ANDROID
 
 #include "system/graphics.h"
 #include "hardware/hardware_rockchip.h"
 
-const static std::unordered_map<uint32_t, uint32_t> android_hal_table = {
+#include "android_utils/android_utils.h"
+
+#ifdef __cplusplus
+#include <unordered_map>
+#include <set>
+
+typedef std::unordered_map<uint32_t, uint32_t> rga_android_hal_map_t ;
+typedef std::set<int> rga_android_hal_set_t;
+#else
+
+struct android_hal_format {
+    uint32_t android_format;
+    uint32_t rga_format;
+};
+
+typedef struct android_hal_format rga_android_hal_map_t[];
+typedef int rga_android_hal_set_t[];
+#endif /* #ifdef __cplusplus */
+
+const static rga_android_hal_map_t android_hal_table = {
     // { , RK_FORMAT_ABGR_8888 },
     // { , RK_FORMAT_ARGB_8888 },
     { HAL_PIXEL_FORMAT_BGRA_8888, RK_FORMAT_BGRA_8888 },
@@ -103,30 +116,46 @@ const static std::unordered_map<uint32_t, uint32_t> android_hal_table = {
 
 };
 
-const static std::set<int> android_hal_rfbc_table({
+const static rga_android_hal_set_t android_hal_rfbc_table = {
     HAL_PIXEL_FORMAT_YUV420_8BIT_RFBC,
     HAL_PIXEL_FORMAT_YUV422_8BIT_RFBC,
     HAL_PIXEL_FORMAT_YUV444_8BIT_RFBC,
     HAL_PIXEL_FORMAT_YUV420_10BIT_RFBC,
     HAL_PIXEL_FORMAT_YUV422_10BIT_RFBC,
     HAL_PIXEL_FORMAT_YUV444_10BIT_RFBC,
-});
-#else
-const static std::unordered_map<uint32_t, uint32_t> android_hal_table;
-const static std::set<int> android_hal_rfbc_table;
-#endif
+};
 
 uint32_t get_format_from_android_hal(uint32_t android_hal_format) {
+#ifdef __cplusplus
     auto entry = android_hal_table.find(android_hal_format);
     if (entry == android_hal_table.end())
         return RK_FORMAT_UNKNOWN;
 
     return entry->second;
+#else
+    int i;
+
+    for (i = 0; i < sizeof(android_hal_table) / sizeof(android_hal_table[0]); i++) {
+        if (android_hal_table[i].android_format == android_hal_format)
+            return android_hal_table[i].rga_format;
+    }
+
+    return RK_FORMAT_UNKNOWN;
+#endif
 }
 
 int get_mode_from_android_hal(uint32_t android_hal_format) {
+#ifdef __cplusplus
     if (android_hal_rfbc_table.count(android_hal_format))
         return IM_RKFBC64x4_MODE;
+#else
+    int i;
+
+    for (i = 0; i < sizeof(android_hal_rfbc_table) / sizeof(android_hal_rfbc_table[0]); i++) {
+        if (android_hal_rfbc_table[i] == android_hal_format)
+            return IM_RKFBC64x4_MODE;
+    }
+#endif
 
     return IM_RASTER_MODE;
 }
