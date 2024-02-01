@@ -54,17 +54,14 @@ set(IM2D_SRCS
     core/utils/android_utils/src/android_utils.cpp
     core/utils/drm_utils/src/drm_utils.cpp
     core/utils/utils.cpp
-    core/RockchipRga.cpp
-    core/GrallocOps.cpp
-    core/NormalRga.cpp
     core/NormalRgaApi.cpp
     core/RgaUtils.cpp
-    core/RgaApi.cpp
     core/rga_sync.cpp
     im2d_api/src/im2d_log.cpp
     im2d_api/src/im2d_debugger.cpp
     im2d_api/src/im2d_impl.cpp
-    im2d_api/src/im2d.cpp)
+    im2d_api/src/im2d.cpp
+)
 
 set(IM2D_INCLUDE
     ./
@@ -77,7 +74,8 @@ set(IM2D_INCLUDE
     ./core/3rdparty/android_hal
     hardware/libhardware/modules/gralloc
     system/core/liblog/includeNDROID_NDK_REVISION_REGEX
-    system/core/libion/kernel-headers)
+    system/core/libion/kernel-headers
+)
 
 set(IM2D_PUBLIC_HEADER
     im2d_api/im2d_version.h
@@ -89,16 +87,39 @@ set(IM2D_PUBLIC_HEADER
     im2d_api/im2d_mpi.h
     im2d_api/im2d_expand.h
     im2d_api/im2d.h
-    im2d_api/im2d.hpp
-    include/drmrga.h
     include/rga.h
-    include/RgaApi.h
-    include/RockchipRga.h
     include/RgaUtils.h
-    include/RgaSingleton.h
-    include/RgaMutex.h
-    include/GrallocOps.h
 )
+
+if (RGA_SOURCE_CODE_TYPE STREQUAL c)
+    set_source_files_properties(${IM2D_SRCS} PROPERTIES LANGUAGE C COMPILE_FLAGS "-x c")
+else()
+    set(IM2D_SRCS
+        ${IM2D_SRCS}
+        core/RockchipRga.cpp
+        core/GrallocOps.cpp
+        core/NormalRga.cpp
+        core/RgaApi.cpp
+    )
+
+    set(IM2D_INCLUDE
+        ${IM2D_INCLUDE}
+        hardware/libhardware/modules/gralloc
+        system/core/liblog/includeNDROID_NDK_REVISION_REGEX
+        system/core/libion/kernel-headers
+    )
+
+    set(IM2D_PUBLIC_HEADER
+        ${IM2D_PUBLIC_HEADER}
+        im2d_api/im2d.hpp
+        include/drmrga.h
+        include/RgaApi.h
+        include/RockchipRga.h
+        include/RgaSingleton.h
+        include/RgaMutex.h
+        include/GrallocOps.h
+    )
+endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_EXT} -DUN_NEED_GL")
 
@@ -153,8 +174,9 @@ install(TARGETS  ${STATIC_LIB_NAME}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # build im2d api demo
-add_subdirectory(samples/im2d_api_demo)
-#add_subdirectory(samples)
+if (NOT RGA_SOURCE_CODE_TYPE STREQUAL c)
+    add_subdirectory(samples/im2d_api_demo)
+endif()
 
 if (DEFINED RGA_ENABLE_INSTALL_SAMPLES)
 install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_PREFIX})
