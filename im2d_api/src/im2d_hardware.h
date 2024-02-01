@@ -151,7 +151,7 @@ typedef struct {
     struct rga_version_t minimum;
 } rga_version_bind_table_entry_t;
 
-const rga_info_table_entry hw_info_table[] = {
+static const rga_info_table_entry hw_info_table[] = {
     { IM_RGA_HW_VERSION_RGA_V_ERR       ,    0,    0, 0, 0, 0,   0, 0, 0, {0} },
     {   IM_RGA_HW_VERSION_RGA_1         , 8192, 2048, 4, 8, 1,
                                         /* input format */
@@ -368,7 +368,7 @@ const rga_info_table_entry hw_info_table[] = {
  *   current = librga version.
  *   minimum = support minimum driver version.
  */
-const rga_version_bind_table_entry_t user_driver_bind_table[] = {
+static const rga_version_bind_table_entry_t user_driver_bind_table[] = {
     { { 0, 0, 0, "0.0.0" }, {0, 0, 0, "0.0.0" } },
     { { 1, 0, 3, "1.0.3" }, {0, 0, 0, "0.0.0" } },
     { { 1, 6, 0, "1.6.0" }, {1, 1, 5, "1.1.5" } },
@@ -382,7 +382,7 @@ const rga_version_bind_table_entry_t user_driver_bind_table[] = {
  *   current = librga version.
  *   minimum = support minimum librga header version.
  */
-const rga_version_bind_table_entry_t user_header_bind_table[] = {
+static const rga_version_bind_table_entry_t user_header_bind_table[] = {
     { { 0, 0, 0, "0.0.0" }, { 0, 0, 0, "0.0.0" } },
     { { 1, 0, 3, "1.0.3" }, { 1, 0, 3, "1.0.3" } },
     { { 1, 4, 0, "1.4.0" }, { 1, 4, 0, "1.4.0" } },

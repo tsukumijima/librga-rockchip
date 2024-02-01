@@ -27,11 +27,11 @@
 #include <string.h>
 #include <errno.h>
 
-#include "RockchipRga.h"
-
 #include "im2d_debugger.h"
 #include "im2d_impl.h"
 #include "im2d_log.h"
+
+#include "RgaUtils.h"
 
 const char *string_rd_mode(uint32_t mode) {
     switch (mode) {

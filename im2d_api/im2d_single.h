@@ -471,11 +471,11 @@ IM_API IM_STATUS immakeBorder(rga_buffer_t src, rga_buffer_t dst,
                               int border_type, int value = 0,
                               int sync = 1, int acquir_fence_fd = -1, int *release_fence_fd = NULL);
 
-#endif /* #ifdef __cplusplus */
-
 IM_C_API IM_STATUS immosaic(const rga_buffer_t image, im_rect rect, int mosaic_mode, int sync);
 IM_C_API IM_STATUS imosd(const rga_buffer_t osd,const rga_buffer_t dst,
                          const im_rect osd_rect, im_osd_t *osd_config, int sync);
+#endif /* #ifdef __cplusplus */
+
 IM_C_API IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
                              im_rect srect, im_rect drect, im_rect prect, int usage);
 

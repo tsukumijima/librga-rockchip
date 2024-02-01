@@ -24,6 +24,7 @@
 #endif
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
@@ -57,7 +58,9 @@ using namespace android;
 
 extern struct rgaContext *rgaCtx;
 
+#ifdef __cplusplus
 struct im2d_job_manager g_im2d_job_manager;
+#endif
 __thread im_context_t g_im2d_context;
 
 IM_API static IM_STATUS rga_get_context(void) {
@@ -125,7 +128,7 @@ int rga_version_compare(struct rga_version_t version1, struct rga_version_t vers
  *
  * @returns if return value >= 0, then index is found, otherwise, the query fails.
  */
-int rga_version_table_get_current_index(rga_version_t &version, const rga_version_bind_table_entry_t *table, int table_size) {
+int rga_version_table_get_current_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size) {
     int index = -1;
 
     for (int i = (table_size - 1); i >= 0; i--) {
@@ -152,7 +155,7 @@ int rga_version_table_get_current_index(rga_version_t &version, const rga_versio
  *
  * @returns if return value >= 0, then index is found, otherwise, the query fails.
  */
-int rga_version_table_get_minimum_index(rga_version_t &version, const rga_version_bind_table_entry_t *table, int table_size) {
+int rga_version_table_get_minimum_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size) {
     int index = -1;
 
     for (int i = (table_size - 1); i >= 0; i--) {
@@ -182,7 +185,7 @@ int rga_version_table_get_minimum_index(rga_version_t &version, const rga_versio
  *   return value = 0, within range.
  *   return value < 0, below range.
  */
-int rga_version_table_check_minimum_range(rga_version_t &version,
+int rga_version_table_check_minimum_range(struct rga_version_t version,
                                           const rga_version_bind_table_entry_t *table,
                                           int table_size, int index) {
     if (rga_version_compare(version, table[index].minimum) >= 0) {
@@ -198,28 +201,28 @@ int rga_version_table_check_minimum_range(rga_version_t &version,
     }
 }
 
-static IM_STATUS rga_version_get_current_index_failed_default(rga_version_t &current, rga_version_t &minimum) {
+static IM_STATUS rga_version_get_current_index_failed_default(struct rga_version_t current, struct rga_version_t minimum) {
     UNUSED(current);
     UNUSED(minimum);
 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_minimum_index_failed_default(rga_version_t &current, rga_version_t &minimum) {
+static IM_STATUS rga_version_get_minimum_index_failed_default(struct rga_version_t current, struct rga_version_t minimum) {
     UNUSED(current);
     UNUSED(minimum);
 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_witnin_minimun_range_default(rga_version_t &current, rga_version_t &minimum) {
+static IM_STATUS rga_version_witnin_minimun_range_default(struct rga_version_t current, struct rga_version_t minimum) {
     UNUSED(current);
     UNUSED(minimum);
 
     return IM_STATUS_SUCCESS;
 }
 
-static IM_STATUS rga_version_above_minimun_range_default(rga_version_t &current, rga_version_t &minimum, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_above_minimun_range_default(struct rga_version_t current, struct rga_version_t minimum, const rga_version_bind_table_entry_t *least_version_table) {
     UNUSED(current);
     UNUSED(minimum);
     UNUSED(least_version_table);
@@ -227,7 +230,7 @@ static IM_STATUS rga_version_above_minimun_range_default(rga_version_t &current,
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_below_minimun_range_default(rga_version_t &current, rga_version_t &minimum, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_below_minimun_range_default(struct rga_version_t current, struct rga_version_t minimum, const rga_version_bind_table_entry_t *least_version_table) {
     UNUSED(current);
     UNUSED(minimum);
     UNUSED(least_version_table);
@@ -235,7 +238,7 @@ static IM_STATUS rga_version_below_minimun_range_default(rga_version_t &current,
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_current_index_failed_user_header(rga_version_t &user_version, rga_version_t &header_version) {
+static IM_STATUS rga_version_get_current_index_failed_user_header(struct rga_version_t user_version, struct rga_version_t header_version) {
     IM_LOGE("Failed to get the version binding table of librga, "
             "current version: librga: %s, header: %s",
             user_version.str, header_version.str);
@@ -243,7 +246,7 @@ static IM_STATUS rga_version_get_current_index_failed_user_header(rga_version_t 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_minimum_index_failed_user_header(rga_version_t &user_version, rga_version_t &header_version) {
+static IM_STATUS rga_version_get_minimum_index_failed_user_header(struct rga_version_t user_version, struct rga_version_t header_version) {
     IM_LOGE("Failed to get the version binding table of header file, "
             "current version: librga: %s, header: %s",
             user_version.str, header_version.str);
@@ -251,7 +254,7 @@ static IM_STATUS rga_version_get_minimum_index_failed_user_header(rga_version_t 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_above_minimun_range_user_header(rga_version_t &user_version, rga_version_t &header_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_above_minimun_range_user_header(struct rga_version_t user_version, struct rga_version_t header_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The current referenced header_version is %s, but the running librga's version(%s) is too old, "
             "The librga must to be updated to version %s at least. "
             "You can try to update the SDK or update librga.so and header files "
@@ -262,7 +265,7 @@ static IM_STATUS rga_version_above_minimun_range_user_header(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_below_minimun_range_user_header(rga_version_t &user_version, rga_version_t &header_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_below_minimun_range_user_header(struct rga_version_t user_version, struct rga_version_t header_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The current librga.so's verison is %s, but the referenced header_version(%s) is too old, "
             "it is recommended to update the librga's header_version to %s and above."
             "You can try to update the SDK or update librga.so and header files "
@@ -273,7 +276,7 @@ static IM_STATUS rga_version_below_minimun_range_user_header(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_current_index_faile_user_driver(rga_version_t &user_version, rga_version_t &driver_version) {
+static IM_STATUS rga_version_get_current_index_faile_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version) {
     IM_LOGE("Failed to get the version binding table of librga, "
             "current version: librga: %s, driver: %s",
             user_version.str, driver_version.str);
@@ -281,7 +284,7 @@ static IM_STATUS rga_version_get_current_index_faile_user_driver(rga_version_t &
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_minimum_index_failed_user_driver(rga_version_t &user_version, rga_version_t &driver_version) {
+static IM_STATUS rga_version_get_minimum_index_failed_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version) {
     IM_LOGE("Failed to get the version binding table of rga_driver, "
             "current version: librga: %s, driver: %s",
             user_version.str, driver_version.str);
@@ -289,7 +292,7 @@ static IM_STATUS rga_version_get_minimum_index_failed_user_driver(rga_version_t 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_above_minimun_range_user_driver(rga_version_t &user_version, rga_version_t &driver_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_above_minimun_range_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The librga must to be updated to version %s at least. "
             "You can try to update the SDK or update librga.so and header files "
             "through github(https://github.com/airockchip/librga/). "
@@ -300,7 +303,7 @@ static IM_STATUS rga_version_above_minimun_range_user_driver(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_below_minimun_range_user_driver(rga_version_t &user_version, rga_version_t &driver_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_below_minimun_range_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The driver may be compatible, "
             "but it is best to update the driver to version %s. "
             "You can try to update the SDK or update the "
@@ -312,23 +315,23 @@ static IM_STATUS rga_version_below_minimun_range_user_driver(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static const rga_version_check_ops_t rga_version_check_user_header_ops {
-    .get_current_index_failed = rga_version_get_current_index_failed_user_header,
-    .get_minimum_index_failed = rga_version_get_minimum_index_failed_user_header,
-    .witnin_minimun_range = rga_version_witnin_minimun_range_default,
-    .above_minimun_range = rga_version_above_minimun_range_user_header,
-    .below_minimun_range = rga_version_below_minimun_range_user_header,
+static const rga_version_check_ops_t rga_version_check_user_header_ops = {
+    rga_version_get_current_index_failed_user_header,
+    rga_version_get_minimum_index_failed_user_header,
+    rga_version_witnin_minimun_range_default,
+    rga_version_above_minimun_range_user_header,
+    rga_version_below_minimun_range_user_header,
 };
 
-static const rga_version_check_ops_t rga_version_check_user_driver_ops {
-    .get_current_index_failed = rga_version_get_current_index_faile_user_driver,
-    .get_minimum_index_failed = rga_version_get_minimum_index_failed_user_driver,
-    .witnin_minimun_range = rga_version_witnin_minimun_range_default,
-    .above_minimun_range = rga_version_above_minimun_range_user_driver,
-    .below_minimun_range = rga_version_below_minimun_range_user_driver,
+static const rga_version_check_ops_t rga_version_check_user_driver_ops = {
+    rga_version_get_current_index_faile_user_driver,
+    rga_version_get_minimum_index_failed_user_driver,
+    rga_version_witnin_minimun_range_default,
+    rga_version_above_minimun_range_user_driver,
+    rga_version_below_minimun_range_user_driver,
 };
 
-static int rga_version_check(rga_version_t &current_version, rga_version_t &minimum_version,
+static int rga_version_check(struct rga_version_t current_version, struct rga_version_t minimum_version,
                              const rga_version_bind_table_entry_t *table, int table_size,
                              const rga_version_check_ops_t *ops) {
     int ret;
@@ -414,70 +417,25 @@ void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
         memset(opt, 0, sizeof(*opt));
 }
 
-IM_STATUS rga_set_buffer_info(rga_buffer_t dst, rga_info_t* dstinfo) {
-    if(NULL == dstinfo) {
-        IM_LOGE("Invaild dstinfo, dst structure address is NULL!");
+IM_STATUS static rga_set_buffer_info(const char *name, rga_buffer_t image, rga_info_t* info) {
+    if(!info) {
+        IM_LOGE("Invaild rga_info_t, %s structure address is NULL!", name);
         return IM_STATUS_INVALID_PARAM;
     }
 
-    if (dst.handle > 0) {
-        dstinfo->handle = dst.handle;
-    } else if(dst.phy_addr != NULL) {
-        dstinfo->phyAddr= dst.phy_addr;
-    } else if(dst.fd > 0) {
-        dstinfo->fd = dst.fd;
-        dstinfo->mmuFlag = 1;
-    } else if(dst.vir_addr != NULL) {
-        dstinfo->virAddr = dst.vir_addr;
-        dstinfo->mmuFlag = 1;
+    if (image.handle > 0) {
+        info->handle = image.handle;
+    } else if(image.phy_addr != NULL) {
+        info->phyAddr= image.phy_addr;
+    } else if(image.fd > 0) {
+        info->fd = image.fd;
+        info->mmuFlag = 1;
+    } else if(image.vir_addr != NULL) {
+        info->virAddr = image.vir_addr;
+        info->mmuFlag = 1;
     } else {
-        IM_LOGE("Invaild dst buffer, no address available in dst buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
-                (unsigned long)dst.phy_addr, dst.fd, (unsigned long)dst.vir_addr, dst.handle);
-        return IM_STATUS_INVALID_PARAM;
-    }
-
-    return IM_STATUS_SUCCESS;
-}
-
-IM_STATUS rga_set_buffer_info(const rga_buffer_t src, rga_buffer_t dst, rga_info_t* srcinfo, rga_info_t* dstinfo) {
-    if(NULL == srcinfo) {
-        IM_LOGE("Invaild srcinfo, src structure address is NULL.");
-        return IM_STATUS_INVALID_PARAM;
-    }
-    if(NULL == dstinfo) {
-        IM_LOGE("Invaild dstinfo, dst structure address is NULL.");
-        return IM_STATUS_INVALID_PARAM;
-    }
-
-    if (src.handle > 0) {
-        srcinfo->handle = src.handle;
-    } else if(src.phy_addr != NULL) {
-        srcinfo->phyAddr = src.phy_addr;
-    } else if(src.fd > 0) {
-        srcinfo->fd = src.fd;
-        srcinfo->mmuFlag = 1;
-    } else if(src.vir_addr != NULL) {
-        srcinfo->virAddr = src.vir_addr;
-        srcinfo->mmuFlag = 1;
-    } else {
-        IM_LOGE("Invaild src buffer, no address available in src buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
-                (unsigned long)src.phy_addr, src.fd, (unsigned long)src.vir_addr, src.handle);
-        return IM_STATUS_INVALID_PARAM;
-    }
-
-    if (dst.handle > 0) {
-        dstinfo->handle = dst.handle;
-    } else if(dst.phy_addr != NULL) {
-        dstinfo->phyAddr= dst.phy_addr;
-    } else if(dst.fd > 0) {
-        dstinfo->fd = dst.fd;
-        dstinfo->mmuFlag = 1;
-    } else if(dst.vir_addr != NULL) {
-        dstinfo->virAddr = dst.vir_addr;
-        dstinfo->mmuFlag = 1;
-    } else {
-        IM_LOGE("Invaild dst buffer, no address available in dst buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
-                (unsigned long)dst.phy_addr, dst.fd, (unsigned long)dst.vir_addr, dst.handle);
+        IM_LOGE("Invaild %s image buffer, no address available in buffer buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
+                name, (unsigned long)image.phy_addr, image.fd, (unsigned long)image.vir_addr, image.handle);
         return IM_STATUS_INVALID_PARAM;
     }
 
@@ -705,10 +663,10 @@ TRY_TO_COMPATIBLE:
     return IM_STATUS_SUCCESS;
 }
 
-IM_STATUS rga_check_header(rga_version_t header_version) {
+IM_STATUS rga_check_header(struct rga_version_t header_version) {
     int ret;
     int table_size = sizeof(user_header_bind_table) / sizeof(rga_version_bind_table_entry_t);
-    rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
+    struct rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
 
     ret = rga_version_check(user_version, header_version,
                             user_header_bind_table, table_size,
@@ -723,10 +681,10 @@ IM_STATUS rga_check_header(rga_version_t header_version) {
     }
 }
 
-IM_STATUS rga_check_driver(rga_version_t &driver_version) {
+IM_STATUS rga_check_driver(struct rga_version_t driver_version) {
     int ret;
     int table_size = sizeof(user_driver_bind_table) / sizeof(rga_version_bind_table_entry_t);
-    rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
+    struct rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
 
     ret =  rga_version_check(user_version, driver_version,
                              user_driver_bind_table, table_size,
@@ -1139,7 +1097,7 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     return IM_STATUS_NOERROR;
 }
 
-IM_STATUS rga_check_rotate(int mode_usage, rga_info_table_entry &table) {
+IM_STATUS rga_check_rotate(int mode_usage, rga_info_table_entry table) {
     if (table.version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
         if (mode_usage & IM_HAL_TRANSFORM_FLIP_H_V) {
             IM_LOGW("RGA1/RGA1_PLUS cannot support H_V mirror.");
@@ -1387,7 +1345,7 @@ IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, uint32_t
     return buffers[0].handle;
 }
 
-IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, im_handle_param_t *param) {
+IM_API rga_buffer_handle_t rga_import_buffer_param(uint64_t memory, int type, im_handle_param_t *param) {
     int format;
     struct rga_buffer_pool buffer_pool;
     struct rga_external_buffer buffers[1];
@@ -1477,10 +1435,10 @@ IM_STATUS rga_get_opt(im_opt_t *opt, void *ptr) {
     return IM_STATUS_SUCCESS;
 }
 
-static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
-                                 im_rect srect, im_rect drect, im_rect prect,
-                                 int acquire_fence_fd, int *release_fence_fd,
-                                 im_opt_t *opt_ptr, int usage) {
+IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
+                          im_rect srect, im_rect drect, im_rect prect,
+                          int acquire_fence_fd, int *release_fence_fd,
+                          im_opt_t *opt_ptr, int usage) {
     int ret;
     int format;
     rga_info_t srcinfo;
@@ -1506,10 +1464,12 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     memset(&dstinfo, 0, sizeof(rga_info_t));
     memset(&patinfo, 0, sizeof(rga_info_t));
 
-    if (usage & IM_COLOR_FILL)
-        ret = rga_set_buffer_info(dst, &dstinfo);
-    else
-        ret = rga_set_buffer_info(src, dst, &srcinfo, &dstinfo);
+    if (usage & IM_COLOR_FILL) {
+        ret = rga_set_buffer_info("dst", dst, &dstinfo);
+    } else {
+        ret = rga_set_buffer_info("src", src, &srcinfo);
+        ret = rga_set_buffer_info("dst", dst, &dstinfo);
+    }
 
     if (ret <= 0)
         return (IM_STATUS)ret;
@@ -1537,7 +1497,7 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     if (((usage & IM_COLOR_PALETTE) || (usage & IM_ALPHA_BLEND_MASK)) &&
         rga_is_buffer_valid(pat)) {
 
-        ret = rga_set_buffer_info(pat, &patinfo);
+        ret = rga_set_buffer_info("src1/pat", pat, &patinfo);
         if (ret <= 0)
             return (IM_STATUS)ret;
 
@@ -2073,11 +2033,7 @@ IM_STATUS rga_single_task_submit(rga_buffer_t src, rga_buffer_t dst, rga_buffer_
     return rga_task_submit(0, src, dst, pat, srect, drect, prect, acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 }
 
-IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
-                          im_rect srect, im_rect drect, im_rect prect, im_opt_t *opt_ptr, int usage) {
-    return rga_task_submit(job_handle, src, dst, pat, srect, drect, prect, 0, NULL, opt_ptr, usage);
-}
-
+#ifdef __cplusplus
 im_job_handle_t rga_job_create(uint32_t flags) {
     int ret;
     im_job_handle_t job_handle;
@@ -2277,3 +2233,20 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
 
     return IM_STATUS_SUCCESS;
 }
+#else
+im_job_handle_t rga_job_create(uint32_t flags) {
+    return 0;
+}
+
+IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
+    return IM_STATUS_FAILED;
+}
+
+IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
+    return IM_STATUS_FAILED;
+}
+
+IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
+    return IM_STATUS_FAILED;
+}
+#endif

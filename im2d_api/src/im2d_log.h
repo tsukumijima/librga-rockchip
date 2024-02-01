@@ -50,6 +50,8 @@ size_t rga_get_current_time_ms(void);
 size_t rga_get_start_time_ms(void);
 
 #ifdef ANDROID
+#include <android/log.h>
+
 #define IM_LOG(level, ...) \
     do { \
         if (!((level) & IM_LOG_FORCE)) \
