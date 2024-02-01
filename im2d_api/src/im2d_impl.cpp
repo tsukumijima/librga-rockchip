@@ -1067,9 +1067,9 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     pat_fmt = pat.format;
     dst_fmt = dst.format;
 
-    src_isRGB = NormalRgaIsRgbFormat(src_fmt);
-    pat_isRGB = NormalRgaIsRgbFormat(pat_fmt);
-    dst_isRGB = NormalRgaIsRgbFormat(dst_fmt);
+    src_isRGB = is_rga_format(src_fmt);
+    pat_isRGB = is_rga_format(pat_fmt);
+    dst_isRGB = is_rga_format(dst_fmt);
 
     /* bg format check */
     if (rga_is_buffer_valid(pat)) {
@@ -1748,9 +1748,9 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
     /* special config for color space convert */
     if ((dst.color_space_mode & IM_YUV_TO_RGB_MASK) && (dst.color_space_mode & IM_RGB_TO_YUV_MASK)) {
         if (rga_is_buffer_valid(pat) &&
-            NormalRgaIsYuvFormat(src.format) &&
-            NormalRgaIsRgbFormat(pat.format) &&
-            NormalRgaIsYuvFormat(dst.format)) {
+            is_yuv_format(src.format) &&
+            is_rgb_format(pat.format) &&
+            is_yuv_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
         } else {
             IM_LOGW("Not yuv + rgb -> yuv does not need for color_sapce_mode R2Y & Y2R, please fix, "
@@ -1762,12 +1762,12 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
         }
     } else if (dst.color_space_mode & (IM_YUV_TO_RGB_MASK)) {
         if (rga_is_buffer_valid(pat) &&
-            NormalRgaIsYuvFormat(src.format) &&
-            NormalRgaIsRgbFormat(pat.format) &&
-            NormalRgaIsRgbFormat(dst.format)) {
+            is_yuv_format(src.format) &&
+            is_rgb_format(pat.format) &&
+            is_rgb_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
-        } else if (NormalRgaIsYuvFormat(src.format) &&
-                   NormalRgaIsRgbFormat(dst.format)) {
+        } else if (is_yuv_format(src.format) &&
+                   is_rgb_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
         } else {
             IM_LOGW("Not yuv to rgb does not need for color_sapce_mode, please fix, "
@@ -1779,12 +1779,12 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
         }
     } else if (dst.color_space_mode & (IM_RGB_TO_YUV_MASK)) {
         if (rga_is_buffer_valid(pat) &&
-            NormalRgaIsRgbFormat(src.format) &&
-            NormalRgaIsRgbFormat(pat.format) &&
-            NormalRgaIsYuvFormat(dst.format)) {
+            is_rgb_format(src.format) &&
+            is_rgb_format(pat.format) &&
+            is_yuv_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
-        } else if (NormalRgaIsRgbFormat(src.format) &&
-                   NormalRgaIsYuvFormat(dst.format)) {
+        } else if (is_rgb_format(src.format) &&
+                   is_yuv_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
         } else {
             IM_LOGW("Not rgb to yuv does not need for color_sapce_mode, please fix, "
@@ -1798,17 +1798,17 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
                dst.color_space_mode & IM_FULL_CSC_MASK) {
         /* Get default color space */
         if (src.color_space_mode == IM_COLOR_SPACE_DEFAULT) {
-            if  (NormalRgaIsRgbFormat(src.format)) {
+            if  (is_rgb_format(src.format)) {
                 src.color_space_mode = IM_RGB_FULL;
-            } else if (NormalRgaIsYuvFormat(src.format)) {
+            } else if (is_yuv_format(src.format)) {
                 src.color_space_mode = IM_YUV_BT601_LIMIT_RANGE;
             }
         }
 
         if (dst.color_space_mode == IM_COLOR_SPACE_DEFAULT) {
-            if  (NormalRgaIsRgbFormat(dst.format)) {
+            if  (is_rgb_format(dst.format)) {
                 dst.color_space_mode = IM_RGB_FULL;
-            } else if (NormalRgaIsYuvFormat(dst.format)) {
+            } else if (is_yuv_format(dst.format)) {
                 dst.color_space_mode = IM_YUV_BT601_LIMIT_RANGE;
             }
         }

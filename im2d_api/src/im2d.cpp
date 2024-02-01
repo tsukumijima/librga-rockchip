@@ -890,7 +890,7 @@ IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx, d
             return IM_STATUS_NOT_SUPPORTED;
         }
 
-        if(NormalRgaIsYuvFormat(format)) {
+        if(is_yuv_format(format)) {
             int width = dst.width;
             int height = dst.height;
             dst.width = DOWN_ALIGN(dst.width, 2);
@@ -1604,7 +1604,7 @@ IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle, const rga_buffer_t src
             return IM_STATUS_NOT_SUPPORTED;
         }
 
-        if(NormalRgaIsYuvFormat(format)) {
+        if(is_yuv_format(format)) {
             int width = dst.width;
             int height = dst.height;
             dst.width = DOWN_ALIGN(dst.width, 2);
