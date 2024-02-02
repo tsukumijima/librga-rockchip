@@ -34,6 +34,7 @@
 #include "im2d_log.h"
 #include "im2d_hardware.h"
 #include "im2d_debugger.h"
+#include "im2d_context.h"
 
 #include "RockchipRga.h"
 #include "core/NormalRga.h"
@@ -56,25 +57,10 @@ using namespace android;
     })
 #define GET_LCM(n1, n2, gcd) (((n1) * (n2)) / gcd)
 
-extern struct rgaContext *rgaCtx;
-
 #ifdef __cplusplus
 struct im2d_job_manager g_im2d_job_manager;
 #endif
 __thread im_context_t g_im2d_context;
-
-IM_API static IM_STATUS rga_get_context(void) {
-    if (rgaCtx == NULL) {
-        RockchipRga& rkRga(RockchipRga::get());
-        if (rgaCtx == NULL) {
-            IM_LOGE("The current RockchipRga singleton is destroyed. "
-                    "Please check if RkRgaInit/RkRgaDeInit are called, if so, please disable them.");
-            return IM_STATUS_FAILED;
-        }
-    }
-
-    return IM_STATUS_SUCCESS;
-}
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
     if (dst_table == NULL || merge_table == NULL) {
@@ -446,25 +432,31 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
     int ret;
     int  rga_version = 0;
     rga_info_table_entry merge_table;
+    rga_session_t *session;
+    struct rga_hw_versions_t *version;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get librga session!\n");
+        return IM_STATUS_FAILED;
+    }
+
+    version = &session->core_version;
 
     memset(&merge_table, 0x0, sizeof(merge_table));
 
-    for (uint32_t i = 0; i < rgaCtx->mHwVersions.size; i++) {
-        if (rgaCtx->mHwVersions.version[i].major == 2 &&
-            rgaCtx->mHwVersions.version[i].minor == 0) {
-            if (rgaCtx->mHwVersions.version[i].revision == 0) {
+    for (uint32_t i = 0; i < version->size; i++) {
+        if (version->version[i].major == 2 &&
+            version->version[i].minor == 0) {
+            if (version->version[i].revision == 0) {
                 rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
                 memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
             } else {
                 goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0) {
+            switch (version->version[i].revision) {
                 case 0x16445 :
                     // RK3288
                     rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
@@ -483,9 +475,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 2) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 2) {
+            switch (version->version[i].revision) {
                 case 0x18218 :
                     // RK3399
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -511,9 +503,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 3) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 3) {
+            switch (version->version[i].revision) {
                 case 0x87975:
                     // RV1106
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -534,9 +526,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 6) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 6) {
+            switch (version->version[i].revision) {
                 case 0x92812:
                     // RK3562
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -557,9 +549,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
                 }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 7) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 7) {
+            switch (version->version[i].revision) {
                 case 0x93215:
                     // RK3528
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -580,9 +572,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0xe) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0xe) {
+            switch (version->version[i].revision) {
                 case 0x19357:
                     // RK3576
                     rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
@@ -591,9 +583,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 4 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 4 &&
+                   version->version[i].minor == 0) {
+            switch (version->version[i].revision) {
                 case 0x18632 :
                     // RK3366/RK3368
                     rga_version = IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX;
@@ -613,9 +605,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 42 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0) {
-            if (rgaCtx->mHwVersions.version[i].revision == 0x17760) {
+        } else if (version->version[i].major == 42 &&
+                   version->version[i].minor == 0) {
+            if (version->version[i].revision == 0x17760) {
                 // RK3228
                 rga_version = IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX;
                 memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
@@ -632,22 +624,22 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
     return IM_STATUS_SUCCESS;
 
 TRY_TO_COMPATIBLE:
-    if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "1.3", 3) == 0)
+    if (strncmp((char *)version->version[0].str, "1.3", 3) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_1_INDEX;
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "1.6", 3) == 0)
+    else if (strncmp((char *)version->version[0].str, "1.6", 3) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_1_PLUS_INDEX;
     /*3288 vesion is 2.00*/
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "2.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "2.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
     /*3288w version is 3.00*/
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "3.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "3.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "3.02", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "3.02", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "4.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "4.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX;
     /*The version number of lite1 cannot be obtained temporarily.*/
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "4.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "4.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX;
     else
         rga_version = IM_RGA_HW_VERSION_RGA_V_ERR_INDEX;
@@ -656,7 +648,7 @@ TRY_TO_COMPATIBLE:
 
     if (rga_version == IM_RGA_HW_VERSION_RGA_V_ERR_INDEX) {
         IM_LOGE("Can not get the correct RGA version, please check the driver, version=%s\n",
-                rgaCtx->mHwVersions.version[0].str);
+                version->version[0].str);
         return IM_STATUS_FAILED;
     }
 
@@ -1306,17 +1298,20 @@ IM_STATUS rga_check_external(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pa
 
 IM_API IM_STATUS rga_import_buffers(struct rga_buffer_pool *buffer_pool) {
     int ret = 0;
+    rga_session_t *session;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get librga session!\n");
+        return IM_STATUS_FAILED;
+    }
 
     if (buffer_pool == NULL) {
         IM_LOGW("buffer pool is null!");
         return IM_STATUS_FAILED;
     }
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_IMPORT_BUFFER, buffer_pool);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_IMPORT_BUFFER, buffer_pool);
     if (ret < 0) {
         IM_LOGW("RGA_IOC_IMPORT_BUFFER fail! %s", strerror(errno));
         return IM_STATUS_FAILED;
@@ -1374,17 +1369,20 @@ IM_API rga_buffer_handle_t rga_import_buffer_param(uint64_t memory, int type, im
 
 IM_API IM_STATUS rga_release_buffers(struct rga_buffer_pool *buffer_pool) {
     int ret = 0;
+    rga_session_t *session;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get rga session!\n");
+        return IM_STATUS_FAILED;
+    }
 
     if (buffer_pool == NULL) {
         IM_LOGW("buffer pool is null!");
         return IM_STATUS_FAILED;
     }
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_RELEASE_BUFFER, buffer_pool);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_RELEASE_BUFFER, buffer_pool);
     if (ret < 0) {
         IM_LOGW("RGA_IOC_RELEASE_BUFFER fail! %s", strerror(errno));
         return IM_STATUS_FAILED;
@@ -1447,12 +1445,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
 
     im_opt_t opt;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
-
-    is_debug_log();
-    if (is_out_log())
+    get_debug_state();
+    if (is_debug_en())
         rga_dump_info(IM_LOG_DEBUG | IM_LOG_FORCE,
                       job_handle, &src, &dst, &pat, &srect, &drect, &prect,
                       acquire_fence_fd, release_fence_fd, opt_ptr, usage);
@@ -2038,11 +2032,15 @@ im_job_handle_t rga_job_create(uint32_t flags) {
     int ret;
     im_job_handle_t job_handle;
     im_rga_job_t *job = NULL;
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get librga session!\n");
         return IM_STATUS_FAILED;
+    }
 
-    if (ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_CREATE, &flags) < 0) {
+    if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CREATE, &flags) < 0) {
         IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;
     }
@@ -2084,9 +2082,13 @@ error_cancel_job:
 
 IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
     im_rga_job_t *job = NULL;
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get librga session!\n");
         return IM_STATUS_FAILED;
+    }
 
     g_im2d_job_manager.mutex.lock();
 
@@ -2102,7 +2104,7 @@ IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
 
     g_im2d_job_manager.mutex.unlock();
 
-    if (ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_CANCEL, &job_handle) < 0) {
+    if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CANCEL, &job_handle) < 0) {
         IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;
     }
@@ -2114,9 +2116,13 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
     int ret;
     im_rga_job_t *job = NULL;
     struct rga_user_request submit_request = {0};
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get librga session!\n");
         return IM_STATUS_FAILED;
+    }
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2157,7 +2163,7 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
     submit_request.id = job->id;
     submit_request.acquire_fence_fd = acquire_fence_fd;
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_SUBMIT, &submit_request);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_SUBMIT, &submit_request);
     if (ret < 0) {
         IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         ret = IM_STATUS_FAILED;
@@ -2179,9 +2185,13 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
     int ret;
     im_rga_job_t *job = NULL;
     struct rga_user_request config_request;
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
+    session = get_rga_session();
+    if (session == NULL) {
+        IM_LOGE("cannot get librga session!\n");
         return IM_STATUS_FAILED;
+    }
 
     g_im2d_job_manager.mutex.lock();
 
@@ -2222,7 +2232,7 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
 
     config_request.acquire_fence_fd = acquire_fence_fd;
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_CONFIG, &config_request);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CONFIG, &config_request);
     if (ret < 0) {
         IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;

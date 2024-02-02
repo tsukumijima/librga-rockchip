@@ -59,6 +59,7 @@ set(IM2D_SRCS
     core/rga_sync.cpp
     im2d_api/src/im2d_log.cpp
     im2d_api/src/im2d_debugger.cpp
+    im2d_api/src/im2d_context.cpp
     im2d_api/src/im2d_impl.cpp
     im2d_api/src/im2d.cpp
 )

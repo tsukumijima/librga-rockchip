@@ -20,24 +20,13 @@
 #define _rockchip_normal_rga_context_h_
 
 #include "rga_ioctl.h"
+#include "src/im2d_context.h"
 
 #ifndef ANDROID
 #define ALOGI(...) { printf(__VA_ARGS__); printf("\n"); }
 #define ALOGD(...) { printf(__VA_ARGS__); printf("\n"); }
 #define ALOGE(...) { printf(__VA_ARGS__); printf("\n"); }
 #endif
-
-typedef enum {
-    RGA_DRIVER_IOC_UNKONW = 0,
-    RGA_DRIVER_IOC_RGA2,
-    RGA_DRIVER_IOC_MULTI_RGA,
-
-    RGA_DRIVER_IOC_DEFAULT = RGA_DRIVER_IOC_MULTI_RGA,
-} RGA_DRIVER_IOC_TYPE;
-
-typedef enum {
-    RGA_DRIVER_FEATURE_USER_CLOSE_FENCE = 1,
-} RGA_DRIVER_FEATURE;
 
 struct rgaContext {
     int rgaFd;

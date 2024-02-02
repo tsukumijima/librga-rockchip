@@ -47,6 +47,7 @@ cc_library_shared {
         "core/rga_sync.cpp",
         "im2d_api/src/im2d_log.cpp",
         "im2d_api/src/im2d_debugger.cpp",
+        "im2d_api/src/im2d_context.cpp",
         "im2d_api/src/im2d_impl.cpp",
         "im2d_api/src/im2d.cpp",
     ],
@@ -55,6 +56,7 @@ cc_library_shared {
         "im2d_api",
     ],
     include_dirs: [
+        "hardware/rockchip/librga/core",
         "hardware/rockchip/librga/core/hardware",
         "hardware/rockchip/librga/core/utils",
         "hardware/rockchip/librga/core/3rdparty/libdrm/include/drm",
