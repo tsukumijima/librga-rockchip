@@ -31,9 +31,9 @@
 #include <sys/mman.h>
 #include <linux/stddef.h>
 
+#include "utils/utils.h"
 #include "RgaUtils.h"
-#include "RockchipRga.h"
-#include "core/NormalRga.h"
+#include "rga.h"
 
 struct format_table_entry {
     int format;
@@ -113,7 +113,7 @@ const struct format_table_entry format_table[] = {
 };
 
 const char *translate_format_str(int format) {
-    format = RkRgaGetRgaFormat(format);
+    format = convert_to_rga_format(format);
 
     for (size_t i = 0; i < sizeof(format_table) / sizeof(format_table[0]); i++)
         if (format_table[i].format == format)
@@ -143,36 +143,7 @@ int get_string_by_format(char *value, int format) {
 float get_bpp_from_format(int format) {
     float bpp = 0;
 
-#ifdef LINUX
-    if (!(format & 0xFF00 || format == 0)) {
-        format = RkRgaCompatibleFormat(format);
-    }
-#endif
-
-    switch (format) {
-#ifdef ANDROID
-        case HAL_PIXEL_FORMAT_RGB_565:
-            bpp = 2;
-            break;
-        case HAL_PIXEL_FORMAT_RGB_888:
-            bpp = 3;
-            break;
-        case HAL_PIXEL_FORMAT_RGBA_8888:
-        case HAL_PIXEL_FORMAT_RGBX_8888:
-        case HAL_PIXEL_FORMAT_BGRA_8888:
-            bpp = 4;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-        case HAL_PIXEL_FORMAT_YCrCb_NV12:
-        case HAL_PIXEL_FORMAT_YCrCb_NV12_VIDEO:
-            bpp = 1.5;
-            break;
-        case HAL_PIXEL_FORMAT_YCrCb_NV12_10:
-            /*RK encoder requires alignment of odd multiples of 256.*/
-            /*Here bpp=2 guarantee to read complete data.*/
-            bpp = 2;
-            break;
-#endif
+    switch (convert_to_rga_format(format)) {
         case RK_FORMAT_RGBA2BPP:
             return 0.25;
         case RK_FORMAT_Y4:
@@ -253,28 +224,7 @@ float get_bpp_from_format(int format) {
 }
 
 int get_perPixel_stride_from_format(int format) {
-    #ifdef LINUX
-    if (!(format & 0xFF00 || format == 0)) {
-        format = RkRgaCompatibleFormat(format);
-    }
-#endif
-
-    switch (format) {
-#ifdef ANDROID
-        case HAL_PIXEL_FORMAT_RGB_565:
-            return (2 * 8);
-        case HAL_PIXEL_FORMAT_RGB_888:
-            return (3 * 8);
-        case HAL_PIXEL_FORMAT_RGBA_8888:
-        case HAL_PIXEL_FORMAT_RGBX_8888:
-        case HAL_PIXEL_FORMAT_BGRA_8888:
-            return  (4 * 8);
-        case HAL_PIXEL_FORMAT_YCrCb_420_SP:
-        case HAL_PIXEL_FORMAT_YCrCb_NV12:
-            return  (1 * 8);
-        case HAL_PIXEL_FORMAT_YCrCb_NV12_10:
-            return  (1 * 10);
-#endif
+    switch (convert_to_rga_format(format)) {
         case RK_FORMAT_RGBA2BPP:
             return 2;
         case RK_FORMAT_Y4:
