@@ -14,4 +14,4 @@ target_include_directories(utils_obj
         ${CMAKE_CURRENT_LIST_DIR}/include
 )
 
-target_link_libraries(utils_obj dl)
+target_link_libraries(utils_obj INTERFACE dl)
