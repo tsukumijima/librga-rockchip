@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.12)
+
 add_library(utils_obj OBJECT "")
 
 SET(THIRD_PARTY_PATH ${CMAKE_CURRENT_LIST_DIR}/3rdparty)
