@@ -331,6 +331,11 @@ IM_API rga_buffer_t wrapbuffer_AHardwareBuffer(AHardwareBuffer *buf) {
 #endif
 #endif
 
+void imsetAlphaBit(rga_buffer_t *buf, uint8_t alpha0, uint8_t alpha1) {
+    buf->alpha_bit.alpha0 = alpha0;
+    buf->alpha_bit.alpha1 = alpha1;
+}
+
 void imsetOpacity(rga_buffer_t *buf, uint8_t alpha) {
     buf->global_alpha = alpha;
 }

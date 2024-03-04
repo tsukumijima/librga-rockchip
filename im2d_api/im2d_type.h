@@ -87,6 +87,7 @@ typedef enum {
     IM_MOSAIC                   = 1 << 27,
     IM_OSD                      = 1 << 28,
     IM_PRE_INTR                 = 1 << 29,
+    IM_ALPHA_BIT_CONFIG         = 1 << 30,
 } IM_USAGE;
 
 typedef enum {
@@ -312,7 +313,13 @@ typedef struct {
     int format;                         /* format */
 
     int color_space_mode;               /* color_space_mode */
-    int global_alpha;                   /* global_alpha, the default should be 0xff */
+    union {
+        int global_alpha;               /* global_alpha, the default should be 0xff */
+        struct {
+            uint16_t alpha0;
+            uint16_t alpha1;
+        } alpha_bit;                    /* alpha bit(e.g. RGBA5551), 0: alpha0, 1: alpha1 */
+    };
     int rd_mode;
 
     /* legacy */

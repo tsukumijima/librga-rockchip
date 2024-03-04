@@ -1712,6 +1712,15 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
             IM_LOGE("rga_im2d: Could not find rotate/flip usage : 0x%x \n", usage);
     }
 
+    /* set 5551 Alpha bit */
+    if ((usage & IM_ALPHA_BIT_CONFIG) &&
+        (pat.format == RK_FORMAT_RGBA_5551 || pat.format == RK_FORMAT_BGRA_5551 ||
+         pat.format == RK_FORMAT_ARGB_5551 || pat.format == RK_FORMAT_ABGR_5551)) {
+        srcinfo.rgba5551_flags = 1;
+        srcinfo.rgba5551_alpha0 = pat.alpha_bit.alpha0;
+        srcinfo.rgba5551_alpha1 = pat.alpha_bit.alpha1;
+    }
+
     /* Blend */
     if (usage & IM_ALPHA_BLEND_MASK) {
         switch(usage & IM_ALPHA_BLEND_MASK) {

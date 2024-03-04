@@ -403,6 +403,12 @@ struct rga_interp {
     uint8_t verti:4;
 };
 
+struct rga_rgba5551_alpha {
+    uint16_t flags;
+    uint8_t alpha0;
+    uint8_t alpha1;
+};
+
 struct rga_req {
     uint8_t render_mode;                  /* (enum) process mode sel */
 
@@ -508,7 +514,9 @@ struct rga_req {
 
     struct rga_csc_clip full_csc_clip;
 
-    uint8_t reservr[43];
+    struct rga_rgba5551_alpha rgba5551_alpha;
+
+    uint8_t reservr[39];
 };
 
 struct rga_user_request {

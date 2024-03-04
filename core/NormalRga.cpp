@@ -1438,6 +1438,13 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
         NormalRgaLogOutRgaReq(rgaReg);
     }
 
+    /* RGBA5551 alpha control */
+    if (src->rgba5551_flags == 1) {
+        rgaReg.rgba5551_alpha.flags = src->rgba5551_flags;
+        rgaReg.rgba5551_alpha.alpha0 = src->rgba5551_alpha0;
+        rgaReg.rgba5551_alpha.alpha1 = src->rgba5551_alpha1;
+    }
+
     if(src->sync_mode == RGA_BLIT_ASYNC || dst->sync_mode == RGA_BLIT_ASYNC) {
         sync_mode = RGA_BLIT_ASYNC;
     }
