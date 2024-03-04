@@ -120,7 +120,7 @@ RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
             return 0;
 
         ret = RgaInit(&mContext);
-        if(ret == 0)
+        if(ret >= 0)
             mSupportRga = true;
         else
             mSupportRga = false;
