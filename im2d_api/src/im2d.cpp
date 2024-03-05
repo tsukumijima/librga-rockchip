@@ -1561,7 +1561,9 @@ IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle, const rga_buffer_t src
             }
         }
     }
-    UNUSED(interpolation);
+
+    opt.version = RGA_CURRENT_API_VERSION;
+    opt.interp = interpolation;
 
     return improcessTask(job_handle, src, dst, pat, srect, drect, prect, &opt, usage);
 }
