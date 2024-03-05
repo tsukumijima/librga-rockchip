@@ -406,10 +406,12 @@ IM_API const char* querystring(int name) {
         "YUV422_p_10bit ",
         "YUYV420 ",
         "YUYV422 ",
-        "YUV400/Y4 ",
-        "RGB2BPP",
-        "ALPHA-8bit",
+        "YUV400 ",
+        "Y4 ",
+        "RGB2BPP ",
+        "ALPHA-8bit ",
         "YUV444_sp_8bit ",
+        "Y8 ",
     };
     const char *feature[] = {
         "unknown ",
@@ -569,6 +571,16 @@ IM_API const char* querystring(int name) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_Y4)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_Y8)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
                 if(!(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_MASK))
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 out << endl;
@@ -604,6 +616,16 @@ IM_API const char* querystring(int name) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_Y4)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_Y8)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
                 if(!(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_MASK))
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 out << endl;
