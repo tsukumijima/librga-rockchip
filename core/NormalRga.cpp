@@ -872,12 +872,17 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
         }
     }
 
-    if ((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) ||
-        (hScale > 1.0f && interp.horiz == RGA_INTERP_LINEAR)) {
-        if (hScale < 1.0f || vScale < 1.0f) {
+    if (((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) ||
+         (hScale > 1.0f && interp.horiz == RGA_INTERP_LINEAR)) &&
+        (hScale < 1.0f || vScale < 1.0f)) {
             ALOGE("when using bilinear scaling for downsizing, it does not support scaling up in other directions.");
             return -EINVAL;
-        }
+    }
+
+    if ((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) &&
+        relDstRect.width > 4096) {
+        ALOGE("bi-linear scale-down only supports vertical direction smaller than 4096.");
+        return -EINVAL;
     }
 
     if(is_out_log())
