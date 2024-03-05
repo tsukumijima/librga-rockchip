@@ -92,11 +92,14 @@ typedef enum {
 
 typedef enum {
     IM_RASTER_MODE              = 1 << 0,
-    IM_FBC_MODE                 = 1 << 1,
-    IM_TILE_MODE                = 1 << 2,
+    IM_AFBC16x16_MODE           = 1 << 1,
+    IM_TILE8x8_MODE             = 1 << 2,
     IM_TILE4x4_MODE             = 1 << 3,
     IM_RKFBC64x4_MODE           = 1 << 4,
     IM_AFBC32x8_MODE            = 1 << 5,
+    /* legacy */
+    IM_FBC_MODE                 = IM_AFBC16x16_MODE,
+    IM_TILE_MODE                = IM_TILE8x8_MODE,
 } IM_RD_MODE;
 
 typedef enum {
