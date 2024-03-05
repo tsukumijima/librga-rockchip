@@ -393,7 +393,8 @@ IM_API const char* querystring(int name) {
     };
     const char *output_format[] = {
         "unknown",
-        "RGBA_8888 RGB_888 RGB_565 ",
+        "RGBA/ARGB_8888 RGB_888 RGB_565 ",
+        "ARGB_4444 ARGB_5551 ",
         "RGBA_4444 RGBA_5551 ",
         "BPP8 BPP4 BPP2 BPP1 ",
         "YUV420_sp_8bit ",
@@ -545,8 +546,10 @@ IM_API const char* querystring(int name) {
                 out << output_name[name];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER)
-                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
@@ -590,8 +593,10 @@ IM_API const char* querystring(int name) {
                 out << output_name[name];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER)
-                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
