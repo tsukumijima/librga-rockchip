@@ -428,6 +428,7 @@ IM_API const char* querystring(int name) {
         "mosaic ",
         "OSD ",
         "early_interruption ",
+        "alpha_bit_map ",
     };
     const char *performance[] = {
         "unknown",
@@ -662,6 +663,8 @@ IM_API const char* querystring(int name) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_OSD_INDEX];
                 if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_PRE_INTR)
                     out << feature[IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX];
+                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)
+                    out << feature[IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX];
                 out << endl;
                 break;
 

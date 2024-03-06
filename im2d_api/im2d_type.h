@@ -87,7 +87,7 @@ typedef enum {
     IM_MOSAIC                   = 1 << 27,
     IM_OSD                      = 1 << 28,
     IM_PRE_INTR                 = 1 << 29,
-    IM_ALPHA_BIT_CONFIG         = 1 << 30,
+    IM_ALPHA_BIT_MAP            = 1 << 30,
 } IM_USAGE;
 
 typedef enum {

@@ -1259,6 +1259,12 @@ IM_STATUS rga_check_feature(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst
         return IM_STATUS_NOT_SUPPORTED;
     }
 
+    if ((mode_usage & IM_ALPHA_BIT_MAP) && (~feature_usage & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)) {
+        IM_LOGW("The platform does not support alpha-bit map featrue. \n%s",
+                querystring(RGA_FEATURE));
+        return IM_STATUS_NOT_SUPPORTED;
+    }
+
     return IM_STATUS_NOERROR;
 }
 
@@ -1719,7 +1725,7 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     }
 
     /* set 5551 Alpha bit */
-    if ((usage & IM_ALPHA_BIT_CONFIG) &&
+    if ((usage & IM_ALPHA_BIT_MAP) &&
         (pat.format == RK_FORMAT_RGBA_5551 || pat.format == RK_FORMAT_BGRA_5551 ||
          pat.format == RK_FORMAT_ARGB_5551 || pat.format == RK_FORMAT_ABGR_5551)) {
         srcinfo.rgba5551_flags = 1;

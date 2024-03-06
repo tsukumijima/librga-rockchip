@@ -143,7 +143,7 @@ int main() {
 
     imsetAlphaBit(&bg_img, 0x20, 0xe0);
 
-    usage = IM_SYNC | IM_ALPHA_BLEND_DST_OVER | IM_ALPHA_BLEND_PRE_MUL | IM_ALPHA_BIT_CONFIG;
+    usage = IM_SYNC | IM_ALPHA_BLEND_DST_OVER | IM_ALPHA_BLEND_PRE_MUL | IM_ALPHA_BIT_MAP;
 
     ret = imcheck_composite(fg_img, output_img, bg_img, fg_rect, output_rect, bg_rect, usage);
     if (IM_STATUS_NOERROR != ret) {

@@ -111,6 +111,7 @@ typedef enum {
     IM_RGA_SUPPORT_FEATURE_MOSAIC_INDEX,
     IM_RGA_SUPPORT_FEATURE_OSD_INDEX,
     IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX,
+    IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX,
     IM_RGA_SUPPORT_FEATURE_MASK_INDEX,
 } IM_RGA_SUPPORT_FEATURE_INDEX;
 
@@ -128,6 +129,7 @@ typedef enum {
     IM_RGA_SUPPORT_FEATURE_MOSAIC         = 1 << IM_RGA_SUPPORT_FEATURE_MOSAIC_INDEX,
     IM_RGA_SUPPORT_FEATURE_OSD            = 1 << IM_RGA_SUPPORT_FEATURE_OSD_INDEX,
     IM_RGA_SUPPORT_FEATURE_PRE_INTR       = 1 << IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX,
+    IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP  = 1 << IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX,
     IM_RGA_SUPPORT_FEATURE_MASK           = ~((~(unsigned int)0x0 << IM_RGA_SUPPORT_FEATURE_MASK_INDEX) | 1),
 } IM_RGA_SUPPORT_FEATURE;
 
@@ -333,7 +335,8 @@ const rga_info_table_entry hw_info_table[] = {
                                         IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC |
                                         IM_RGA_SUPPORT_FEATURE_MOSAIC |
                                         IM_RGA_SUPPORT_FEATURE_OSD |
-                                        IM_RGA_SUPPORT_FEATURE_PRE_INTR,
+                                        IM_RGA_SUPPORT_FEATURE_PRE_INTR |
+                                        IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP,
                                         /* reserved */
                                         {0} },
     { IM_RGA_HW_VERSION_RGA_3           , 8176, 8128, 16, 8,  4,
