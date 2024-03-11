@@ -28,7 +28,8 @@
 #define IM2D_SLT_BUFFER_CACHEABLE       0   /* Enable buffer cache. Only support GraphicBuffer. */
 #define IM2D_SLT_BUFFER_PHY_EN          0   /* Enable physical memory. Only support drm buffer.*/
 
-#define IM2D_SLT_TEST_RGA2_EN           1   /* Enable rga2 case. */
+#define IM2D_SLT_TEST_RGA2_0_EN         1   /* Enable rga2_core0 case. */
+#define IM2D_SLT_TEST_RGA2_1_EN         0   /* Enable rga2_core1 case. */
 #define IM2D_SLT_TEST_RGA3_0_EN         0   /* Enable rga3_core0 case. */
 #define IM2D_SLT_TEST_RGA3_1_EN         0   /* Enable rga3_core1 case. */
 #define IM2D_SLT_TEST_RGA3_0_FBC_EN     0   /* Enable rga3_core0 fbc_mode case. */

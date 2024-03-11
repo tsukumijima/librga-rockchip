@@ -523,10 +523,10 @@ int main() {
     data[pthread_num].priority = 1;
 #endif
 
-#if IM2D_SLT_TEST_RGA2_EN
+#if IM2D_SLT_TEST_RGA2_0_EN
     pthread_num++;
     data[pthread_num].id = pthread_num;
-    data[pthread_num].name = "RGA2";
+    data[pthread_num].name = "RGA2_core0";
     data[pthread_num].mode = IM2D_SLT_WHILE_EN;
     data[pthread_num].num = IM2D_SLT_WHILE_NUM;
     data[pthread_num].width = IM2D_SLT_DEFAULT_WIDTH;
@@ -534,6 +534,20 @@ int main() {
     data[pthread_num].format = IM2D_SLT_DEFAULT_FORMAT;
     data[pthread_num].rd_mode = IM_RASTER_MODE;
     data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
+    data[pthread_num].priority = 1;
+#endif
+
+#if IM2D_SLT_TEST_RGA2_1_EN
+    pthread_num++;
+    data[pthread_num].id = pthread_num;
+    data[pthread_num].name = "RGA2_core1";
+    data[pthread_num].mode = IM2D_SLT_WHILE_EN;
+    data[pthread_num].num = IM2D_SLT_WHILE_NUM;
+    data[pthread_num].width = IM2D_SLT_DEFAULT_WIDTH;
+    data[pthread_num].height = IM2D_SLT_DEFAULT_HEIGHT;
+    data[pthread_num].format = IM2D_SLT_DEFAULT_FORMAT;
+    data[pthread_num].rd_mode = IM_RASTER_MODE;
+    data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
     data[pthread_num].priority = 1;
 #endif
 
@@ -546,7 +560,7 @@ int main() {
     data[pthread_num].width = IM2D_SLT_DEFAULT_WIDTH;
     data[pthread_num].height = IM2D_SLT_DEFAULT_HEIGHT;
     data[pthread_num].format = IM2D_SLT_DEFAULT_FORMAT;
-    data[pthread_num].rd_mode = IM_FBC_MODE;
+    data[pthread_num].rd_mode = IM_AFBC16x16_MODE;
     data[pthread_num].core = IM_SCHEDULER_RGA3_CORE0;
     data[pthread_num].priority = 1;
 #endif
@@ -560,7 +574,7 @@ int main() {
     data[pthread_num].width = IM2D_SLT_DEFAULT_WIDTH;
     data[pthread_num].height = IM2D_SLT_DEFAULT_HEIGHT;
     data[pthread_num].format = IM2D_SLT_DEFAULT_FORMAT;
-    data[pthread_num].rd_mode = IM_FBC_MODE;
+    data[pthread_num].rd_mode = IM_AFBC16x16_MODE;
     data[pthread_num].core = IM_SCHEDULER_RGA3_CORE1;
     data[pthread_num].priority = 1;
 #endif
