@@ -32,8 +32,8 @@ out%dw%d-h%d-%s.bin
 - FBC mode
 
 ```
-in%dw%d-h%d-%s-afbc.bin
-out%dw%d-h%d-%s-afbc.bin
+in%dw%d-h%d-%s-fbc.bin
+out%dw%d-h%d-%s-fbc.bin
 
 示例：
 1280×720 RGBA8888的输入图像： in0w1280-h720-rgba8888-afbc.bin
@@ -60,27 +60,68 @@ out%dw%d-h%d-%s-afbc.bin
 
 在工具编译前，可以通过修改 slt_config.h 配置测试工具，该文件配置可以参考chip_config中的template进行替换使用。
 
-| 配置                         | 说明                                                         |
-| :--------------------------- | :----------------------------------------------------------- |
-| IM2D_SLT_THREAD_EN           | 使能该配置后，将使能多线程模式，每个case都单独在一个线程运行。 |
-| IM2D_SLT_THREAD_MAX          | 多线程模式有效，配置最大的线程数量。                         |
-| IM2D_SLT_WHILE_EN            | 使能该配置后，将使能测试case循环模式。                       |
-| IM2D_SLT_WHILE_NUM           | 循环模式有效，测试case循环次数。                             |
-| IM2D_SLT_DRM_BUFFER_EN       | 使能该配置后，测试工具的内存分配器将选择DRM。                |
-| IM2D_SLT_GRAPHICBUFFER_EN    | 使能该配置后，测试工具的内存分配器将选择Gralloc。            |
-| IM2D_SLT_RK_DMA_HEAP_EN      | 使能该配置后，测试工具的内存分配器将选择rk_dma_deap。        |
-| IM2D_SLT_BUFFER_CACHEABLE    | 使能该配置后，测试工具将申请cacheable的内存。                |
-| IM2D_SLT_BUFFER_PHY_EN       | 使能该配置后，测试工具将申请使用物理地址。                   |
-| IM2D_SLT_TEST_RGA2_EN        | 使能该配置后，将使能RGA2 拷贝测试case。                      |
-| IM2D_SLT_TEST_RGA3_0_EN      | 使能该配置后，将使能RGA3 core0 拷贝测试case。                |
-| IM2D_SLT_TEST_RGA3_1_EN      | 使能该配置后，将使能RGA3 core1 拷贝测试case。                |
-| IM2D_SLT_TEST_RGA3_0_FBC_EN  | 使能该配置后，将使能RGA3 core0 FBC模式 拷贝测试case。        |
-| IM2D_SLT_TEST_RGA3_1_FBC_EN  | 使能该配置后，将使能RGA3 core1 FBC模式 拷贝测试case。        |
-| IM2D_SLT_DEFAULT_WIDTH       | 默认的图像宽。                                               |
-| IM2D_SLT_DEFAULT_HWIGHT      | 默认的图像高。                                               |
-| IM2D_SLT_DEFAULT_FORMAT      | 默认的图像格式。                                             |
-| IM2D_SLT_DEFAULT_INPUT_PATH  | 默认的输入图像路径                                           |
-| IM2D_SLT_DEFAULT_OUTPUT_PATH | 默认的输出图像路径                                           |
+> slt配置
+
+| 配置                | 说明                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| IM2D_SLT_THREAD_EN  | 使能该配置后，将使能多线程模式，每个case都单独在一个线程运行。 |
+| IM2D_SLT_THREAD_MAX | 多线程模式有效，配置最大的线程数量。                         |
+| IM2D_SLT_WHILE_EN   | 使能该配置后，将使能测试case循环模式。                       |
+| IM2D_SLT_WHILE_NUM  | 循环模式有效，测试case循环次数。                             |
+
+> raster-test配置
+
+| 配置                    | 说明                                          |
+| ----------------------- | --------------------------------------------- |
+| IM2D_SLT_TEST_RGA2_0_EN | 使能该配置后，将使能RGA2core0拷贝测试case。   |
+| IM2D_SLT_TEST_RGA2_0_EN | 使能该配置后，将使能RGA2core1拷贝测试case。   |
+| IM2D_SLT_TEST_RGA3_0_EN | 使能该配置后，将使能RGA3 core0 拷贝测试case。 |
+| IM2D_SLT_TEST_RGA3_1_EN | 使能该配置后，将使能RGA3 core1 拷贝测试case。 |
+
+> special-test配置
+
+| 配置                              | 说明                                                        |
+| --------------------------------- | ----------------------------------------------------------- |
+| IM2D_SLT_TEST_SPECIAL_EN          | 使能该配置后，将使能special-test。                          |
+| IM2D_SLT_TEST_RGA2_0_TILE_EN      | 使能该配置后，将使能RGA2 core0 TILE4x4模式 拷贝测试case。   |
+| IM2D_SLT_TEST_RGA2_0_AFBC32x8_EN  | 使能该配置后，将使能RGA2 core0 AFBC32x8模式 拷贝测试case。  |
+| IM2D_SLT_TEST_RGA2_0_RKFBC64x4_EN | 使能该配置后，将使能RGA2 core0 RKFBC64x4模式 拷贝测试case。 |
+| IM2D_SLT_TEST_RGA2_1_TILE_EN      | 使能该配置后，将使能RGA2 core1 TILE4x4模式 拷贝测试case。   |
+| IM2D_SLT_TEST_RGA2_1_AFBC32x8_EN  | 使能该配置后，将使能RGA2 core1 AFBC32x8模式 拷贝测试case。  |
+| IM2D_SLT_TEST_RGA2_1_RKFBC64x4_EN | 使能该配置后，将使能RGA2 core1 RKFBC64x4模式 拷贝测试case。 |
+| IM2D_SLT_TEST_RGA3_0_FBC_EN       | 使能该配置后，将使能RGA3 core0 FBC模式 拷贝测试case。       |
+| IM2D_SLT_TEST_RGA3_1_FBC_EN       | 使能该配置后，将使能RGA3 core1 FBC模式 拷贝测试case。       |
+
+> perf-test
+
+| 配置                  | 说明                            |
+| --------------------- | ------------------------------- |
+| IM2D_SLT_TEST_PERF_EN | 使能该配置后，将使能perf-test。 |
+
+> 环境配置
+
+| 配置                         | 说明                                                     |
+| :--------------------------- | :------------------------------------------------------- |
+| IM2D_SLT_DEFAULT_WIDTH       | 默认的图像宽。                                           |
+| IM2D_SLT_DEFAULT_HWIGHT      | 默认的图像高。                                           |
+| IM2D_SLT_DEFAULT_FORMAT      | 默认的图像格式。                                         |
+| IM2D_SLT_DMA_HEAP_PATH       | 默认的dma-buf heap路径。（用于分配slt需要使用的dma-buf） |
+| IM2D_SLT_DEFAULT_INPUT_PATH  | 默认的输入图像路径。                                     |
+| IM2D_SLT_DEFAULT_OUTPUT_PATH | 默认的输出图像路径。                                     |
+
+
+
+### golden获取
+
+#### 生成golden
+
+在RGA正常的环境下，通过配置golden相关配置，启动获取golden数据的运行模式，获取的golden数据将输出到对应配置的路径下。
+
+| 配置                                | 说明                                     |
+| ----------------------------------- | ---------------------------------------- |
+| IM2D_SLT_GENERATE_CRC               | 使能该配置后，运行模式切换为生成golden。 |
+| IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX | golden数据的可自定义前缀。               |
+| IM2D_SLT_DEFAULT_GOLDEN_PATH        | 默认的golden文件路径。                   |
 
 
 
@@ -135,14 +176,48 @@ mm
 ```
 :/ # im2d_slt
 -------------------------------------------------
-ID[1]: RGA3_core0 imcopy 1 time success!
-ID[1]: RGA3_core0 check buffer 1 time success!
-ID[1]: RGA3_core0 imcopy 2 time success!
-ID[1]: RGA3_core0 check buffer 2 time success!
-ID[1]: RGA3_core0 imcopy 3 time success!
-ID[1]: RGA3_core0 check buffer 3 time success!
-ID[1] RGA3_core0 run end!
+creat Sync pthread[0x7605a80cb0] = 1, id = 1
+creat Sync pthread[0x7604982cb0] = 2, id = 2
+ID[1]: RGA2_core0 running success!
+ID[2]: RGA2_core1 running success!
 -------------------------------------------------
-im2d api slt success!
+RGA raster-test success!
+-------------------------------------------------
+creat Sync pthread[0x7605a80cb0] = 1, id = 1
+creat Sync pthread[0x7605982cb0] = 2, id = 2
+creat Sync pthread[0x7604884cb0] = 3, id = 3
+creat Sync pthread[0x7603786cb0] = 4, id = 4
+creat Sync pthread[0x7602688cb0] = 5, id = 5
+creat Sync pthread[0x76013c7cb0] = 6, id = 6
+ID[6]: RGA2_core1_rkfbc64x4 running success!
+ID[3]: RGA2_core0_rkfbc64x4 running success!
+ID[2]: RGA2_core0_afbc32x8 running success!
+ID[5]: RGA2_core1_afbc32x8 running success!
+ID[4]: RGA2_core1_tile4x4 running success!
+ID[1]: RGA2_core0_tile4x4 running success!
+-------------------------------------------------
+RGA special-test success!
+-------------------------------------------------
+creat Sync pthread[0x7605a80cb0] = 1, id = 1
+creat Sync pthread[0x7605982cb0] = 2, id = 2
+creat Sync pthread[0x7604884cb0] = 3, id = 3
+creat Sync pthread[0x7602786cb0] = 4, id = 4
+creat Sync pthread[0x7601688cb0] = 5, id = 5
+creat Sync pthread[0x760158acb0] = 6, id = 6
+creat Sync pthread[0x7600108cb0] = 7, id = 7
+creat Sync pthread[0x75fe57ecb0] = 8, id = 8
+creat Sync pthread[0x75fdd78cb0] = 9, id = 9
+ID[1]: perf_test running success!
+ID[6]: perf_test running success!
+ID[3]: perf_test running success!
+ID[9]: perf_test running success!
+ID[2]: perf_test running success!
+ID[7]: perf_test running success!
+ID[5]: perf_test running success!
+ID[4]: perf_test running success!
+ID[8]: perf_test running success!
+-------------------------------------------------
+RGA perf-test success!
+-------------------------------------------------
 ```
 
