@@ -28,15 +28,10 @@
 #include <memory.h>
 #include <pthread.h>
 
-#if LIBDRM
-#include "drm_alloc.h"
-#include "xf86drm.h"
-#endif
-
-#include "RockchipRga.h"
-#include "im2d_api/im2d.hpp"
+#include "im2d.hpp"
 #include "RgaUtils.h"
 
+#include "utils.h"
 #include "dma_alloc.h"
 #include "drm_alloc.h"
 
