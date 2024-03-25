@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+#ifndef _IM2D_SLT_CRC_H_
+#define _IM2D_SLT_CRC_H_
+
 #include <stdint.h>
 
 #include "slt_config.h"
@@ -54,7 +57,10 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
     FILE* crc_file = NULL;
     char file_name[100];
 
-    sprintf(file_name,"%s/%s_%s.txt", IM2D_SLT_DEFAULT_GOLDEN_PATH, GENERATE_CRC_GOLDEN_PREFIX, prefix_name);
+    sprintf(file_name,"%s/%s_%s.txt",
+            IM2D_SLT_DEFAULT_GOLDEN_PATH,
+            IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX,
+            prefix_name);
     if(case_index == 0) {
         crc_file = fopen(file_name, "wb+");
         if(crc_file == NULL){
@@ -81,7 +87,10 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
     }
 
     /* golden */
-    sprintf(file_name,"%s/%s_%s.bin", IM2D_SLT_DEFAULT_GOLDEN_PATH, GENERATE_CRC_GOLDEN_PREFIX, prefix_name);
+    sprintf(file_name,"%s/%s_%s.bin",
+            IM2D_SLT_DEFAULT_GOLDEN_PATH,
+            IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX,
+            prefix_name);
     if(case_index == 0) {
         crc_file = fopen(file_name, "wb+");
         if(crc_file == NULL){
@@ -109,7 +118,10 @@ unsigned int * read_crcdata_from_file(const char *prefix_name) {
     unsigned int *golden_table = NULL;
     char file_name[100];
 
-    sprintf(file_name,"%s/%s_%s.bin", IM2D_SLT_DEFAULT_GOLDEN_PATH, GENERATE_CRC_GOLDEN_PREFIX, prefix_name);
+    sprintf(file_name,"%s/%s_%s.bin",
+            IM2D_SLT_DEFAULT_GOLDEN_PATH,
+            IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX,
+            prefix_name);
     golden_file = fopen(file_name,"rb");
     if (golden_file) {
         fseek(golden_file, 0, SEEK_END);
@@ -136,3 +148,5 @@ unsigned int * read_crcdata_from_file(const char *prefix_name) {
 inline int crc_check(int index, unsigned int crc_data, unsigned int *golden_table) {
     return crc_data != golden_table[index] ? false : true;
 }
+
+#endif /* #ifndef _IM2D_SLT_CRC_H_ */

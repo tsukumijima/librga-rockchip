@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+#ifndef _IM2D_SLT_CONFIG_H_
+#define _IM2D_SLT_CONFIG_H_
+
 /* im2d_slt config */
 #define IM2D_SLT_THREAD_EN                  1   /* Enable multi-threaded mode. */
 #define IM2D_SLT_THREAD_MAX                 10  /* Maximum number of threads. */
@@ -62,3 +65,5 @@
 #define IM2D_SLT_GENERATE_CRC               0
 #define IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX "crcdata"
 #define IM2D_SLT_DEFAULT_GOLDEN_PATH        "/data/rga_slt/golden"
+
+#endif /* #ifndef _IM2D_SLT_CONFIG_H_ */
