@@ -175,9 +175,8 @@ install(TARGETS  ${STATIC_LIB_NAME}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # build im2d api demo
-if (NOT RGA_SOURCE_CODE_TYPE STREQUAL c)
-    add_subdirectory(samples/im2d_api_demo)
-endif()
+add_subdirectory(samples/im2d_api_demo)
+#add_subdirectory(samples)
 
 if (DEFINED RGA_ENABLE_INSTALL_SAMPLES)
 install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_PREFIX})
