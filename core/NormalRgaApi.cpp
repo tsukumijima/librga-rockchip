@@ -641,7 +641,7 @@ int NormalRgaSetBitbltMode(struct rga_req *msg,
 
     alpha_mode = msg->alpha_rop_mode & 3;
     if(rotate_mode == BB_ROTATE) {
-        if (AA_en == ENABLE) {
+        if (AA_en == true) {
             if ((msg->alpha_rop_flag & 0x3) == 0x1) {
                 if (alpha_mode == 0) {
                     msg->alpha_rop_mode = 0x2;
