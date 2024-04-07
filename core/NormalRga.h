@@ -55,7 +55,6 @@ int         RgaCollorFill(rga_info_t *dst);
 int         RgaCollorPalette(rga_info_t *src, rga_info_t *dst, rga_info_t *lut);
 
 
-int         NormalRgaInitTables();
 int         NormalRgaScale();
 int         NormalRgaRoate();
 int         NormalRgaRoateScale();

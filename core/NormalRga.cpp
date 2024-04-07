@@ -133,8 +133,6 @@ int NormalRgaOpen(void **context) {
 
         rga_set_driver_feature(ctx);
 
-        NormalRgaInitTables();
-
         rgaCtx = ctx;
     } else {
         ctx = rgaCtx;
