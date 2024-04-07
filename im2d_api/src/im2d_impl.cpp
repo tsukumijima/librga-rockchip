@@ -2000,7 +2000,7 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
 
         dstinfo.sync_mode = RGA_BLIT_ASYNC;
 
-    } else if (usage & IM_SYNC) {
+    } else {
         dstinfo.sync_mode = RGA_BLIT_SYNC;
     }
 
