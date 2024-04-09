@@ -424,6 +424,7 @@ IM_API const char* querystring(int name) {
         "RGA_2_lite1 ",
         "RGA_2_Enhance ",
         "RGA_2_PRO ",
+        "RGA_2_lite2 ",
         "RGA_3 ",
     };
     const char *output_resolution[] = {
@@ -522,6 +523,8 @@ IM_API const char* querystring(int name) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX];
                     if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_PRO)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_PRO_INDEX];
+                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_LITE2)
+                        out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE2_INDEX];
                     if (rga_info.version & IM_RGA_HW_VERSION_RGA_3)
                         out << output_version[IM_RGA_HW_VERSION_RGA_3_INDEX];
                 }

@@ -584,6 +584,18 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0xf) {
+            switch (version->version[i].revision) {
+                case 0x23690:
+                    // RV1103B
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_LITE2_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
+
         } else if (version->version[i].major == 4 &&
                    version->version[i].minor == 0) {
             switch (version->version[i].revision) {
