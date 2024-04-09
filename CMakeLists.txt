@@ -16,9 +16,12 @@ if(NOT CMAKE_BUILD_TYPE)
         FORCE)
 endif()
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2 -pthread")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -pthread")
+
 if(CMAKE_BUILD_TARGET STREQUAL android_ndk)
     message("cmake build android ndk")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wno-error -DLOG_TAG=librga")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error -DLOG_TAG=librga")
     add_compile_options(-DLINUX)
     add_compile_options(-DANDROID_VNDK)
     string(REPLACE "-DANDROID" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -26,7 +29,6 @@ endif()
 
 if(CMAKE_BUILD_TARGET STREQUAL buildroot)
     message("cmake build buildroot")
-    set(CMAKE_CXX_FLAGS "-std=c++11 -O2 -pthread")
     add_compile_options(-DLINUX)
 endif()
 
@@ -34,7 +36,7 @@ if(CMAKE_BUILD_TARGET STREQUAL cmake_linux)
     message("RGA build with cmake")
     add_compile_options(-DLINUX)
     # TO support pass external CMAKE_CXX_FLAGS
-    set(CMAKE_CXX_FLAGS_EXT "-std=c++11 -O2 -pthread -fdata-sections -ffunction-sections -fno-exceptions -fno-rtti")
+    set(CMAKE_CXX_FLAGS_EXT "${CMAKE_CXX_FLAGS} -fdata-sections -ffunction-sections -fno-exceptions -fno-rtti")
 
     if (NOT DEFINED CMAKE_C_COMPILER)
         message(FATAL_ERROR "RGA: CMAKE_C_COMPILER not define")
@@ -43,7 +45,6 @@ if(CMAKE_BUILD_TARGET STREQUAL cmake_linux)
     if (NOT DEFINED CMAKE_CXX_COMPILER)
         message(FATAL_ERROR "RGA: CMAKE_CXX_COMPILER not define")
     endif()
-
 endif()
 
 if (BUILD_WITH_VERSION STREQUAL true)
