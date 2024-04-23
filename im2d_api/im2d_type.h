@@ -91,6 +91,7 @@ typedef enum {
     IM_OSD                      = 1 << 28,
     IM_PRE_INTR                 = 1 << 29,
     IM_ALPHA_BIT_MAP            = 1 << 30,
+    IM_GAUSS                    = 1 << 31,
 } IM_USAGE;
 
 typedef enum {
@@ -438,6 +439,20 @@ typedef struct im_intr_config {
     int write_step;
 } im_intr_config_t;
 
+typedef struct im_size {
+    int width;
+    int height;
+} im_size_t;
+
+typedef struct im_gauss {
+    im_size_t ksize;
+
+    double sigma_x;
+    double sigma_y;
+
+    double *matrix;
+} im_gauss_t;
+
 typedef struct im_opt {
     im_api_version_t version DEFAULT_INITIALIZER(RGA_CURRENT_API_HEADER_VERSION);
 
@@ -457,7 +472,9 @@ typedef struct im_opt {
 
     int interp;
 
-    char reserve[124];
+    im_gauss_t gauss_config;
+
+    char reserve[92];
 } im_opt_t;
 
 typedef struct im_handle_param {

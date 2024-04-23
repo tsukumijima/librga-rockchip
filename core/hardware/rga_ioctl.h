@@ -250,6 +250,11 @@ typedef struct rga_mosaic_info_ioctl {
     uint8_t mode;
 } rga_mosaic_info_t;
 
+typedef struct rga_gauss_config_ioctl {
+    uint32_t size;
+    uint64_t coe_ptr;
+} rga_gauss_config_t;
+
 typedef struct rga_pre_intr_info_ioctl {
     uint8_t enable;
 
@@ -516,7 +521,9 @@ struct rga_req {
 
     struct rga_rgba5551_alpha rgba5551_alpha;
 
-    uint8_t reservr[39];
+    rga_gauss_config_t gauss_config;
+
+    uint8_t reservr[27];
 };
 
 struct rga_user_request {

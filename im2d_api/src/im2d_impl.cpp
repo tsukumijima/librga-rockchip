@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <math.h>
 #include <sys/ioctl.h>
 
 #include "im2d.h"
@@ -1460,6 +1461,99 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
 int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst);
 int generate_color_palette_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst, rga_info_t *lut);
 
+void generate_gaussian_kernel(double sigma_x, double sigma_y, im_size_t ksize, double *kernel) {
+    int i, j;
+    double sum = 0.0;
+    double sX = 2.0 * sigma_x * sigma_x;
+    double sY = 2.0 * sigma_y * sigma_y;
+
+    /* Calculate the weight of the Gaussian kernel */
+    for (i = -ksize.height / 2; i <= ksize.height / 2; i++) {
+        for (j = -ksize.width / 2; j <= ksize.width / 2; j++) {
+            int index = (i + ksize.height / 2) * ksize.width + (j + ksize.width / 2);
+            double weightX = exp(-(j * j) / sX);
+            double weightY = exp(-(i * i) / sY);
+            kernel[index] = weightX * weightY / (M_PI * sigma_x * sigma_y);
+            sum += kernel[index];
+        }
+    }
+
+    /* normalized */
+    for (i = 0; i < ksize.width * ksize.height; i++) {
+        kernel[i] /= sum;
+    }
+}
+
+int get_gaussian_special_points(int rows, int cols, double *gauss_kernel, uint32_t *special_points, int factor, int center_factor) {
+    int i;
+    int index = 0;
+    int center_rows = rows / 2;
+    int center_cols = cols / 2;
+
+    /* get (0,x) */
+    for (i = 0; i <= center_rows; i++) {
+        special_points[index] = (gauss_kernel[0 + i] * factor) + 0.5;
+        index++;
+    }
+
+    /* get (x,center_rows) */
+    for (i = 1; i <= center_cols; i++) {
+        special_points[index] =
+            (gauss_kernel[i * rows + center_rows] * (i == center_cols ? center_factor : factor)) + 0.5;
+        index++;
+    }
+
+    return index;
+}
+
+IM_STATUS generate_gauss_coe(im_gauss_t *gauss, struct rga_gauss_config *config) {
+    double *kernel;
+    uint32_t *coe;
+    int factor, center_factor;
+
+    if (gauss->ksize.width != 3 ||
+        gauss->ksize.height != 3) {
+        IM_LOGW("Only supports 3x3 Gaussian blur, please modify ksize[%d, %d]\n",
+                gauss->ksize.width, gauss->ksize.height);
+        return IM_STATUS_NOT_SUPPORTED;
+    }
+
+    /* Calculate sigma */
+    if (gauss->sigma_x <= 0 && gauss->sigma_y > 0)
+        gauss->sigma_x = 0.3 * ((gauss->ksize.width - 1) * 0.5 - 1) + 0.8;
+
+    if (gauss->sigma_x <= 0 && gauss->sigma_y <= 0) {
+        gauss->sigma_x = 0.3 * ((gauss->ksize.width - 1) * 0.5 - 1) + 0.8;
+        gauss->sigma_y = 0.3 * ((gauss->ksize.height - 1) * 0.5 - 1) + 0.8;
+    }
+
+    if (gauss->sigma_y <= 0)
+        gauss->sigma_y = gauss->sigma_x;
+
+    /* generate guassian kernel */
+    if (gauss->matrix == NULL) {
+        kernel = (double *)malloc(gauss->ksize.width * gauss->ksize.height * sizeof(double));
+
+        generate_gaussian_kernel(gauss->sigma_x, gauss->sigma_y, gauss->ksize, kernel);
+    } else {
+        kernel = gauss->matrix;
+    }
+
+    factor = 0xff;
+    center_factor = 0xff;
+
+    config->size = (gauss->ksize.width + gauss->ksize.height) / 2;
+    coe = (uint32_t *)malloc(config->size * sizeof(uint32_t));
+    get_gaussian_special_points(gauss->ksize.width, gauss->ksize.height,
+                                kernel, coe, factor, center_factor);
+    config->coe_ptr = ptr_to_u64(coe);
+
+    if (gauss->matrix == NULL)
+        free(kernel);
+
+    return IM_STATUS_SUCCESS;
+}
+
 IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
                           im_rect srect, im_rect drect, im_rect prect,
                           int acquire_fence_fd, int *release_fence_fd,
@@ -2007,6 +2101,24 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
         dstinfo.dither.lut1_h = 0xfedc;
     }
 
+    /* set gauss */
+    if (usage & IM_GAUSS) {
+        if (usage & IM_HAL_TRANSFORM_MASK) {
+            IM_LOGW("Gaussian blur does not support rotation/mirror\n");
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        if ((src.width != dst.width) || (src.height != dst.height)) {
+            IM_LOGW("Gaussian blur does not support scaling, src[w,h] = [%d, %d], dst[w,h] = [%d, %d]",
+                    src.width, src.height, dst.width, dst.height);
+            return IM_STATUS_INVALID_PARAM;
+        }
+
+        ret = generate_gauss_coe(&opt.gauss_config, &srcinfo.gauss_config);
+        if (ret != IM_STATUS_SUCCESS)
+            return (IM_STATUS)ret;
+    }
+
     srcinfo.rd_mode = src.rd_mode;
     dstinfo.rd_mode = dst.rd_mode;
     if (rga_is_buffer_valid(pat))
@@ -2015,7 +2127,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
     if (usage & IM_ASYNC) {
         if (release_fence_fd == NULL) {
             IM_LOGW("Async mode release_fence_fd cannot be NULL!");
-            return IM_STATUS_ILLEGAL_PARAM;
+            ret = IM_STATUS_ILLEGAL_PARAM;
+            goto release_resource;
         }
 
         dstinfo.sync_mode = RGA_BLIT_ASYNC;
@@ -2048,7 +2161,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
                       job_handle, &src, &dst, &pat, &srect, &drect, &prect,
                       acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
-        return IM_STATUS_FAILED;
+        ret = IM_STATUS_FAILED;
+        goto release_resource;
     }
 
     if (job_handle > 0) {
@@ -2060,12 +2174,14 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
         if (job == NULL) {
             IM_LOGE("cannot find job_handle[%d]\n", job_handle);
             pthread_mutex_unlock(&g_im2d_job_manager.mutex);
-            return IM_STATUS_ILLEGAL_PARAM;
+            ret = IM_STATUS_ILLEGAL_PARAM;
+            goto release_resource;
         } else if (job->task_count >= RGA_TASK_NUM_MAX) {
             IM_LOGE("job[%d] add task failed! too many tasks, count = %d\n", job_handle, job->task_count);
 
             pthread_mutex_unlock(&g_im2d_job_manager.mutex);
-            return IM_STATUS_ILLEGAL_PARAM;
+            ret = IM_STATUS_ILLEGAL_PARAM;
+            goto release_resource;
         }
 
         job->req[job->task_count] = req;
@@ -2087,7 +2203,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
 
             default:
                 IM_LOGW("unknow driver[0x%x]\n", session->driver_type);
-                return IM_STATUS_FAILED;
+                ret = IM_STATUS_FAILED;
+                goto release_resource;
         }
 
         do {
@@ -2100,7 +2217,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
                         job_handle, &src, &dst, &pat, &srect, &drect, &prect,
                         acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
-            return IM_STATUS_FAILED;
+            ret = IM_STATUS_FAILED;
+            goto release_resource;
         }
 
         if (usage & IM_ASYNC) {
@@ -2112,7 +2230,13 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
         }
     }
 
-    return IM_STATUS_SUCCESS;
+    ret = IM_STATUS_SUCCESS;
+
+release_resource:
+    if (usage & IM_GAUSS && req.gauss_config.coe_ptr != 0)
+        free(u64_to_ptr(req.gauss_config.coe_ptr));
+
+    return (IM_STATUS)ret;
 }
 
 IM_STATUS rga_single_task_submit(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
@@ -3390,6 +3514,9 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
 
     /* mosaic */
     memcpy(&rgaReg.mosaic_info, &src->mosaic_info, sizeof(struct rga_mosaic_info));
+
+    /* gauss */
+    memcpy(&rgaReg.gauss_config, &src->gauss_config, sizeof(rgaReg.gauss_config));
 
     /* OSD */
     memcpy(&rgaReg.osd_info, &src->osd_info, sizeof(struct rga_osd_info));

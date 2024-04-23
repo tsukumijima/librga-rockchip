@@ -148,6 +148,11 @@ struct rga_mosaic_info {
     uint8_t mode;
 };
 
+struct rga_gauss_config {
+    uint32_t size;
+    uint64_t coe_ptr;
+};
+
 struct rga_pre_intr_info {
     uint8_t enable;
 
@@ -316,7 +321,9 @@ typedef struct rga_info {
     uint8_t rgba5551_alpha0;
     uint8_t rgba5551_alpha1;
 
-    char reserve[398];
+    struct rga_gauss_config gauss_config;
+
+    char reserve[386];
 } rga_info_t;
 
 
