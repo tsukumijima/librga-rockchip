@@ -66,7 +66,7 @@ extern "C"
 #define RGA_REG_CMD_LEN     0x1c   /* 28 */
 #define RGA_CMD_BUF_SIZE    0x700  /* 16*28*4 */
 
-#define RGA_TASK_NUM_MAX		50
+#define RGA_TASK_NUM_MAX		256
 
 #define RGA_SCHED_PRIORITY_DEFAULT 0
 #define RGA_SCHED_PRIORITY_MAX 6
