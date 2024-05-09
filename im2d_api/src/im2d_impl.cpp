@@ -1515,6 +1515,10 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
     im_opt_t opt;
 
+    ret = rga_get_context();
+    if (ret != IM_STATUS_SUCCESS)
+        return (IM_STATUS)ret;
+
     is_debug_log();
     if (is_out_log())
         rga_dump_info(IM_LOG_DEBUG | IM_LOG_FORCE,
