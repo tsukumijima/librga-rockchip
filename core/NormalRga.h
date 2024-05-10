@@ -20,6 +20,7 @@
 #define _rockchip_normal_rga_h_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
