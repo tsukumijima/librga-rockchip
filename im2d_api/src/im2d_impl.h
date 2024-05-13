@@ -66,25 +66,6 @@ typedef struct im_context {
     int check_mode;
 } im_context_t;
 
-typedef struct im_rga_job {
-    struct rga_req req[RGA_TASK_NUM_MAX];
-    int task_count;
-
-    int id;
-} im_rga_job_t;
-
-#ifdef __cplusplus
-#include <map>
-#include <mutex>
-
-struct im2d_job_manager {
-    std::map<im_job_handle_t, im_rga_job_t *> job_map;
-    int job_count;
-
-    std::mutex mutex;
-};
-#endif
-
 int rga_version_compare(struct rga_version_t version1, struct rga_version_t version2);
 int rga_version_table_get_current_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size);
 int rga_version_table_get_minimum_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size);

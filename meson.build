@@ -26,6 +26,7 @@ librga_srcs = [
     'im2d_api/src/im2d_log.cpp',
     'im2d_api/src/im2d_debugger.cpp',
     'im2d_api/src/im2d_context.cpp',
+    'im2d_api/src/im2d_job.cpp',
     'im2d_api/src/im2d_impl.cpp',
 	'im2d_api/src/im2d.cpp',
 ]

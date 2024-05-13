@@ -31,6 +31,7 @@
 
 #include "im2d.h"
 #include "im2d_impl.h"
+#include "im2d_job.h"
 #include "im2d_log.h"
 #include "im2d_hardware.h"
 #include "im2d_debugger.h"
@@ -60,9 +61,6 @@ using namespace android;
     })
 #define GET_LCM(n1, n2, gcd) (((n1) * (n2)) / gcd)
 
-#ifdef __cplusplus
-struct im2d_job_manager g_im2d_job_manager;
-#endif
 __thread im_context_t g_im2d_context;
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
@@ -2032,26 +2030,26 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
     }
 
     if (job_handle > 0) {
-#ifdef __cplusplus
         im_rga_job_t *job = NULL;
 
-        g_im2d_job_manager.mutex.lock();
+        pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-        job = g_im2d_job_manager.job_map[job_handle];
-        if (job->task_count >= RGA_TASK_NUM_MAX) {
+        job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+        if (job == NULL) {
+            IM_LOGE("cannot find job_handle[%d]\n", job_handle);
+            pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+            return IM_STATUS_ILLEGAL_PARAM;
+        } else if (job->task_count >= RGA_TASK_NUM_MAX) {
             IM_LOGE("job[%d] add task failed! too many tasks, count = %d\n", job_handle, job->task_count);
 
-            g_im2d_job_manager.mutex.unlock();
+            pthread_mutex_unlock(&g_im2d_job_manager.mutex);
             return IM_STATUS_ILLEGAL_PARAM;
         }
 
         job->req[job->task_count] = req;
         job->task_count++;
 
-        g_im2d_job_manager.mutex.unlock();
-#else
-        IM_LOGE("C unsupport multi-task mode!\n");
-#endif
+        pthread_mutex_unlock(&g_im2d_job_manager.mutex);
     } else {
         switch (session->driver_type) {
             case RGA_DRIVER_IOC_RGA1:
@@ -2102,7 +2100,6 @@ IM_STATUS rga_single_task_submit(rga_buffer_t src, rga_buffer_t dst, rga_buffer_
     return rga_task_submit(0, src, dst, pat, srect, drect, prect, acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 }
 
-#ifdef __cplusplus
 im_job_handle_t rga_job_create(uint32_t flags) {
     int ret;
     im_job_handle_t job_handle;
@@ -2112,44 +2109,45 @@ im_job_handle_t rga_job_create(uint32_t flags) {
     session = get_rga_session();
     if (session == NULL) {
         IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
+        return 0;
     }
 
     if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CREATE, &flags) < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
-        return IM_STATUS_FAILED;
+        IM_LOGE(" %s(%d) request create fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
+        return 0;
     }
 
     job_handle = flags;
 
-    g_im2d_job_manager.mutex.lock();
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-    if (g_im2d_job_manager.job_map.count(job_handle) != 0) {
-        IM_LOGE("job_map error! handle[%d] already exists[%lu]!\n",
-                job_handle, (unsigned long)g_im2d_job_manager.job_map.count(job_handle));
-        ret = IM_STATUS_FAILED;
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job != NULL) {
+        IM_LOGE("job_map error! handle[%d] already exists[%d]!\n",
+                job_handle, job->task_count);
+        ret = 0;
         goto error_cancel_job;
     }
 
     job = (im_rga_job_t *)malloc(sizeof(*job));
     if (job == NULL) {
         IM_LOGE("rga job alloc error!\n");
-        ret = IM_STATUS_FAILED;
+        ret = 0;
         goto error_cancel_job;
     }
 
     memset(job, 0x0, sizeof(*job));
 
     job->id = job_handle;
-    g_im2d_job_manager.job_map[job_handle] = job;
+    rga_map_insert_job(&g_im2d_job_manager.job_map, job_handle, job);
     g_im2d_job_manager.job_count++;
 
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
     return job_handle;
 
 error_cancel_job:
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
     rga_job_cancel(job_handle);
 
     return ret;
@@ -2165,22 +2163,20 @@ IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
         return IM_STATUS_FAILED;
     }
 
-    g_im2d_job_manager.mutex.lock();
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-    if (g_im2d_job_manager.job_map.count(job_handle) > 0) {
-        job = g_im2d_job_manager.job_map[job_handle];
-        if (job != NULL)
-            free(job);
-
-        g_im2d_job_manager.job_map.erase(job_handle);
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job != NULL) {
+        rga_map_delete_job(&g_im2d_job_manager.job_map, job_handle);
+        free(job);
     }
 
     g_im2d_job_manager.job_count--;
 
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
     if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CANCEL, &job_handle) < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        IM_LOGE(" %s(%d) request cancel fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;
     }
 
@@ -2211,27 +2207,20 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
             return IM_STATUS_ILLEGAL_PARAM;
     }
 
-    g_im2d_job_manager.mutex.lock();
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-    if (g_im2d_job_manager.job_map.count(job_handle) == 0) {
-        IM_LOGE("job_handle[%d] is illegal!\n", job_handle);
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job == NULL) {
+        IM_LOGE("%s job_handle[%d] is illegal!\n", __func__, job_handle);
 
-        g_im2d_job_manager.mutex.unlock();
+        pthread_mutex_unlock(&g_im2d_job_manager.mutex);
         return IM_STATUS_ILLEGAL_PARAM;
     }
 
-    job = g_im2d_job_manager.job_map[job_handle];
-    if (job == NULL) {
-        IM_LOGE("job is NULL!\n");
-
-        g_im2d_job_manager.mutex.unlock();
-        return IM_STATUS_FAILED;
-    }
-
-    g_im2d_job_manager.job_map.erase(job_handle);
+    rga_map_delete_job(&g_im2d_job_manager.job_map, job_handle);
     g_im2d_job_manager.job_count--;
 
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
     submit_request.task_ptr = ptr_to_u64(job->req);
     submit_request.task_num = job->task_count;
@@ -2240,7 +2229,7 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
 
     ret = ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_SUBMIT, &submit_request);
     if (ret < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        IM_LOGE(" %s(%d) request submit fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
         ret = IM_STATUS_FAILED;
         goto free_job;
     } else {
@@ -2259,7 +2248,7 @@ free_job:
 IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
     int ret;
     im_rga_job_t *job = NULL;
-    struct rga_user_request config_request;
+    struct rga_user_request config_request = {0};
     rga_session_t *session;
 
     session = get_rga_session();
@@ -2267,31 +2256,6 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
         IM_LOGE("cannot get librga session!\n");
         return IM_STATUS_FAILED;
     }
-
-    g_im2d_job_manager.mutex.lock();
-
-    if (g_im2d_job_manager.job_map.count(job_handle) == 0) {
-        IM_LOGE("job_handle[%d] is illegal!\n", job_handle);
-
-        g_im2d_job_manager.mutex.unlock();
-        return IM_STATUS_ILLEGAL_PARAM;
-    }
-
-    job = g_im2d_job_manager.job_map[job_handle];
-    if (job == NULL) {
-        IM_LOGE("job is NULL!\n");
-
-        g_im2d_job_manager.mutex.unlock();
-        return IM_STATUS_FAILED;
-    }
-
-    memset(&config_request, 0x0, sizeof(config_request));
-
-    config_request.task_ptr = ptr_to_u64(&job->req);
-    config_request.task_num = job->task_count;
-    config_request.id = job->id;
-
-    g_im2d_job_manager.mutex.unlock();
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2305,12 +2269,29 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
             return IM_STATUS_ILLEGAL_PARAM;
     }
 
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
+
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job == NULL) {
+        IM_LOGE("%s job_handle[%d] is illegal!\n", __func__, job_handle);
+
+        pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+        return IM_STATUS_ILLEGAL_PARAM;
+    }
+
+    config_request.task_ptr = ptr_to_u64(job->req);
+    config_request.task_num = job->task_count;
+    config_request.id = job->id;
     config_request.acquire_fence_fd = acquire_fence_fd;
+
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
     ret = ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CONFIG, &config_request);
     if (ret < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        IM_LOGE(" %s(%d) request config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;
+    } else {
+        ret = IM_STATUS_SUCCESS;
     }
 
     if ((sync_mode == IM_ASYNC) && release_fence_fd)
@@ -2318,23 +2299,6 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
 
     return IM_STATUS_SUCCESS;
 }
-#else
-im_job_handle_t rga_job_create(uint32_t flags) {
-    return 0;
-}
-
-IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
-    return IM_STATUS_FAILED;
-}
-
-IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
-    return IM_STATUS_FAILED;
-}
-
-IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
-    return IM_STATUS_FAILED;
-}
-#endif
 
 int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst, rga_info_t *src1) {
     int srcVirW,srcVirH,srcActW,srcActH,srcXPos,srcYPos;
