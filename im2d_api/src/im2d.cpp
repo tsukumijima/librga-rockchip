@@ -1923,6 +1923,7 @@ IM_API IM_STATUS improcessTask(im_job_handle_t job_handle,
     return rga_task_submit(job_handle, src, dst, pat, srect, drect, prect, -1, NULL, opt_ptr, usage);
 }
 /* End task api */
+#endif /* #ifdef __cplusplus */
 
 /* for rockit-ko */
 im_ctx_id_t imbegin(uint32_t flags) {
@@ -1933,10 +1934,10 @@ IM_STATUS imcancel(im_ctx_id_t id) {
     return rga_job_cancel((im_job_handle_t)id);
 }
 
-IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
-                    im_rect srect, im_rect drect, im_rect prect,
-                    int acquire_fence_fd, int *release_fence_fd,
-                    im_opt_t *opt_ptr, int usage, im_ctx_id_t ctx_id) {
+IM_STATUS improcess_ctx(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
+                        im_rect srect, im_rect drect, im_rect prect,
+                        int acquire_fence_fd, int *release_fence_fd,
+                        im_opt_t *opt_ptr, int usage, im_ctx_id_t ctx_id) {
     int ret;
     int sync_mode;
 
@@ -1955,13 +1956,14 @@ IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
     return rga_job_config((im_job_handle_t)ctx_id, sync_mode, acquire_fence_fd, release_fence_fd);
 }
 
-IM_STATUS improcess_ctx(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
-                        im_rect srect, im_rect drect, im_rect prect,
-                        int acquire_fence_fd, int *release_fence_fd,
-                        im_opt_t *opt_ptr, int usage, im_ctx_id_t ctx_id) {
-    return improcess(src, dst, pat, srect, drect, prect, acquire_fence_fd, release_fence_fd, opt_ptr, usage, ctx_id);
+#ifdef __cplusplus
+IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
+                    im_rect srect, im_rect drect, im_rect prect,
+                    int acquire_fence_fd, int *release_fence_fd,
+                    im_opt_t *opt_ptr, int usage, im_ctx_id_t ctx_id) {
+    return improcess_ctx(src, dst, pat, srect, drect, prect, acquire_fence_fd, release_fence_fd, opt_ptr, usage, ctx_id);
 }
-#endif
+#endif /* #ifdef __cplusplus */
 
 /* For the C interface */
 IM_API rga_buffer_t wrapbuffer_handle_t(rga_buffer_handle_t  handle,
