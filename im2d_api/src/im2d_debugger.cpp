@@ -295,20 +295,22 @@ void rga_dump_opt(int log_level, const im_opt_t *opt, const int usage) {
                opt->colorkey_range.min, opt->colorkey_range.max);
     }
 
-    if (usage & IM_NN_QUANTIZE)
+    if (usage & IM_NN_QUANTIZE) {
         IM_LOG(log_level, "\tnn:");
         IM_LOG(log_level, "\t\tscale[r,g,b] = [%d, %d, %d], offset[r,g,b] = [0x%x, 0x%x, 0x%x]",
                opt->nn.scale_r, opt->nn.scale_g, opt->nn.scale_b,
                opt->nn.offset_r, opt->nn.offset_g, opt->nn.offset_b);
+    }
 
     if (usage & IM_OSD)
         rga_dump_osd_info(log_level, &opt->osd_config);
 
-    if (usage & IM_PRE_INTR)
+    if (usage & IM_PRE_INTR) {
         IM_LOG(log_level, "\tpre_intr:");
         IM_LOG(log_level, "\t\tflags[0x%x], read_threshold[0x%x], write_start[0x%x], write_step[0x%x]",
                opt->intr_config.flags, opt->intr_config.read_threshold,
                opt->intr_config.write_start, opt->intr_config.write_step);
+    }
 }
 
 void rga_dump_info(int log_level,
