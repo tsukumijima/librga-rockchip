@@ -41,6 +41,15 @@ librga = shared_library(
     install : true,
 )
 
+librga = static_library(
+    'rga',
+    librga_srcs,
+    dependencies : [libthreads_dep],
+        include_directories : incdir,
+    cpp_args : ['-w'],
+    install : true,
+)
+
 install_headers(
     'include/rga.h',
     'include/drmrga.h',
