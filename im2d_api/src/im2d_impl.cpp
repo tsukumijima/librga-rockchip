@@ -74,8 +74,18 @@ static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, r
     dst_table->output_format        |= merge_table->output_format;
     dst_table->feature              |= merge_table->feature;
 
-    dst_table->input_resolution     = MAX(dst_table->input_resolution, merge_table->input_resolution);
-    dst_table->output_resolution    = MAX(dst_table->output_resolution, merge_table->output_resolution);
+    if (merge_table->input_resolution.width > dst_table->input_resolution.width &&
+        merge_table->input_resolution.height > dst_table->input_resolution.height) {
+        dst_table->input_resolution.width = merge_table->input_resolution.width;
+        dst_table->input_resolution.height = merge_table->input_resolution.height;
+    }
+
+    if (merge_table->output_resolution.width > dst_table->output_resolution.width &&
+        merge_table->output_resolution.height > dst_table->output_resolution.height) {
+        dst_table->output_resolution.width = merge_table->output_resolution.width;
+        dst_table->output_resolution.height = merge_table->output_resolution.height;
+    }
+
     dst_table->byte_stride          = MAX(dst_table->byte_stride, merge_table->byte_stride);
     dst_table->scale_limit          = MAX(dst_table->scale_limit, merge_table->scale_limit);
     dst_table->performance          = MAX(dst_table->performance, merge_table->performance);
@@ -704,7 +714,7 @@ IM_STATUS rga_check_driver(struct rga_version_t driver_version) {
     }
 }
 
-IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rect rect, int resolution_usage) {
+IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rect rect, rga_info_resolution_t resolution_usage) {
     /**************** src/dst judgment ****************/
     if (info.width <= 0 || info.height <= 0 || info.format < 0) {
         IM_LOGW("Illegal %s, the parameter cannot be negative or 0, width = %d, height = %d, format = 0x%x(%s)",
@@ -756,15 +766,15 @@ IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rec
     }
 
     /**************** resolution check ****************/
-    if (info.width > resolution_usage ||
-        info.height > resolution_usage) {
-        IM_LOGW("Unsupported %s to input resolution more than %d, width = %d, height = %d",
-                name, resolution_usage, info.width, info.height);
+    if (info.width > resolution_usage.width ||
+        info.height > resolution_usage.height) {
+        IM_LOGW("Unsupported %s resolution more than %dx%d, width = %d, height = %d",
+                name, resolution_usage.width, resolution_usage.height, info.width, info.height);
         return IM_STATUS_NOT_SUPPORTED;
-    } else if ((rect.width > 0 && rect.width > resolution_usage) ||
-               (rect.height > 0 && rect.height > resolution_usage)) {
-        IM_LOGW("Unsupported %s rect to output resolution more than %d, rect[x,y,w,h] = [%d, %d, %d, %d]",
-                name, resolution_usage, rect.x, rect.y, rect.width, rect.height);
+    } else if ((rect.width > 0 && rect.width > resolution_usage.width) ||
+               (rect.height > 0 && rect.height > resolution_usage.height)) {
+        IM_LOGW("Unsupported %s rect resolution more than %dx%d, rect[x,y,w,h] = [%d, %d, %d, %d]",
+                name, resolution_usage.width, resolution_usage.height, rect.x, rect.y, rect.width, rect.height);
         return IM_STATUS_NOT_SUPPORTED;
     }
 

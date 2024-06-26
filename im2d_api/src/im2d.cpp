@@ -433,6 +433,7 @@ IM_API const char* querystring(int name) {
         "4096x4096",
         "8192x8192",
         "8128x8128",
+        "2880x1620",
     };
     const char *output_scale_limit[] = {
         "unknown",
@@ -532,7 +533,7 @@ IM_API const char* querystring(int name) {
                 break;
 
             case RGA_MAX_INPUT :
-                switch (rga_info.input_resolution) {
+                switch (rga_info.input_resolution.width) {
                     case 2048 :
                         out << output_name[name] << output_resolution[1] << endl;
                         break;
@@ -544,6 +545,9 @@ IM_API const char* querystring(int name) {
                         break;
                     case 8128 :
                         out << output_name[name] << output_resolution[4] << endl;
+                        break;
+                    case 2880 :
+                        out << output_name[name] << output_resolution[5] << endl;
                         break;
                     default :
                         out << output_name[name] << output_resolution[IM_RGA_HW_VERSION_RGA_V_ERR_INDEX] << endl;
@@ -552,7 +556,7 @@ IM_API const char* querystring(int name) {
                 break;
 
             case RGA_MAX_OUTPUT :
-                switch(rga_info.output_resolution) {
+                switch(rga_info.output_resolution.width) {
                     case 2048 :
                         out << output_name[name] << output_resolution[1] << endl;
                         break;
@@ -564,6 +568,9 @@ IM_API const char* querystring(int name) {
                         break;
                     case 8128 :
                         out << output_name[name] << output_resolution[4] << endl;
+                        break;
+                    case 2880 :
+                        out << output_name[name] << output_resolution[5] << endl;
                         break;
                     default :
                         out << output_name[name] << output_resolution[IM_RGA_HW_VERSION_RGA_V_ERR_INDEX] << endl;
