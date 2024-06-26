@@ -585,6 +585,30 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                     goto TRY_TO_COMPATIBLE;
             }
         } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0xa) {
+            switch (version->version[i].revision) {
+                case 0x07135:
+                    // RK3506
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+                    merge_table.input_resolution.width = 1280;
+                    merge_table.input_resolution.height = 1280;
+                    merge_table.output_resolution.width = 1280;
+                    merge_table.output_resolution.height = 1280;
+
+                    merge_table.input_format |= IM_RGA_SUPPORT_FORMAT_YUYV_422 |
+                                                IM_RGA_SUPPORT_FORMAT_YUV_400;
+                    merge_table.output_format |= IM_RGA_SUPPORT_FORMAT_YUV_400;
+                    merge_table.feature |= IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC |
+                                           IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC |
+                                           IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP |
+                                           IM_RGA_SUPPORT_FEATURE_GAUSS;
+                    merge_table.feature &= ~IM_RGA_SUPPORT_FEATURE_ROP;
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
+        } else if (version->version[i].major == 3 &&
                    version->version[i].minor == 0xe) {
             switch (version->version[i].revision) {
                 case 0x19357:
@@ -1191,6 +1215,12 @@ IM_STATUS rga_check_feature(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst
 
     if ((mode_usage & IM_ALPHA_BIT_MAP) && (~feature_usage & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)) {
         IM_LOGW("The platform does not support alpha-bit map featrue. \n%s",
+                querystring(RGA_FEATURE));
+        return IM_STATUS_NOT_SUPPORTED;
+    }
+
+    if ((mode_usage & IM_GAUSS) && (~feature_usage & IM_RGA_SUPPORT_FEATURE_GAUSS)) {
+        IM_LOGW("The platform does not support gauss featrue.\n%s",
                 querystring(RGA_FEATURE));
         return IM_STATUS_NOT_SUPPORTED;
     }

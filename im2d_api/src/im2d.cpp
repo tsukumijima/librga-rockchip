@@ -459,6 +459,7 @@ IM_API const char* querystring(int name) {
         "8192x8192",
         "8128x8128",
         "2880x1620",
+        "1280x1280",
     };
     const char *output_scale_limit[] = {
         "unknown",
@@ -503,6 +504,7 @@ IM_API const char* querystring(int name) {
         "OSD ",
         "early_interruption ",
         "alpha_bit_map ",
+        "gauss ",
     };
     const char *performance[] = {
         "unknown",
@@ -574,6 +576,9 @@ IM_API const char* querystring(int name) {
                     case 2880 :
                         out << output_name[name] << output_resolution[5] << endl;
                         break;
+                    case 1280 :
+                        out << output_name[name] << output_resolution[6] << endl;
+                        break;
                     default :
                         out << output_name[name] << output_resolution[IM_RGA_HW_VERSION_RGA_V_ERR_INDEX] << endl;
                         break;
@@ -596,6 +601,9 @@ IM_API const char* querystring(int name) {
                         break;
                     case 2880 :
                         out << output_name[name] << output_resolution[5] << endl;
+                        break;
+                    case 1280 :
+                        out << output_name[name] << output_resolution[6] << endl;
                         break;
                     default :
                         out << output_name[name] << output_resolution[IM_RGA_HW_VERSION_RGA_V_ERR_INDEX] << endl;
@@ -747,6 +755,8 @@ IM_API const char* querystring(int name) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX];
                 if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)
                     out << feature[IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX];
+                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_GAUSS)
+                    out << feature[IM_RGA_SUPPORT_FEATURE_GAUSS_INDEX];
                 out << endl;
                 break;
 
