@@ -80,6 +80,7 @@ enum ERR_NUM {
 struct rga_image_info {
     rga_buffer_t img;
     char *buf;
+    int fd;
     int buf_size;
 };
 
@@ -131,9 +132,12 @@ int rga_raster_test(private_data_t *data, int time,
 
         ret = imcvtcolor(src, dst, RK_FORMAT_YCbCr_420_SP, dst.format);
         if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s copy %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+            printf("ID[%d]: %s bypass + src-CSC %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
         }
+
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
@@ -163,9 +167,12 @@ int rga_raster_test(private_data_t *data, int time,
 
         ret = improcess(src, dst, tmp, src_rect, dst_rect, dst_rect, usage);
         if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s process %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+            printf("ID[%d]: %s 3-channel blend + rotate-180 + H_V mirror + scale-up + dst-CSC %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
         }
+
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
@@ -189,9 +196,13 @@ int rga_raster_test(private_data_t *data, int time,
 
         ret = improcess(src, dst, {}, {}, dst_rect, {}, usage);
         if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s process %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+            printf("ID[%d]: %s rotate-90 + H_V mirror + scale-down %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
         }
+
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
+
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
@@ -216,6 +227,9 @@ int rga_raster_test(private_data_t *data, int time,
                 printf("ID[%d]: %s fill %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
                 return slt_rga_error;
             }
+
+            if (dst_img.fd)
+                dma_sync_device_to_cpu(dst_img.fd);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(IM2D_SLT_GENERATE_CRC) {
@@ -290,6 +304,9 @@ int rga_special_test(private_data_t *data, int time,
             return slt_rga_error;
         }
 
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
+
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
             save_crcdata_to_file(result_crc, data->name, case_index);
@@ -308,6 +325,9 @@ int rga_special_test(private_data_t *data, int time,
                 printf("ID[%d]: %s output %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
                 return slt_rga_error;
             }
+
+            if (dst_img.fd)
+                dma_sync_device_to_cpu(dst_img.fd);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(IM2D_SLT_GENERATE_CRC) {
@@ -496,6 +516,10 @@ static int rga_run(void *args, rga_slt_case running_case) {
         }
     }
 
+    dma_sync_device_to_cpu(src_dma_fd);
+    dma_sync_device_to_cpu(tmp_dma_fd);
+    dma_sync_device_to_cpu(dst_dma_fd);
+
     if (fbc_en) {
         ret = read_image_from_fbc_file(src_buf, IM2D_SLT_DEFAULT_INPUT_PATH,
                                        src_width, src_height, src_format, 0);
@@ -509,6 +533,10 @@ static int rga_run(void *args, rga_slt_case running_case) {
     }
     memset(tmp_buf, 0x22, tmp_buf_size);
     memset(dst_buf, 0x33, dst_buf_size);
+
+    dma_sync_cpu_to_device(src_dma_fd);
+    dma_sync_cpu_to_device(tmp_dma_fd);
+    dma_sync_cpu_to_device(dst_dma_fd);
 
     src = wrapbuffer_handle(src_handle, src_width, src_height, src_format);
     tmp = wrapbuffer_handle(tmp_handle, src_width, src_height, src_format);
@@ -527,14 +555,17 @@ static int rga_run(void *args, rga_slt_case running_case) {
 
     src_img.img = src;
     src_img.buf = src_buf;
+    src_img.fd = src_dma_fd;
     src_img.buf_size = src_buf_size;
 
     tmp_img.img = tmp;
     tmp_img.buf = tmp_buf;
+    tmp_img.fd = tmp_dma_fd;
     tmp_img.buf_size = tmp_buf_size;
 
     dst_img.img = dst;
     dst_img.buf = dst_buf;
+    dst_img.fd = dst_dma_fd;
     dst_img.buf_size = dst_buf_size;
 
     do {
@@ -562,6 +593,11 @@ RUNNING_FAILED:
     printf("src: %#x %#x %#x %#x\n", (int)src_buf[0], (int)src_buf[1], (int)src_buf[2], (int)src_buf[3]);
     printf("tmp: %#x %#x %#x %#x\n", (int)tmp_buf[0], (int)tmp_buf[1], (int)tmp_buf[2], (int)tmp_buf[3]);
     printf("dst: %#x %#x %#x %#x\n", (int)dst_buf[0], (int)dst_buf[1], (int)dst_buf[2], (int)dst_buf[3]);
+
+    dma_sync_device_to_cpu(src_dma_fd);
+    dma_sync_device_to_cpu(tmp_dma_fd);
+    dma_sync_device_to_cpu(dst_dma_fd);
+
     if (fbc_en) {
         write_image_to_fbc_file(src_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
                                 src.wstride, src.hstride, src.format, data->id * 10 + 1);
@@ -577,6 +613,10 @@ RUNNING_FAILED:
         write_image_to_file(dst_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
                             dst.wstride, dst.hstride, dst.format, data->id * 10 + 3);
     }
+
+    dma_sync_cpu_to_device(src_dma_fd);
+    dma_sync_cpu_to_device(tmp_dma_fd);
+    dma_sync_cpu_to_device(dst_dma_fd);
 
 RELEASE_BUFFER:
     if (src_handle)
