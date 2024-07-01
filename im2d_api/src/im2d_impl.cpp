@@ -597,11 +597,11 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                     merge_table.output_resolution.height = 1280;
 
                     merge_table.input_format |= IM_RGA_SUPPORT_FORMAT_YUYV_422 |
-                                                IM_RGA_SUPPORT_FORMAT_YUV_400;
+                                                IM_RGA_SUPPORT_FORMAT_YUV_400 |
+                                                IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT;
                     merge_table.output_format |= IM_RGA_SUPPORT_FORMAT_YUV_400;
                     merge_table.feature |= IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC |
                                            IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC |
-                                           IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP |
                                            IM_RGA_SUPPORT_FEATURE_GAUSS;
                     merge_table.feature &= ~IM_RGA_SUPPORT_FEATURE_ROP;
                     break;
