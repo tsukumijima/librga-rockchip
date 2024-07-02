@@ -55,6 +55,7 @@
 #define LOG_TAG "platform_gralloc4"
 #endif
 
+#include <log/log.h>
 #include <sync/sync.h>
 
 #include <drm_fourcc.h>
