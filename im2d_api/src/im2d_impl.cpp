@@ -90,6 +90,8 @@ static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, r
     dst_table->byte_stride          = MAX(dst_table->byte_stride, merge_table->byte_stride);
     dst_table->scale_limit          = MAX(dst_table->scale_limit, merge_table->scale_limit);
     dst_table->performance          = MAX(dst_table->performance, merge_table->performance);
+    dst_table->scale_ver_bicubic_limit = MAX(dst_table->scale_ver_bicubic_limit,
+                                             merge_table->scale_ver_bicubic_limit);
 
     return IM_STATUS_SUCCESS;
 }
@@ -594,6 +596,7 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                                            IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC |
                                            IM_RGA_SUPPORT_FEATURE_GAUSS;
                     merge_table.feature &= ~IM_RGA_SUPPORT_FEATURE_ROP;
+                    merge_table.scale_ver_bicubic_limit = 600;
                     break;
                 default :
                     goto TRY_TO_COMPATIBLE;
@@ -2481,10 +2484,15 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
     struct rga_req rgaReg;
 
     rga_session_t *session;
+    rga_info_table_entry *rga_info;
+    int ver_bicubic_limit;
 
     session = get_rga_session();
     if (IS_ERR(session))
         return (IM_STATUS)PTR_ERR(session);
+
+    rga_info = &session->hardware_info;
+    ver_bicubic_limit = rga_info->scale_ver_bicubic_limit;
 
     //init
     memset(&rgaReg, 0, sizeof(struct rga_req));
@@ -2929,8 +2937,8 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
         if (vScale > 1.0f) {
             interp.verti = RGA_INTERP_AVERAGE;
         } else if (vScale < 1.0f) {
-            if (relSrcRect.width > 1996 ||
-                (relDstRect.width > 1996 && hScale > 1.0f))
+            if (relSrcRect.width > ver_bicubic_limit ||
+                (relDstRect.width > ver_bicubic_limit && hScale > 1.0f))
                 interp.verti = RGA_INTERP_LINEAR;
             else
                 interp.verti = RGA_INTERP_BICUBIC;
@@ -2939,10 +2947,10 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
 
     /* check interpoletion limit */
     if (interp.verti == RGA_INTERP_BICUBIC && vScale < 1.0f) {
-        if (relSrcRect.width > 1996 ||
-            (relDstRect.width > 1996 && hScale > 1.0f)) {
+        if (relSrcRect.width > ver_bicubic_limit ||
+            (relDstRect.width > ver_bicubic_limit && hScale > 1.0f)) {
             ALOGE("when using bicubic scaling in the vertical direction, it does not support input width larger than %d.",
-                1996);
+                  ver_bicubic_limit);
             return -EINVAL;
         }
     }
