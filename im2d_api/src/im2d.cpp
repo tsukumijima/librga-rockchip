@@ -35,6 +35,7 @@
 #include "utils.h"
 #include "core/rga_sync.h"
 #include "im2d_hardware.h"
+#include "im2d_context.h"
 #include "im2d_impl.h"
 #include "im2d_log.h"
 
@@ -84,6 +85,7 @@ IM_API const char* imStrError_t(IM_STATUS status) {
         "Illegal parameters",
         "Version verification failed",
         "Fatal error",
+        "No session",
         "unkown status"
     };
     static __thread char error_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
@@ -120,8 +122,12 @@ IM_API const char* imStrError_t(IM_STATUS status) {
             ptr = error_type[7];
             break;
 
+        case IM_STATUS_NO_SESSION :
+            ptr = error_type[8];
+            break;
+
         default :
-            return error_type[8];
+            return error_type[9];
     }
 
     snprintf(error_str, IM_ERR_MSG_LEN, "%s: %s", ptr, g_rga_err_str);
@@ -515,14 +521,14 @@ IM_API const char* querystring(int name) {
     ostringstream out;
     static string info;
 
-    rga_info_table_entry rga_info;
+    rga_session_t *session;
+    rga_info_table_entry *rga_info;
 
-    memset(&rga_info, 0x0, sizeof(rga_info));
-    usage = rga_get_info(&rga_info);
-    if (IM_STATUS_FAILED == usage) {
-        IM_LOGE("rga im2d: rga2 get info failed!\n");
-        return "get info failed";
-    }
+    session = get_rga_session();
+    if (session == NULL)
+        return imStrError(IM_STATUS_NO_SESSION);
+
+    rga_info = &session->hardware_info;
 
     do {
         switch(name) {
@@ -534,33 +540,33 @@ IM_API const char* querystring(int name) {
                 out << version_name[RGA_API] << "v" << RGA_API_VERSION << endl;
 
                 out << output_name[name];
-                if (rga_info.version == IM_RGA_HW_VERSION_RGA_V_ERR) {
+                if (rga_info->version == IM_RGA_HW_VERSION_RGA_V_ERR) {
                     out << output_version[IM_RGA_HW_VERSION_RGA_V_ERR_INDEX];
                 } else {
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_1)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_1)
                         out << output_version[IM_RGA_HW_VERSION_RGA_1_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_1_PLUS)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_1_PLUS)
                         out << output_version[IM_RGA_HW_VERSION_RGA_1_PLUS_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_2)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_LITE0)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_2_LITE0)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_LITE1)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_2_LITE1)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_ENHANCE)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_2_ENHANCE)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_PRO)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_2_PRO)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_PRO_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_LITE2)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_2_LITE2)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE2_INDEX];
-                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_3)
+                    if (rga_info->version & IM_RGA_HW_VERSION_RGA_3)
                         out << output_version[IM_RGA_HW_VERSION_RGA_3_INDEX];
                 }
                 out << endl;
                 break;
 
             case RGA_MAX_INPUT :
-                switch (rga_info.input_resolution.width) {
+                switch (rga_info->input_resolution.width) {
                     case 2048 :
                         out << output_name[name] << output_resolution[1] << endl;
                         break;
@@ -586,7 +592,7 @@ IM_API const char* querystring(int name) {
                 break;
 
             case RGA_MAX_OUTPUT :
-                switch(rga_info.output_resolution.width) {
+                switch(rga_info->output_resolution.width) {
                     case 2048 :
                         out << output_name[name] << output_resolution[1] << endl;
                         break;
@@ -612,15 +618,15 @@ IM_API const char* querystring(int name) {
                 break;
 
             case RGA_BYTE_STRIDE :
-                if (rga_info.byte_stride > 0)
-                    out << output_name[name] << rga_info.byte_stride << " byte" << endl;
+                if (rga_info->byte_stride > 0)
+                    out << output_name[name] << rga_info->byte_stride << " byte" << endl;
                 else
                     out << output_name[name] << "unknown" << endl;
 
                 break;
 
             case RGA_SCALE_LIMIT :
-                switch(rga_info.scale_limit) {
+                switch(rga_info->scale_limit) {
                     case 8 :
                         out << output_name[name] << output_scale_limit[1] << endl;
                         break;
@@ -635,133 +641,133 @@ IM_API const char* querystring(int name) {
 
             case RGA_INPUT_FORMAT :
                 out << output_name[name];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_RGB)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_BPP)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_420)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUYV_420)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_420_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUYV_422)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUYV_422)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_Y4)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_Y4)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_Y8)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_Y8)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
-                if(!(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_MASK))
+                if(!(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_MASK))
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 out << endl;
                 break;
 
             case RGA_OUTPUT_FORMAT :
                 out << output_name[name];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_RGB)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
+                if(rga_info->input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_BPP)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_8_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_420_PLANNER_10_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_8_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_8_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_422_PLANNER_10_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_420)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUYV_420)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_420_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUYV_422)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUYV_422)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_Y4)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_Y4)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_Y8)
+                if(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_Y8)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
-                if(!(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_MASK))
+                if(!(rga_info->output_format & IM_RGA_SUPPORT_FORMAT_MASK))
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 out << endl;
                 break;
 
             case RGA_FEATURE :
                 out << output_name[name];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_COLOR_FILL)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_COLOR_FILL)
                     out << feature[IM_RGA_SUPPORT_FEATURE_COLOR_FILL_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE)
                     out << feature[IM_RGA_SUPPORT_FEATURE_COLOR_PALETTE_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_ROP)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_ROP)
                     out << feature[IM_RGA_SUPPORT_FEATURE_ROP_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_QUANTIZE)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_QUANTIZE)
                     out << feature[IM_RGA_SUPPORT_FEATURE_QUANTIZE_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC)
                     out << feature[IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)
                     out << feature[IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_FBC)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_FBC)
                     out << feature[IM_RGA_SUPPORT_FEATURE_FBC_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_BLEND_YUV)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_BLEND_YUV)
                     out << feature[IM_RGA_SUPPORT_FEATURE_BLEND_YUV_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_BT2020)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_BT2020)
                     out << feature[IM_RGA_SUPPORT_FEATURE_BT2020_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_MOSAIC)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_MOSAIC)
                     out << feature[IM_RGA_SUPPORT_FEATURE_MOSAIC_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_OSD)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_OSD)
                     out << feature[IM_RGA_SUPPORT_FEATURE_OSD_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_PRE_INTR)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_PRE_INTR)
                     out << feature[IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)
                     out << feature[IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX];
-                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_GAUSS)
+                if(rga_info->feature & IM_RGA_SUPPORT_FEATURE_GAUSS)
                     out << feature[IM_RGA_SUPPORT_FEATURE_GAUSS_INDEX];
                 out << endl;
                 break;
 
             case RGA_EXPECTED :
-                switch(rga_info.performance) {
+                switch(rga_info->performance) {
                     case 1 :
                         out << output_name[name] << performance[1] << endl;
                         break;

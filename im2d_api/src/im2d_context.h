@@ -23,6 +23,7 @@
 #include <pthread.h>
 
 #include "rga_ioctl.h"
+#include "im2d_hardware.h"
 
 #define RGA_DEVICE_NODE_PATH "/dev/rga"
 
@@ -50,6 +51,8 @@ typedef struct rga_session {
     struct rga_version_t driver_verison;
     RGA_DRIVER_IOC_TYPE driver_type;
     uint32_t driver_feature;
+
+    rga_info_table_entry hardware_info;
 } rga_session_t;
 
 int get_debug_state();

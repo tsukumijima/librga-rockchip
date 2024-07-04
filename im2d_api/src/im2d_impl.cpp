@@ -440,20 +440,10 @@ IM_STATUS static rga_set_buffer_info(const char *name, rga_buffer_t image, rga_i
     return IM_STATUS_SUCCESS;
 }
 
-IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
+IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *return_table) {
     int ret;
     int  rga_version = 0;
     rga_info_table_entry merge_table;
-    rga_session_t *session;
-    struct rga_hw_versions_t *version;
-
-    session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
-
-    version = &session->core_version;
 
     memset(&merge_table, 0x0, sizeof(merge_table));
 
@@ -1137,8 +1127,8 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     return IM_STATUS_NOERROR;
 }
 
-IM_STATUS rga_check_rotate(int mode_usage, rga_info_table_entry table) {
-    if (table.version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
+IM_STATUS rga_check_rotate(int mode_usage, rga_info_table_entry *table) {
+    if (table->version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
         if (mode_usage & IM_HAL_TRANSFORM_FLIP_H_V) {
             IM_LOGW("RGA1/RGA1_PLUS cannot support H_V mirror.");
             return IM_STATUS_NOT_SUPPORTED;
@@ -1232,14 +1222,14 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
                     const im_rect src_rect, const im_rect dst_rect, const im_rect pat_rect, int mode_usage) {
     bool pat_enable = 0;
     IM_STATUS ret = IM_STATUS_NOERROR;
-    rga_info_table_entry rga_info;
+    rga_session_t *session;
+    rga_info_table_entry *rga_info;
 
-    memset(&rga_info, 0x0, sizeof(rga_info));
-    ret = rga_get_info(&rga_info);
-    if (IM_STATUS_FAILED == ret) {
-        IM_LOGE("rga im2d: rga2 get info failed!\n");
-        return IM_STATUS_FAILED;
-    }
+    session = get_rga_session();
+    if (session == NULL)
+        return IM_STATUS_NO_SESSION;
+
+    rga_info = &session->hardware_info;
 
     if (mode_usage & IM_ALPHA_BLEND_MASK) {
         if (rga_is_buffer_valid(pat))
@@ -1247,52 +1237,52 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
     }
 
     /**************** feature judgment ****************/
-    ret = rga_check_feature(src, pat, dst, pat_enable, mode_usage, rga_info.feature);
+    ret = rga_check_feature(src, pat, dst, pat_enable, mode_usage, rga_info->feature);
     if (ret != IM_STATUS_NOERROR)
         return ret;
 
     /**************** info judgment ****************/
     if (~mode_usage & IM_COLOR_FILL) {
-        ret = rga_check_info("src", src, src_rect, rga_info.input_resolution);
+        ret = rga_check_info("src", src, src_rect, rga_info->input_resolution);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_format("src", src, src_rect, rga_info.input_format, mode_usage);
+        ret = rga_check_format("src", src, src_rect, rga_info->input_format, mode_usage);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_align("src", src, rga_info.byte_stride, true);
+        ret = rga_check_align("src", src, rga_info->byte_stride, true);
         if (ret != IM_STATUS_NOERROR)
             return ret;
     }
     if (pat_enable) {
         /* RGA1 cannot support src1. */
-        if (rga_info.version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
+        if (rga_info->version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
             IM_LOGW("RGA1/RGA1_PLUS cannot support src1.");
             return IM_STATUS_NOT_SUPPORTED;
         }
 
 
-        ret = rga_check_info("pat", pat, pat_rect, rga_info.input_resolution);
+        ret = rga_check_info("pat", pat, pat_rect, rga_info->input_resolution);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_format("pat", pat, pat_rect, rga_info.input_format, mode_usage);
+        ret = rga_check_format("pat", pat, pat_rect, rga_info->input_format, mode_usage);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_align("pat", pat, rga_info.byte_stride, true);
+        ret = rga_check_align("pat", pat, rga_info->byte_stride, true);
         if (ret != IM_STATUS_NOERROR)
             return ret;
     }
-    ret = rga_check_info("dst", dst, dst_rect, rga_info.output_resolution);
+    ret = rga_check_info("dst", dst, dst_rect, rga_info->output_resolution);
     if (ret != IM_STATUS_NOERROR)
         return ret;
-    ret = rga_check_format("dst", dst, dst_rect, rga_info.output_format, mode_usage);
+    ret = rga_check_format("dst", dst, dst_rect, rga_info->output_format, mode_usage);
     if (ret != IM_STATUS_NOERROR)
         return ret;
-    ret = rga_check_align("dst", dst, rga_info.byte_stride, false);
+    ret = rga_check_align("dst", dst, rga_info->byte_stride, false);
     if (ret != IM_STATUS_NOERROR)
         return ret;
 
     if ((~mode_usage & IM_COLOR_FILL)) {
-        ret = rga_check_limit(src, dst, rga_info.scale_limit, mode_usage);
+        ret = rga_check_limit(src, dst, rga_info->scale_limit, mode_usage);
         if (ret != IM_STATUS_NOERROR)
             return ret;
     }

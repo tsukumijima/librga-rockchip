@@ -63,30 +63,22 @@ static inline void clear_driver_feature(rga_session_t *session) {
     session->driver_feature = 0;
 }
 
-static int rga_device_init() {
+static IM_STATUS rga_device_init(rga_session_t *session) {
     int ret;
     int fd;
-    rga_session_t *session =  &g_rga_session;
-
-    pthread_rwlock_wrlock(&session->rwlock);
-    if (session->rga_dev_fd != -1 || session->rga_dev_fd >= 0) {
-        pthread_rwlock_unlock(&session->rwlock);
-        return 0;
-    }
 
     fd = open(RGA_DEVICE_NODE_PATH, O_RDWR, 0);
     if (fd < 0) {
         IM_LOGE("failed to open %s:%s.", RGA_DEVICE_NODE_PATH, strerror(errno));
-        ret = -ENODEV;
-        goto unlock;
+        return IM_STATUS_FAILED;
     }
 
     ret = ioctl(fd, RGA_IOC_GET_DRVIER_VERSION, &session->driver_verison);
     if (ret >= 0) {
         ret = ioctl(fd, RGA_IOC_GET_HW_VERSION, &session->core_version);
         if (ret < 0) {
-            IM_LOGE("librga fail to get hardware versions!\n");
-            goto unlock;
+            IM_LOGE("fail to get hardware versions! ret = %d, %s\n", ret, strerror(errno));
+            return IM_STATUS_FAILED;
         }
 
         session->driver_type = RGA_DRIVER_IOC_MULTI_RGA;
@@ -97,8 +89,8 @@ static int rga_device_init() {
             /* Try to get the version of RGA1 */
             ret = ioctl(fd, RGA_GET_VERSION, session->core_version.version[0].str);
             if (ret < 0) {
-                IM_LOGE("librga fail to get RGA2/RGA1 version! %s\n", strerror(ret));
-                goto unlock;
+                IM_LOGE("librga fail to get RGA2/RGA1 version! ret = %d, %s\n", ret, strerror(errno));
+                return IM_STATUS_FAILED;
             }
         }
 
@@ -117,24 +109,16 @@ static int rga_device_init() {
 
     ret = rga_check_driver(session->driver_verison);
     if (ret == IM_STATUS_ERROR_VERSION)
-        goto unlock;
+        return (IM_STATUS)ret;
 
     set_driver_feature(session);
     session->rga_dev_fd = fd;
-    ret = 0;
 
-unlock:
-    pthread_rwlock_unlock(&session->rwlock);
-
-    return ret;
+    return IM_STATUS_SUCCESS;
 }
 
-static void rga_device_exit(void) {
-    rga_session_t *session = &g_rga_session;
-
-    pthread_rwlock_wrlock(&session->rwlock);
+static void rga_device_exit(rga_session_t *session) {
     if (session->rga_dev_fd < 0) {
-        pthread_rwlock_unlock(&session->rwlock);
         return;
     }
 
@@ -145,25 +129,76 @@ static void rga_device_exit(void) {
     clear_driver_feature(session);
 }
 
-rga_session_t *get_rga_session() {
+static int rga_session_init(rga_session_t *session) {
     int ret;
 
-    if (rga_device_init() == 0)
-        return &g_rga_session;
-    else
+    ret = rga_device_init(session);
+    if (ret != IM_STATUS_SUCCESS) {
+        return ret;
+    }
+
+    ret = rga_get_info(&session->core_version, &session->hardware_info);
+    if (ret != IM_STATUS_SUCCESS) {
+        IM_LOGE("get RGA hardware info failed!\n");
+        return ret;
+    }
+
+    return IM_STATUS_SUCCESS;
+}
+
+static void rga_session_deinit(rga_session_t *session) {
+    memset(&session->hardware_info, 0, sizeof(session->hardware_info));
+
+    rga_device_exit(session);
+}
+
+rga_session_t *get_rga_session() {
+    int ret;
+    rga_session_t *session =  &g_rga_session;
+
+    pthread_rwlock_rdlock(&session->rwlock);
+    if (session->rga_dev_fd != -1 || session->rga_dev_fd >= 0) {
+        pthread_rwlock_unlock(&session->rwlock);
+        return session;
+    }
+    pthread_rwlock_unlock(&session->rwlock);
+
+    pthread_rwlock_wrlock(&session->rwlock);
+    ret = rga_session_init(session);
+    if (ret != IM_STATUS_SUCCESS) {
+        pthread_rwlock_unlock(&session->rwlock);
         return NULL;
+    }
+    pthread_rwlock_unlock(&session->rwlock);
+
+    return session;
 }
 
 int get_debug_state(void) {
-    if (rga_device_init() != 0)
-        return false;
+    rga_session_t *session;
+    bool is_debug;
 
-    g_rga_session.is_debug = get_debug_property();
-    return g_rga_session.is_debug;
+    session = get_rga_session();
+
+    pthread_rwlock_wrlock(&session->rwlock);
+    session->is_debug = get_debug_property();
+    is_debug = session->is_debug;
+    pthread_rwlock_unlock(&session->rwlock);
+
+    return is_debug;
 }
 
 int is_debug_en(void) {
-    return g_rga_session.is_debug;
+    rga_session_t *session;
+    bool is_debug;
+
+    session = get_rga_session();
+
+    pthread_rwlock_rdlock(&session->rwlock);
+    is_debug = session->is_debug;
+    pthread_rwlock_unlock(&session->rwlock);
+
+    return is_debug;
 }
 
 /* Pre-processing during librga load/unload */
@@ -177,5 +212,5 @@ __attribute__((constructor)) static void librga_init() {
 }
 
 __attribute__((destructor)) static void librga_exit() {
-    rga_device_exit();
+    rga_session_deinit(&g_rga_session);
 }

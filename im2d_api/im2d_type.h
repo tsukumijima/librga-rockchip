@@ -281,6 +281,7 @@ typedef enum {
     IM_STATUS_INVALID_PARAM     = -3,
     IM_STATUS_ILLEGAL_PARAM     = -4,
     IM_STATUS_ERROR_VERSION     = -5,
+    IM_STATUS_NO_SESSION        = -6,
     IM_STATUS_FAILED            =  0,
 } IM_STATUS;
 

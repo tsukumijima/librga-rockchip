@@ -84,7 +84,7 @@ inline void rga_apply_rect(rga_buffer_t *image, im_rect *rect) {
     }
 }
 
-IM_STATUS rga_get_info(rga_info_table_entry *return_table);
+IM_STATUS rga_get_info(struct rga_hw_versions_t * version, rga_info_table_entry *return_table);
 
 IM_STATUS rga_check_header(struct rga_version_t header_version);
 IM_STATUS rga_check_driver(struct rga_version_t driver_version);
