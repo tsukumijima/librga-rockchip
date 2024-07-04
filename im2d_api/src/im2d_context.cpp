@@ -32,6 +32,8 @@
 #include "im2d_context.h"
 #include "im2d_impl.h"
 
+#include "utils.h"
+
 #ifdef LOG_TAG
 #undef LOG_TAG
 #define LOG_TAG "im2d_rga_context"
@@ -167,7 +169,7 @@ rga_session_t *get_rga_session() {
     ret = rga_session_init(session);
     if (ret != IM_STATUS_SUCCESS) {
         pthread_rwlock_unlock(&session->rwlock);
-        return NULL;
+        return (rga_session_t *)ERR_PTR(IM_STATUS_NO_SESSION);
     }
     pthread_rwlock_unlock(&session->rwlock);
 

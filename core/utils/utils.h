@@ -28,6 +28,10 @@
  */
 #define ptr_to_u64(ptr) ((uint64_t)(uintptr_t)(ptr))
 #define u64_to_ptr(var) ((void *)(uintptr_t)(var))
+#define PTR_ERR(ptr) ((intptr_t)(ptr))
+#define ERR_PTR(err) ((void *)((intptr_t)(err)))
+#define IS_ERR(ptr) ((intptr_t)(ptr) < (intptr_t)ERR_PTR(-IM_ERROR_FAILED) && (intptr_t)(ptr) > (intptr_t)ERR_PTR(-IM_ERROR_MAX))
+#define IS_ERR_OR_NULL(ptr) ((ptr) == NULL || IS_ERR(ptr))
 
 #define is_rga_format(format) ((format) & 0xff00 || (format) == 0)
 

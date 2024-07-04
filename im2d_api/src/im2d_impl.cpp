@@ -1226,8 +1226,8 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
     rga_info_table_entry *rga_info;
 
     session = get_rga_session();
-    if (session == NULL)
-        return IM_STATUS_NO_SESSION;
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     rga_info = &session->hardware_info;
 
@@ -1345,10 +1345,8 @@ IM_API IM_STATUS rga_import_buffers(struct rga_buffer_pool *buffer_pool) {
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     if (buffer_pool == NULL) {
         IM_LOGW("buffer pool is null!");
@@ -1416,10 +1414,8 @@ IM_API IM_STATUS rga_release_buffers(struct rga_buffer_pool *buffer_pool) {
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get rga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     if (buffer_pool == NULL) {
         IM_LOGW("buffer pool is null!");
@@ -1593,10 +1589,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     get_debug_state();
     if (is_debug_en())
@@ -2273,10 +2267,8 @@ im_job_handle_t rga_job_create(uint32_t flags) {
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return 0;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CREATE, &flags) < 0) {
         IM_LOGE(" %s(%d) request create fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
@@ -2324,10 +2316,8 @@ IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
@@ -2356,10 +2346,8 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2418,10 +2406,8 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2497,10 +2483,8 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     //init
     memset(&rgaReg, 0, sizeof(struct rga_req));
@@ -3596,10 +3580,8 @@ int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst) {
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
 #if NORMAL_API_LOG_EN
     /* print debug log by setting property vendor.rga.log as 1 */
@@ -3847,10 +3829,8 @@ int generate_color_palette_req(struct rga_req *ioc_req, rga_info_t *src, rga_inf
     rga_session_t *session;
 
     session = get_rga_session();
-    if (session == NULL) {
-        IM_LOGE("cannot get librga session!\n");
-        return IM_STATUS_FAILED;
-    }
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     //init
     memset(&rgaReg, 0, sizeof(struct rga_req));

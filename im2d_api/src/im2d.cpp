@@ -77,57 +77,54 @@ extern __thread char g_rga_err_str[IM_ERR_MSG_LEN];
 
 IM_API const char* imStrError_t(IM_STATUS status) {
     const char *error_type[] = {
-        "No errors during operation",
-        "Run successfully",
+        "Fatal error",
         "Unsupported function",
         "Memory overflow",
         "Invalid parameters",
         "Illegal parameters",
         "Version verification failed",
-        "Fatal error",
         "No session",
-        "unkown status"
     };
     static __thread char error_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
     const char *ptr = NULL;
 
     switch(status) {
         case IM_STATUS_NOERROR :
-            return error_type[0];
+            return "No errors during operation";
 
         case IM_STATUS_SUCCESS :
-            return error_type[1];
+            return "Run successfully";
+
+        case IM_STATUS_FAILED :
+            ptr = error_type[IM_ERROR_FAILED];
+            break;
 
         case IM_STATUS_NOT_SUPPORTED :
-            ptr = error_type[2];
+            ptr = error_type[IM_ERROR_NOT_SUPPORTED];
             break;
 
         case IM_STATUS_OUT_OF_MEMORY :
-            ptr = error_type[3];
+            ptr = error_type[IM_ERROR_OUT_OF_MEMORY];
             break;
 
         case IM_STATUS_INVALID_PARAM :
-            ptr = error_type[4];
+            ptr = error_type[IM_ERROR_INVALID_PARAM];
             break;
 
         case IM_STATUS_ILLEGAL_PARAM :
-            ptr = error_type[5];
+            ptr = error_type[IM_ERROR_ILLEGAL_PARAM];
             break;
 
         case IM_STATUS_ERROR_VERSION :
-            ptr = error_type[6];
-            break;
-
-        case IM_STATUS_FAILED :
-            ptr = error_type[7];
+            ptr = error_type[IM_ERROR_ERROR_VERSION];
             break;
 
         case IM_STATUS_NO_SESSION :
-            ptr = error_type[8];
+            ptr = error_type[IM_ERROR_NO_SESSION];
             break;
 
         default :
-            return error_type[9];
+            return "unkown status";
     }
 
     snprintf(error_str, IM_ERR_MSG_LEN, "%s: %s", ptr, g_rga_err_str);
