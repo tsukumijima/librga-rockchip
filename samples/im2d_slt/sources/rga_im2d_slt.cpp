@@ -28,12 +28,16 @@
 #include <memory.h>
 #include <pthread.h>
 
+#ifdef __cplusplus
 #include "im2d.hpp"
+#else
+#include "im2d.h"
+#endif
+
 #include "RgaUtils.h"
 
 #include "utils.h"
 #include "dma_alloc.h"
-#include "drm_alloc.h"
 
 #include "slt_config.h"
 #include "crc.h"
@@ -84,12 +88,12 @@ struct rga_image_info {
     int buf_size;
 };
 
-typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info &, struct rga_image_info &, struct rga_image_info &);
+typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info, struct rga_image_info, struct rga_image_info);
 
 int rga_raster_test(private_data_t *data, int time,
-                    struct rga_image_info &src_img,
-                    struct rga_image_info &tmp_img,
-                    struct rga_image_info &dst_img) {
+                    struct rga_image_info src_img,
+                    struct rga_image_info tmp_img,
+                    struct rga_image_info dst_img) {
     int ret;
     int case_index;
     int usage = 0;
@@ -194,7 +198,7 @@ int rga_raster_test(private_data_t *data, int time,
 
         usage = IM_SYNC | IM_HAL_TRANSFORM_ROT_90 | IM_HAL_TRANSFORM_FLIP_H_V;
 
-        ret = improcess(src, dst, {}, {}, dst_rect, {}, usage);
+        ret = improcess(src, dst, (rga_buffer_t){}, (im_rect){}, dst_rect, (im_rect){}, usage);
         if (ret != IM_STATUS_SUCCESS) {
             printf("ID[%d]: %s rotate-90 + H_V mirror + scale-down %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
@@ -257,9 +261,9 @@ CHECK_ERROR:
 }
 
 int rga_special_test(private_data_t *data, int time,
-                     struct rga_image_info &src_img,
-                     struct rga_image_info &tmp_img,
-                     struct rga_image_info &dst_img) {
+                     struct rga_image_info src_img,
+                     struct rga_image_info tmp_img,
+                     struct rga_image_info dst_img) {
     int ret;
     int case_index;
     unsigned int result_crc = 0;
@@ -355,9 +359,9 @@ CHECK_ERROR:
 }
 
 int rga_perf_test(private_data_t *data, int time,
-                  struct rga_image_info &src_img,
-                  struct rga_image_info &tmp_img,
-                  struct rga_image_info &dst_img) {
+                  struct rga_image_info src_img,
+                  struct rga_image_info tmp_img,
+                  struct rga_image_info dst_img) {
     int ret;
 
     rga_buffer_t src, dst, tmp;
@@ -406,6 +410,7 @@ static int rga_run(void *args, rga_slt_case running_case) {
     char *src_buf = NULL, *dst_buf = NULL, *tmp_buf = NULL;
     int src_dma_fd = -1, dst_dma_fd = -1, tmp_dma_fd = -1;
     rga_buffer_handle_t src_handle = 0, dst_handle = 0, tmp_handle = 0;
+    im_handle_param_t src_param, tmp_param, dst_param;
 
     rga_buffer_t src;
     rga_buffer_t tmp;
@@ -445,9 +450,15 @@ static int rga_run(void *args, rga_slt_case running_case) {
 
     src_buf_size = src_width * src_height * get_bpp_from_format(src_format);
     dst_buf_size = dst_width * dst_height * get_bpp_from_format(dst_format);
+
+    src_param = (im_handle_param_t){(uint32_t)src_width, (uint32_t)src_height, (uint32_t)src_format};
+    dst_param = (im_handle_param_t){(uint32_t)dst_width, (uint32_t)dst_height, (uint32_t)dst_format};
     if (fbc_en) {
         src_buf_size = src_buf_size * 1.5;
         dst_buf_size = dst_buf_size * 1.5;
+
+        src_param = (im_handle_param_t){(uint32_t)src_width, (uint32_t)(int)(src_height * 1.5), (uint32_t)src_format};
+        dst_param = (im_handle_param_t){(uint32_t)dst_width, (uint32_t)(int)(dst_height * 1.5), (uint32_t)dst_format};
     }
     tmp_buf_size = src_buf_size;
 
@@ -471,19 +482,19 @@ static int rga_run(void *args, rga_slt_case running_case) {
             goto RELEASE_BUFFER;
         }
 
-        src_handle = importbuffer_fd(src_dma_fd, src_buf_size);
+        src_handle = importbuffer_fd(src_dma_fd, &src_param);
         if (src_handle <= 0) {
             printf("ID[%d] %s import src dma_buf failed!\n", data->id, data->name);
             goto RELEASE_BUFFER;
         }
 
-        tmp_handle = importbuffer_fd(tmp_dma_fd, tmp_buf_size);
+        tmp_handle = importbuffer_fd(tmp_dma_fd, &src_param);
         if (tmp_handle <= 0) {
             printf("ID[%d] %s import tmp dma_buf failed!\n", data->id, data->name);
             goto RELEASE_BUFFER;
         }
 
-        dst_handle = importbuffer_fd(dst_dma_fd, dst_buf_size);
+        dst_handle = importbuffer_fd(dst_dma_fd, &dst_param);
         if (dst_handle <= 0) {
             printf("ID[%d] %s import dst dma_buf failed!\n", data->id, data->name);
             goto RELEASE_BUFFER;
@@ -497,19 +508,19 @@ static int rga_run(void *args, rga_slt_case running_case) {
             goto RELEASE_BUFFER;
         }
 
-        src_handle = importbuffer_virtualaddr(src_buf, src_buf_size);
+        src_handle = importbuffer_virtualaddr(src_buf, &src_param);
         if (src_handle <= 0) {
             printf("ID[%d] %s import src virt_addr failed!\n", data->id, data->name);
             goto RELEASE_BUFFER;
         }
 
-        tmp_handle = importbuffer_virtualaddr(tmp_buf, tmp_buf_size);
+        tmp_handle = importbuffer_virtualaddr(tmp_buf, &src_param);
         if (tmp_handle <= 0) {
             printf("ID[%d] %s import tmp virt_addr failed!\n", data->id, data->name);
             goto RELEASE_BUFFER;
         }
 
-        dst_handle = importbuffer_virtualaddr(dst_buf, dst_buf_size);
+        dst_handle = importbuffer_virtualaddr(dst_buf, &dst_param);
         if (dst_handle <= 0) {
             printf("ID[%d] %s import dst virt_addr failed!\n", data->id, data->name);
             goto RELEASE_BUFFER;
