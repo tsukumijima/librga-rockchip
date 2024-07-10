@@ -151,6 +151,7 @@ int rga_raster_test(private_data_t *data, int time,
                 goto CHECK_ERROR;
         }
 
+#if !(IM2d_SLT_TEST_DISABLE_ALPHA)
         /* case: 3-channel blend + rotate-180 + H_V mirror + scale-up + dst-CSC */
         case_index++;
 
@@ -185,6 +186,7 @@ int rga_raster_test(private_data_t *data, int time,
             if (!crc_check(case_index, result_crc, crc_golden_table))
                 goto CHECK_ERROR;
         }
+#endif
 
         dst.format = ori_format;
 
