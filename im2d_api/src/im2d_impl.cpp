@@ -2134,6 +2134,8 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
         ret = generate_gauss_coe(&opt.gauss_config, &srcinfo.gauss_config);
         if (ret != IM_STATUS_SUCCESS)
             return (IM_STATUS)ret;
+
+        srcinfo.blend |= (src.global_alpha & 0xff) << 16;
     }
 
     srcinfo.rd_mode = src.rd_mode;
@@ -3529,6 +3531,10 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
 
     /* gauss */
     memcpy(&rgaReg.gauss_config, &src->gauss_config, sizeof(rgaReg.gauss_config));
+    if (rgaReg.gauss_config.size > 0) {
+        rgaReg.feature.global_alpha_en = true;
+        rgaReg.fg_global_alpha = (blend >> 16) & 0xff;
+    }
 
     /* OSD */
     memcpy(&rgaReg.osd_info, &src->osd_info, sizeof(struct rga_osd_info));
