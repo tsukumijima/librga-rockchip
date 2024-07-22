@@ -52,8 +52,8 @@ int main() {
     rga_buffer_t src_img, dst_img;
     rga_buffer_handle_t src_handle, dst_handle;
     im_opt_t opt;
-    im_handle_param_t src_param = {(uint32_t)src_width, (uint32_t)src_height, (uint32_t)src_format};
-    im_handle_param_t dst_param = {(uint32_t)dst_width, (uint32_t)dst_height, (uint32_t)dst_format};
+    im_handle_param_t src_param;
+    im_handle_param_t dst_param;
 
     /* gauss 3x3, sigma = 1 */
     double gauss_matrix[9] = {
@@ -77,16 +77,17 @@ int main() {
     src_buf_size = src_width * src_height * get_bpp_from_format(src_format);
     dst_buf_size = dst_width * dst_height * get_bpp_from_format(dst_format);
 
+    src_param = {(uint32_t)src_width, (uint32_t)src_height, (uint32_t)src_format};
+    dst_param = {(uint32_t)dst_width, (uint32_t)dst_height, (uint32_t)dst_format};
+
     /* Allocate dma_buf from CMA, return dma_fd and virtual address */
     ret = dma_buf_alloc(DMA_HEAP_DMA32_UNCACHED_PATH, src_buf_size, &src_dma_fd, (void **)&src_buf);
-    // ret = dma_buf_alloc(RV1106_CMA_HEAP_PATH, src_buf_size, &src_dma_fd, (void **)&src_buf);
     if (ret < 0) {
         printf("alloc src CMA buffer failed!\n");
         return -1;
     }
 
     ret = dma_buf_alloc(DMA_HEAP_DMA32_UNCACHED_PATH, dst_buf_size, &dst_dma_fd, (void **)&dst_buf);
-    // ret = dma_buf_alloc(RV1106_CMA_HEAP_PATH, dst_buf_size, &dst_dma_fd, (void **)&dst_buf);
     if (ret < 0) {
         printf("alloc dst CMA buffer failed!\n");
         dma_buf_free(src_buf_size, &src_dma_fd, src_buf);
@@ -127,6 +128,8 @@ int main() {
     }
 
     imsetOptGaussianBlurMatrix(&opt, 3, 3, gauss_matrix);
+
+    imsetOpacity(&src_img, 0xfe);
 
     ret = improcess(src_img, dst_img, (rga_buffer_t){}, (im_rect){}, (im_rect){}, (im_rect){}, -1, NULL, &opt, IM_SYNC | IM_GAUSS);
     if (ret == IM_STATUS_SUCCESS) {

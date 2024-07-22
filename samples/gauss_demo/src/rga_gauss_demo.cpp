@@ -51,8 +51,8 @@ int main() {
 
     rga_buffer_t src_img, dst_img;
     rga_buffer_handle_t src_handle, dst_handle;
-    im_handle_param_t src_param = {(uint32_t)src_width, (uint32_t)src_height, (uint32_t)src_format};
-    im_handle_param_t dst_param = {(uint32_t)dst_width, (uint32_t)dst_height, (uint32_t)dst_format};
+    im_handle_param_t src_param;
+    im_handle_param_t dst_param;
 
     memset(&src_img, 0, sizeof(src_img));
     memset(&dst_img, 0, sizeof(dst_img));
@@ -68,14 +68,17 @@ int main() {
     src_buf_size = src_width * src_height * get_bpp_from_format(src_format);
     dst_buf_size = dst_width * dst_height * get_bpp_from_format(dst_format);
 
+    src_param = {(uint32_t)src_width, (uint32_t)src_height, (uint32_t)src_format};
+    dst_param = {(uint32_t)dst_width, (uint32_t)dst_height, (uint32_t)dst_format};
+
     /* Allocate dma_buf from CMA, return dma_fd and virtual address */
-    ret = dma_buf_alloc(RV1106_CMA_HEAP_PATH, src_buf_size, &src_dma_fd, (void **)&src_buf);
+    ret = dma_buf_alloc(DMA_HEAP_DMA32_UNCACHED_PATH, src_buf_size, &src_dma_fd, (void **)&src_buf);
     if (ret < 0) {
         printf("alloc src CMA buffer failed!\n");
         return -1;
     }
 
-    ret = dma_buf_alloc(RV1106_CMA_HEAP_PATH, dst_buf_size, &dst_dma_fd, (void **)&dst_buf);
+    ret = dma_buf_alloc(DMA_HEAP_DMA32_UNCACHED_PATH, dst_buf_size, &dst_dma_fd, (void **)&dst_buf);
     if (ret < 0) {
         printf("alloc dst CMA buffer failed!\n");
         dma_buf_free(src_buf_size, &src_dma_fd, src_buf);
@@ -108,6 +111,8 @@ int main() {
         |            |        |            |
         --------------        --------------
      */
+
+    imsetOpacity(&src_img, 0xff);
 
     ret = imcheck(src_img, dst_img, (im_rect){}, (im_rect){});
     if (IM_STATUS_NOERROR != ret) {
