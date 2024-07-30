@@ -487,18 +487,21 @@ static int rga_run(void *args, rga_slt_case running_case) {
         src_handle = importbuffer_fd(src_dma_fd, &src_param);
         if (src_handle <= 0) {
             printf("ID[%d] %s import src dma_buf failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
         tmp_handle = importbuffer_fd(tmp_dma_fd, &src_param);
         if (tmp_handle <= 0) {
             printf("ID[%d] %s import tmp dma_buf failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
         dst_handle = importbuffer_fd(dst_dma_fd, &dst_param);
         if (dst_handle <= 0) {
             printf("ID[%d] %s import dst dma_buf failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
     } else {
@@ -507,24 +510,28 @@ static int rga_run(void *args, rga_slt_case running_case) {
         dst_buf = (char *)malloc(dst_buf_size);
         if (src_buf == NULL || tmp_buf == NULL || dst_buf == NULL) {
             printf("malloc fault!\n");
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
         src_handle = importbuffer_virtualaddr(src_buf, &src_param);
         if (src_handle <= 0) {
             printf("ID[%d] %s import src virt_addr failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
         tmp_handle = importbuffer_virtualaddr(tmp_buf, &src_param);
         if (tmp_handle <= 0) {
             printf("ID[%d] %s import tmp virt_addr failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
         dst_handle = importbuffer_virtualaddr(dst_buf, &dst_param);
         if (dst_handle <= 0) {
             printf("ID[%d] %s import dst virt_addr failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
     }
@@ -556,6 +563,7 @@ static int rga_run(void *args, rga_slt_case running_case) {
     dst = wrapbuffer_handle(dst_handle, dst_width, dst_height, dst_format);
     if (src.width == 0 || tmp.width == 0 || dst.width == 0) {
         printf("warpbuffer failed, %s\n", imStrError());
+        ret = slt_error;
         goto RELEASE_BUFFER;
     }
 
