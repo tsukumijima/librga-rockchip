@@ -647,14 +647,12 @@ RELEASE_BUFFER:
         if (dst_dma_fd > 0 && dst_buf != NULL)
             dma_buf_free(dst_buf_size, &dst_dma_fd, (void *)dst_buf);
     } else {
-        printf("yqw, --debug, ID[%d], start free\n", data->id);
         if (src_buf != NULL)
             free(src_buf);
         if (tmp_buf != NULL)
             free(tmp_buf);
         if (dst_buf != NULL)
             free(dst_buf);
-        printf("yqw, --debug, ID[%d], end free\n", data->id);
     }
 
     return ret;
