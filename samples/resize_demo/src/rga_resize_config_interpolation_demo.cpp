@@ -55,6 +55,7 @@ int main() {
 
     memset(&src_img, 0, sizeof(src_img));
     memset(&dst_img, 0, sizeof(dst_img));
+    memset(&opt, 0, sizeof(opt));
 
     src_width = 1280;
     src_height = 720;
