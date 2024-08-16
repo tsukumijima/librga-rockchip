@@ -1525,8 +1525,8 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                       job_handle, &src, &dst, &pat, &srect, &drect, &prect,
                       acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
-    if (rga_get_opt(&opt, opt_ptr) == IM_STATUS_FAILED)
-        memset(&opt, 0x0, sizeof(opt));
+    memset(&opt, 0x0, sizeof(opt));
+    rga_get_opt(&opt, opt_ptr);
 
     memset(&srcinfo, 0, sizeof(rga_info_t));
     memset(&dstinfo, 0, sizeof(rga_info_t));
