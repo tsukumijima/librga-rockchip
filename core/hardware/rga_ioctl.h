@@ -523,7 +523,7 @@ struct rga_req {
 
     rga_gauss_config_t gauss_config;
 
-    uint8_t reservr[27];
+    uint8_t reservr[24];
 };
 
 struct rga_user_request {
