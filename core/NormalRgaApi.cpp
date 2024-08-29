@@ -969,7 +969,7 @@ int NormalRgaFullColorSpaceConvert(struct rga_req *msg, int color_space_mode) {
 
     if (color_space_mode >> 8) {
         memcpy(&msg->full_csc, &default_csc_table, sizeof(full_csc_t));
-        memcpy(&msg->full_csc_clip, clip_ptr, sizeof(full_csc_t));
+        memcpy(&msg->full_csc_clip, clip_ptr, sizeof(struct rga_csc_clip));
         msg->feature.full_csc_clip_en = true;
     }
 
