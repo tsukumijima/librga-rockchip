@@ -28,8 +28,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/mman.h>
-#include <linux/stddef.h>
 
 #include "utils/utils.h"
 #include "RgaUtils.h"

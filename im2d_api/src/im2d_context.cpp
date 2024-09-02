@@ -22,7 +22,6 @@
 #include <pthread.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
 
 #ifdef ANDROID
 #include <cutils/properties.h>

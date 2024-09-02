@@ -19,8 +19,8 @@
 #ifndef _RGA_DRIVER_IOCTL_H_
 #define _RGA_DRIVER_IOCTL_H_
 
-#include <asm/ioctl.h>
 #include <stdint.h>
+#include <sys/ioctl.h>
 
 /* compatible */
 #include "rga2_driver.h"

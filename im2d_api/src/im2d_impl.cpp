@@ -28,7 +28,6 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include <sys/ioctl.h>
 
 #include "im2d.h"
 #include "im2d_impl.h"

@@ -29,8 +29,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/mman.h>
-#include <linux/stddef.h>
 
 #ifdef ANDROID
 #include <utils/Atomic.h>

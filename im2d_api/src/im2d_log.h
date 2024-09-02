@@ -19,7 +19,6 @@
 #define _im2d_log_hpp_
 
 #include <unistd.h>
-#include <sys/syscall.h>
 
 #define IM_ERR_MSG_LEN 512
 
@@ -71,6 +70,8 @@ size_t rga_get_start_time_ms(void);
 #define IM_LOGFE(_str, ...) IM_LOG(ANDROID_LOG_ERROR | IM_LOG_FORCE, _str , ## __VA_ARGS__)
 
 #else
+#include <sys/syscall.h>
+
 #define IM_LOG(level, _str, ...) \
     do { \
         if (!((level) & IM_LOG_FORCE)) \
