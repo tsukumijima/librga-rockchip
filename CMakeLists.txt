@@ -18,6 +18,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2 -pthread")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -pthread -lm -Wno-unused-command-line-argument")
+set(RGA_SAMPLES_ENABLE true)
 
 if(CMAKE_BUILD_TARGET STREQUAL android_ndk)
     message("cmake build android ndk")
@@ -51,6 +52,7 @@ if (BUILD_WITH_VERSION STREQUAL true)
     im2d_api_extract_version()
 endif()
 
+# source code config
 set(IM2D_SRCS
     core/utils/android_utils/src/android_utils.cpp
     core/utils/drm_utils/src/drm_utils.cpp
@@ -66,6 +68,12 @@ set(IM2D_SRCS
     im2d_api/src/im2d.cpp
 )
 
+set(IM2D_3RDPARTY_INCLUDE
+    ${IM2D_3RDPARTY_INCLUDE}
+    ./core/3rdparty/libdrm/include/drm
+    ./core/3rdparty/android_hal
+)
+
 set(IM2D_INCLUDE
     ./
     ./im2d_api
@@ -73,8 +81,17 @@ set(IM2D_INCLUDE
     ./core
     ./core/hardware
     ./core/utils
-    ./core/3rdparty/libdrm/include/drm
-    ./core/3rdparty/android_hal
+    ${IM2D_3RDPARTY_INCLUDE}
+)
+
+set(IM2D_CORE_CPP_SRCS
+    core/RockchipRga.cpp
+    core/GrallocOps.cpp
+    core/NormalRga.cpp
+    core/RgaApi.cpp
+)
+
+set(IM2D_3RDPARTY_CPP_INCLUDE
     hardware/libhardware/modules/gralloc
     system/core/liblog/includeNDROID_NDK_REVISION_REGEX
     system/core/libion/kernel-headers
@@ -94,33 +111,33 @@ set(IM2D_PUBLIC_HEADER
     include/RgaUtils.h
 )
 
+set(IM2D_PUBLIC_CPP_HEADER
+    im2d_api/im2d.hpp
+    include/drmrga.h
+    include/RgaApi.h
+    include/RockchipRga.h
+    include/RgaSingleton.h
+    include/RgaMutex.h
+    include/GrallocOps.h
+)
+
+#set source
 if (RGA_SOURCE_CODE_TYPE STREQUAL c)
     set_source_files_properties(${IM2D_SRCS} PROPERTIES LANGUAGE C COMPILE_FLAGS "-x c")
 else()
     set(IM2D_SRCS
         ${IM2D_SRCS}
-        core/RockchipRga.cpp
-        core/GrallocOps.cpp
-        core/NormalRga.cpp
-        core/RgaApi.cpp
+        ${IM2D_CORE_CPP_SRCS}
     )
 
     set(IM2D_INCLUDE
         ${IM2D_INCLUDE}
-        hardware/libhardware/modules/gralloc
-        system/core/liblog/includeNDROID_NDK_REVISION_REGEX
-        system/core/libion/kernel-headers
+        ${IM2D_3RDPARTY_CPP_INCLUDE}
     )
 
     set(IM2D_PUBLIC_HEADER
         ${IM2D_PUBLIC_HEADER}
-        im2d_api/im2d.hpp
-        include/drmrga.h
-        include/RgaApi.h
-        include/RockchipRga.h
-        include/RgaSingleton.h
-        include/RgaMutex.h
-        include/GrallocOps.h
+        ${IM2D_PUBLIC_CPP_HEADER}
     )
 endif()
 
@@ -176,10 +193,12 @@ install(TARGETS ${SHARED_LIB_NAME}
 install(TARGETS  ${STATIC_LIB_NAME}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-# build im2d api demo
-add_subdirectory(samples/im2d_api_demo)
-#add_subdirectory(samples)
+if (RGA_SAMPLES_ENABLE STREQUAL true)
+    # build im2d api demo
+    add_subdirectory(samples/im2d_api_demo)
+    #add_subdirectory(samples)
 
-if (DEFINED RGA_ENABLE_INSTALL_SAMPLES)
-install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_PREFIX})
+    if (DEFINED RGA_ENABLE_INSTALL_SAMPLES)
+        install(DIRECTORY samples DESTINATION ${CMAKE_INSTALL_PREFIX})
+    endif()
 endif()
