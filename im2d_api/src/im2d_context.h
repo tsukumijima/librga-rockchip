@@ -25,6 +25,10 @@
 #include "rga_ioctl.h"
 #include "im2d_hardware.h"
 
+#ifdef RT_THREAD
+#include "rt-thread/rtt_adapter.h"
+#endif
+
 #define RGA_DEVICE_NODE_PATH "/dev/rga"
 
 typedef enum {
@@ -41,7 +45,11 @@ typedef enum {
 } RGA_DRIVER_FEATURE;
 
 typedef struct rga_session {
+#ifdef RT_THREAD
+    rt_device_t rga_dev_fd;
+#else
     int rga_dev_fd;
+#endif
 
     pthread_rwlock_t rwlock;
 

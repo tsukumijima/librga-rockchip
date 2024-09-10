@@ -70,6 +70,22 @@ size_t rga_get_start_time_ms(void);
 #define IM_LOGFE(_str, ...) IM_LOG(ANDROID_LOG_ERROR | IM_LOG_FORCE, _str , ## __VA_ARGS__)
 
 #else
+#ifdef RT_THREAD
+#include <rtthread.h>
+
+#define IM_LOG(level, _str, ...) \
+    do { \
+        if (!((level) & IM_LOG_FORCE)) \
+            rga_error_msg_set(_str, ## __VA_ARGS__); \
+        if ((rga_log_enable_get() > 0 && LOG_LEVEL_CHECK(level)) || \
+            GET_LOG_LEVEL(level) == IM_LOG_ERROR || \
+            (level) & IM_LOG_FORCE) \
+            rt_kprintf("%lu %1s %8s: " _str "\n", \
+                (unsigned long)(rga_get_current_time_ms()-rga_get_start_time_ms()), \
+                rga_get_error_type_str(level), LOG_TAG, \
+                ## __VA_ARGS__); \
+    } while(0)
+#else
 #include <sys/syscall.h>
 
 #define IM_LOG(level, _str, ...) \
@@ -84,6 +100,8 @@ size_t rga_get_start_time_ms(void);
                     syscall(SYS_gettid), getpid(), rga_get_error_type_str(level), LOG_TAG, \
                     ## __VA_ARGS__); \
     } while(0)
+#endif /* #ifdef RT_THREAD */
+
 #define IM_LOGD(_str, ...) IM_LOG(IM_LOG_DEBUG, _str , ## __VA_ARGS__)
 #define IM_LOGI(_str, ...) IM_LOG(IM_LOG_INFO, _str , ## __VA_ARGS__)
 #define IM_LOGW(_str, ...) IM_LOG(IM_LOG_WARN, _str , ## __VA_ARGS__)

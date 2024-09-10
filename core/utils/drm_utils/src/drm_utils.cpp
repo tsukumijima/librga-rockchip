@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
+#include "drm_utils/drm_utils.h"
 #include "rga.h"
 #include "im2d_type.h"
 
+#ifndef RGA_UTILS_DRM_DISABLE
+
 #include "drm_fourcc.h"
-#include "drm_utils/drm_utils.h"
 
 #ifdef __cplusplus
 #include <unordered_map>
@@ -135,3 +137,5 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
 
     return IM_RASTER_MODE;
 }
+
+#endif /* #ifndef RGA_UTILS_DRM_DISABLE */

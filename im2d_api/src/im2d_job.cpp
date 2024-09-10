@@ -30,6 +30,7 @@
 #include "im2d_type.h"
 #include "im2d_job.h"
 #include "im2d_log.h"
+#include "im2d_context.h"
 
 struct im2d_job_manager g_im2d_job_manager;
 

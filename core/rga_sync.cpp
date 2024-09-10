@@ -16,6 +16,10 @@
  *  limitations under the License.
  */
 
+#include "rga_sync.h"
+
+#ifndef RGA_SYNC_DISABLE
+
 #include <errno.h>
 #include <fcntl.h>
 #include <malloc.h>
@@ -36,8 +40,6 @@
 # define _Atomic(X) std::atomic< X >
 using namespace std;
 #endif
-
-#include "rga_sync.h"
 
 /* Legacy Sync API */
 struct sync_legacy_merge_data {
@@ -173,3 +175,14 @@ int rga_sync_merge(const char *name, int fd1, int fd2)
     }
     return ret;
 }
+
+#else
+int rga_sync_wait(int fd, int timeout) {
+    return -1;
+}
+
+int32_t rga_sync_merge(const char* name, int32_t fd1, int32_t fd2) {
+    return -1;
+}
+#endif /* #ifndef RGA_SYNC_DISABLE */
+

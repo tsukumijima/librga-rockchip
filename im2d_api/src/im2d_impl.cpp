@@ -30,12 +30,13 @@
 #include <math.h>
 
 #include "im2d.h"
-#include "im2d_impl.h"
 #include "im2d_job.h"
 #include "im2d_log.h"
 #include "im2d_hardware.h"
 #include "im2d_debugger.h"
 #include "im2d_context.h"
+
+#include "im2d_impl.h"
 
 #include "core/NormalRga.h"
 #include "RgaUtils.h"

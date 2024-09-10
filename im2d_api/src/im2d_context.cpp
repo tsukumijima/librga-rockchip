@@ -64,6 +64,68 @@ static inline void clear_driver_feature(rga_session_t *session) {
     session->driver_feature = 0;
 }
 
+#ifdef RT_THREAD
+#define RGA_DRIVER_NAME "rga"
+
+static IM_STATUS rga_device_init(rga_session_t *session) {
+    int ret;
+    rt_device_t device;
+
+    device = rt_device_find(RGA_DRIVER_NAME);
+    if (device == NULL)
+    {
+        rt_kprintf("failed to fine %s device\n", RGA_DRIVER_NAME);
+        return IM_STATUS_FAILED;
+    }
+
+    ret = rt_device_open(device, RT_DEVICE_OFLAG_RDWR);
+    if (ret < 0)
+    {
+        rt_kprintf("failed to fine %s device\n", RGA_DRIVER_NAME);
+        return -1;
+    }
+
+    ret = rt_device_control(device, RGA_IOC_GET_DRVIER_VERSION, &session->driver_verison);
+    if (ret < 0)
+    {
+        IM_LOGE("fail to get driver versions! ret = %d, %s\n", ret, strerror(errno));
+        return IM_STATUS_FAILED;
+    }
+
+    ret = rt_device_control(device, RGA_IOC_GET_HW_VERSION, &session->core_version);
+    if (ret < 0)
+    {
+        IM_LOGE("fail to get hardware versions! ret = %d, %s\n", ret, strerror(errno));
+        return IM_STATUS_FAILED;
+    }
+
+    session->driver_type = RGA_DRIVER_IOC_MULTI_RGA;
+
+    ret = rga_check_driver(session->driver_verison);
+    if (ret == IM_STATUS_ERROR_VERSION)
+        return (IM_STATUS)ret;
+
+    set_driver_feature(session);
+    session->rga_dev_fd = device;
+
+    rt_device_close(device);
+
+    return IM_STATUS_SUCCESS;
+}
+
+static void rga_device_exit(rga_session_t *session) {
+    if (session->rga_dev_fd == NULL) {
+        return;
+    }
+
+    rt_device_close(session->rga_dev_fd);
+    session->rga_dev_fd = NULL;
+    session->driver_type = RGA_DRIVER_IOC_UNKONW;
+
+    clear_driver_feature(session);
+}
+
+#else
 static IM_STATUS rga_device_init(rga_session_t *session) {
     int ret;
     int fd;
@@ -129,6 +191,7 @@ static void rga_device_exit(rga_session_t *session) {
 
     clear_driver_feature(session);
 }
+#endif
 
 static int rga_session_init(rga_session_t *session) {
     int ret;
@@ -158,7 +221,7 @@ rga_session_t *get_rga_session() {
     rga_session_t *session =  &g_rga_session;
 
     pthread_rwlock_rdlock(&session->rwlock);
-    if (session->rga_dev_fd != -1 || session->rga_dev_fd >= 0) {
+    if (session->rga_dev_fd > 0) {
         pthread_rwlock_unlock(&session->rwlock);
         return session;
     }
@@ -209,9 +272,16 @@ __attribute__((constructor)) static void librga_init() {
         return;
     }
 
+#ifdef RT_THREAD
+    g_rga_session.rga_dev_fd = NULL;
+#else
     g_rga_session.rga_dev_fd = -1;
+#endif
 }
 
 __attribute__((destructor)) static void librga_exit() {
     rga_session_deinit(&g_rga_session);
 }
+#ifdef RT_THREAD
+INIT_APP_EXPORT(librga_init);
+#endif

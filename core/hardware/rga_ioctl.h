@@ -20,7 +20,10 @@
 #define _RGA_DRIVER_IOCTL_H_
 
 #include <stdint.h>
+
+#ifndef RT_THREAD
 #include <sys/ioctl.h>
+#endif
 
 /* compatible */
 #include "rga2_driver.h"
