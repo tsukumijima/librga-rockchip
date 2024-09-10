@@ -81,6 +81,7 @@ set(IM2D_INCLUDE
     ./core
     ./core/hardware
     ./core/utils
+    ./core/adapter
     ${IM2D_3RDPARTY_INCLUDE}
 )
 
