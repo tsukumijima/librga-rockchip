@@ -3,13 +3,19 @@
 SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE[0]}); pwd)
 SOURCE_PATH=${SCRIPT_DIR}
 
+TARGET_NAME="linux"
+
 # Modify to the local toolchain path.
-TOOLCHAIN_PATH=${SOURCE_PATH}/toolchains/toolchain_linux.cmake
-BUILD_DIR=build/build_linux
+TOOLCHAIN_PATH=${SOURCE_PATH}/toolchains/toolchain_${TARGET_NAME}.cmake
+BUILD_DIR=build/build_${TARGET_NAME}
 BUILD_TYPE=Release
 
-if [ ${1} == 'c' ]
-then
+if [ ! -e ${TOOLCHAIN_PATH} ]; then
+	echo "toolchain ${TOOLCHAIN_PATH} does not exist."
+	exit 1
+fi
+
+if [ -n "${1}" ] && [ "${1}" == 'c' ]; then
     echo "compile with C"
 	BUILD_SOURCE_TYPE=c
 else

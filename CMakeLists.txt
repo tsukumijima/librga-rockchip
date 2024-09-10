@@ -48,6 +48,33 @@ if(CMAKE_BUILD_TARGET STREQUAL cmake_linux)
     endif()
 endif()
 
+if (CMAKE_BUILD_TARGET STREQUAL rt_thread)
+    message("cmake build RT-Thread")
+    add_compile_options(-DLINUX -DRT_THREAD -DRGA_SYNC_DISABLE -DRGA_UTILS_DRM_DISABLE)
+
+    set(IM2D_RT_THREAD_INCLUDE
+        ${RTOS_BSP}/include/
+        ${RTOS_BSP}/components/drivers/include/
+        ${RTOS_BSP}/components/finsh
+        ${RTOS_BSP}/bsp/rockchip/rk2118/
+        ${RTOS_BSP}/rt-thread/include
+        ${RTOS_BSP}/bsp/maix3/
+        ${RTOS_BSP}/rt-thread/components/finsh/
+        ${RTOS_BSP}/bsp/maix3/c908/
+    )
+
+    set(IM2D_3RDPARTY_INCLUDE
+        ${IM2D_3RDPARTY_INCLUDE}
+        ${IM2D_RT_THREAD_INCLUDE}
+    )
+
+    string(REPLACE "-pthread" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    string(REPLACE "-pthread" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-unused-variable -Wno-incompatible-pointer-types -Wno-format")
+    set(RGA_SAMPLES_ENABLE false)
+endif()
+
 if (BUILD_WITH_VERSION STREQUAL true)
     im2d_api_extract_version()
 endif()
