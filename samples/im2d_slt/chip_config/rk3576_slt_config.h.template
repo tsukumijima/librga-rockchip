@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-#ifndef _IM2D_SLT_CONFIG_H_
-#define _IM2D_SLT_CONFIG_H_
-
 /* im2d_slt config */
 #define IM2D_SLT_THREAD_EN                  1   /* Enable multi-threaded mode. */
 #define IM2D_SLT_THREAD_MAX                 10  /* Maximum number of threads. */
@@ -27,18 +24,18 @@
 
 /* raster test */
 #define IM2D_SLT_TEST_RGA2_0_EN             1   /* Enable rga2_core0 case. */
-#define IM2D_SLT_TEST_RGA2_1_EN             0   /* Enable rga2_core1 case. */
+#define IM2D_SLT_TEST_RGA2_1_EN             1   /* Enable rga2_core1 case. */
 #define IM2D_SLT_TEST_RGA3_0_EN             0   /* Enable rga3_core0 case. */
 #define IM2D_SLT_TEST_RGA3_1_EN             0   /* Enable rga3_core1 case. */
 
 #define IM2D_SLT_TEST_SPECIAL_EN            1   /* Enable special test. */
 /* special test */
-#define IM2D_SLT_TEST_RGA2_0_TILE_EN        0   /* Enable rga2_core0 TILE4x4 case. */
-#define IM2D_SLT_TEST_RGA2_0_AFBC32x8_EN    0   /* Enable rga2_core0 AFBC32x8 split mode case. */
-#define IM2D_SLT_TEST_RGA2_0_RKFBC64x4_EN   0   /* Enable rga2_core0 AFBC32x8 split mode case. */
-#define IM2D_SLT_TEST_RGA2_1_TILE_EN        0   /* Enable rga2_core1 TILE4x4 case. */
-#define IM2D_SLT_TEST_RGA2_1_AFBC32x8_EN    0   /* Enable rga2_core0 AFBC32x8 split mode case. */
-#define IM2D_SLT_TEST_RGA2_1_RKFBC64x4_EN   0   /* Enable rga2_core0 AFBC32x8 split mode case. */
+#define IM2D_SLT_TEST_RGA2_0_TILE_EN        1   /* Enable rga2_core0 TILE4x4 case. */
+#define IM2D_SLT_TEST_RGA2_0_AFBC32x8_EN    1   /* Enable rga2_core0 AFBC32x8 split mode case. */
+#define IM2D_SLT_TEST_RGA2_0_RKFBC64x4_EN   1   /* Enable rga2_core0 AFBC32x8 split mode case. */
+#define IM2D_SLT_TEST_RGA2_1_TILE_EN        1   /* Enable rga2_core1 TILE4x4 case. */
+#define IM2D_SLT_TEST_RGA2_1_AFBC32x8_EN    1   /* Enable rga2_core0 AFBC32x8 split mode case. */
+#define IM2D_SLT_TEST_RGA2_1_RKFBC64x4_EN   1   /* Enable rga2_core0 AFBC32x8 split mode case. */
 #define IM2D_SLT_TEST_RGA3_0_FBC_EN         0   /* Enable rga3_core0 AFBC16x16 case. */
 #define IM2D_SLT_TEST_RGA3_1_FBC_EN         0   /* Enable rga3_core1 AFBC16x16 case. */
 
@@ -60,10 +57,4 @@
 
 #define IM2D_SLT_DEFAULT_INPUT_PATH         "/data/rga_slt"
 #define IM2D_SLT_DEFAULT_OUTPUT_PATH        "/data/rga_slt"
-
-/* crc32 golden config */
-#define IM2D_SLT_GENERATE_CRC               0
-#define IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX "crcdata"
 #define IM2D_SLT_DEFAULT_GOLDEN_PATH        "/data/rga_slt/golden"
-
-#endif /* #ifndef _IM2D_SLT_CONFIG_H_ */

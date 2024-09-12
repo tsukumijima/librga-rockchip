@@ -331,6 +331,11 @@ IM_API rga_buffer_t wrapbuffer_AHardwareBuffer(AHardwareBuffer *buf) {
 #endif
 #endif
 
+void imsetAlphaBit(rga_buffer_t *buf, uint8_t alpha0, uint8_t alpha1) {
+    buf->alpha_bit.alpha0 = alpha0;
+    buf->alpha_bit.alpha1 = alpha1;
+}
+
 void imsetOpacity(rga_buffer_t *buf, uint8_t alpha) {
     buf->global_alpha = alpha;
 }
@@ -371,6 +376,7 @@ IM_API const char* querystring(int name) {
         "RGA_2_lite0 ",
         "RGA_2_lite1 ",
         "RGA_2_Enhance ",
+        "RGA_2_PRO ",
         "RGA_3 ",
     };
     const char *output_resolution[] = {
@@ -387,7 +393,8 @@ IM_API const char* querystring(int name) {
     };
     const char *output_format[] = {
         "unknown",
-        "RGBA_8888 RGB_888 RGB_565 ",
+        "RGBA/ARGB_8888 RGB_888 RGB_565 ",
+        "ARGB_4444 ARGB_5551 ",
         "RGBA_4444 RGBA_5551 ",
         "BPP8 BPP4 BPP2 BPP1 ",
         "YUV420_sp_8bit ",
@@ -400,7 +407,12 @@ IM_API const char* querystring(int name) {
         "YUV422_p_10bit ",
         "YUYV420 ",
         "YUYV422 ",
-        "YUV400/Y4 "
+        "YUV400 ",
+        "Y4 ",
+        "RGB2BPP ",
+        "ALPHA-8bit ",
+        "YUV444_sp_8bit ",
+        "Y8 ",
     };
     const char *feature[] = {
         "unknown ",
@@ -416,6 +428,7 @@ IM_API const char* querystring(int name) {
         "mosaic ",
         "OSD ",
         "early_interruption ",
+        "alpha_bit_map ",
     };
     const char *performance[] = {
         "unknown",
@@ -460,6 +473,8 @@ IM_API const char* querystring(int name) {
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX];
                     if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_ENHANCE)
                         out << output_version[IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX];
+                    if (rga_info.version & IM_RGA_HW_VERSION_RGA_2_PRO)
+                        out << output_version[IM_RGA_HW_VERSION_RGA_2_PRO_INDEX];
                     if (rga_info.version & IM_RGA_HW_VERSION_RGA_3)
                         out << output_version[IM_RGA_HW_VERSION_RGA_3_INDEX];
                 }
@@ -532,8 +547,10 @@ IM_API const char* querystring(int name) {
                 out << output_name[name];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
-                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER)
-                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
@@ -558,6 +575,16 @@ IM_API const char* querystring(int name) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_Y4)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_Y8)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
                 if(!(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_MASK))
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 out << endl;
@@ -567,8 +594,10 @@ IM_API const char* querystring(int name) {
                 out << output_name[name];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_INDEX];
-                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGB_OTHER)
-                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGB_OTHER_INDEX];
+                if(rga_info.input_format & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ARGB_16BIT_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA_16BIT_INDEX];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_BPP)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_BPP_INDEX];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_8_BIT)
@@ -593,6 +622,16 @@ IM_API const char* querystring(int name) {
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUYV_422_INDEX];
                 if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_400)
                     out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_400_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_Y4)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y4_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_RGBA2BPP)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_RGBA2BPP_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT_INDEX];
+                if(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_Y8)
+                    out << output_format[IM_RGA_SUPPORT_FORMAT_Y8_INDEX];
                 if(!(rga_info.output_format & IM_RGA_SUPPORT_FORMAT_MASK))
                     out << output_format[IM_RGA_SUPPORT_FORMAT_ERROR_INDEX];
                 out << endl;
@@ -624,6 +663,8 @@ IM_API const char* querystring(int name) {
                     out << feature[IM_RGA_SUPPORT_FEATURE_OSD_INDEX];
                 if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_PRE_INTR)
                     out << feature[IM_RGA_SUPPORT_FEATURE_PRE_INTR_INDEX];
+                if(rga_info.feature & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)
+                    out << feature[IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP_INDEX];
                 out << endl;
                 break;
 
@@ -810,7 +851,9 @@ IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx, d
             }
         }
     }
-    UNUSED(interpolation);
+
+    opt.version = RGA_CURRENT_API_VERSION;
+    opt.interp = interpolation;
 
     if (sync == 0)
         usage |= IM_ASYNC;
@@ -1521,7 +1564,9 @@ IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle, const rga_buffer_t src
             }
         }
     }
-    UNUSED(interpolation);
+
+    opt.version = RGA_CURRENT_API_VERSION;
+    opt.interp = interpolation;
 
     return improcessTask(job_handle, src, dst, pat, srect, drect, prect, &opt, usage);
 }

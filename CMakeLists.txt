@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
 include(${CMAKE_SOURCE_DIR}/cmake/utils.cmake)
 
@@ -62,6 +62,7 @@ set(IM2D_SRCS
     core/RgaApi.cpp
     core/rga_sync.cpp
     im2d_api/src/im2d_log.cpp
+    im2d_api/src/im2d_debugger.cpp
     im2d_api/src/im2d_impl.cpp
     im2d_api/src/im2d.cpp)
 

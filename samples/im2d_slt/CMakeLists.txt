@@ -1,10 +1,21 @@
-cmake_minimum_required(VERSION 3.5)
-enable_testing()
+cmake_minimum_required(VERSION 3.12)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+if (EXISTS ${BUILD_TOOLCHAINS_PATH})
+    message("load ${BUILD_TOOLCHAINS_PATH}")
+    include(${BUILD_TOOLCHAINS_PATH})
+endif()
 
-message(${CMAKE_CURRENT_SOURCE_DIR})
+project(im2d_slt)
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wl,--allow-shlib-undefined -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wl,--allow-shlib-undefined -pthread")
+
+if (EXISTS ${LIBRGA_FILE_LIB}/librga.so)
+	message("load ${LIBRGA_FILE_LIB}/librga.so")
+    set(RGA_LIB ${LIBRGA_FILE_LIB}/librga.so)
+else ()
+    set(RGA_LIB rga)
+endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     message("default to Release build for GCC builds")
@@ -13,82 +24,27 @@ if(NOT CMAKE_BUILD_TYPE)
         FORCE)
 endif()
 
-##########################
-# Command
-#execute_process(COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/version.sh)
-#execute_process(COMMAND ls)
-
-##########################
-# Choose compilation method
-set(TOOL_CHAIN_DIR ${CMAKE_MODULE_PATH})
-
-if(CMAKE_BUILD_TARGET STREQUAL android_ndk)
-    message("set android_ndk toolchain")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error -DLOG_TAG=librga")
-    add_compile_options(-DLINUX)
-    add_compile_options(-DANDROID)
-#    add_compile_options(-DANDROID_VNDK)
+#install path
+if (NOT DEFINED CMAKE_INSTALL_BINDIR)
+    set(CMAKE_INSTALL_BINDIR bin)
 endif()
 
-if(CMAKE_BUILD_TARGET STREQUAL buildroot)
-    message("set buildroot toolchain")
-    set(CMAKE_TOOLCHAIN_FILE
-        ${TOOL_CHAIN_DIR}/buildroot.cmake)
-    include(${TOOL_CHAIN_DIR}/buildroot.cmake)
-    add_compile_options(-DLINUX)
-    set(CMAKE_CXX_FLAGS "-std=c++11 -O2 -pthread")
-endif()
+set(IM2D_SLT_NAME ${PROJECT_NAME})
 
-##########################
-# Choose a third-party library
-if(CMAKE_BUILD_THIRD_PARTY STREQUAL drm)
-    message("set third party drm")
-    add_compile_options(-DLIBDRM=1)
-endif()
-#add_compile_options(-DRGA3=1)
-
-##########################
-# Set project
-project(im2d_rga_slt)
-
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/sources
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../
+set(RGA_INCLUDE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../im2d_api
 )
-
-if(CMAKE_BUILD_THIRD_PARTY STREQUAL drm)
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libdrm/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/third-party/libdrm/include/libdrm
-)
-endif()
-
 set(IM2D_RGA_SLT_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/sources/rga_im2d_slt.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sources/dma_alloc.cpp
 )
-if(CMAKE_BUILD_THIRD_PARTY STREQUAL drm)
-set(IM2D_RGA_SLT_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/sources/drm_alloc.cpp
-)
+
+if (NOT DEFINED RGA_SAMPLES_UTILS_COMPILED)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../utils/CMakeLists.txt)
 endif()
 
-add_executable(im2d_slt ${IM2D_RGA_SLT_SRCS})
+add_executable(${IM2D_SLT_NAME} ${IM2D_RGA_SLT_SRCS})
+target_include_directories(${IM2D_SLT_NAME} PUBLIC ${RGA_INCLUDE})
+target_link_libraries(${IM2D_SLT_NAME} ${RGA_LIB} utils_obj)
 
-target_link_libraries(im2d_slt "-Wl,--allow-shlib-undefined"  dl)
-target_link_libraries(im2d_slt ${CMAKE_CURRENT_SOURCE_DIR}/../../build_linux/install/lib/librga.so)
-
-if(CMAKE_BUILD_THIRD_PARTY STREQUAL drm)
-    target_link_libraries(im2d_slt drm)
-endif()
-
-if(CMAKE_BUILD_TARGET STREQUAL ndk)
-    string(REPLACE "-DANDROID" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
-
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-
-install(TARGETS im2d_slt RUNTIME DESTINATION bin)
+install(TARGETS ${IM2D_SLT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

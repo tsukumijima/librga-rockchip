@@ -20,10 +20,10 @@ LOCAL_C_INCLUDES += hardware/rk29/librga \
     system/core \
     system/core/include/utils \
     system/core/liblog/include \
-    hardware/rockchip/librga\
+    hardware/rockchip/librga \
     hardware/rockchip/librga/include \
-    $(LOCAL_PATH)/third-party/libdrm/include \
-    $(LOCAL_PATH)/third-party/libdrm/include/libdrm
+    # $(LOCAL_PATH)/third-party/libdrm/include \
+    # $(LOCAL_PATH)/third-party/libdrm/include/libdrm
 
 LOCAL_SHARED_LIBRARIES := \
     libcutils \
@@ -51,10 +51,10 @@ LOCAL_C_INCLUDES += \
 LOCAL_C_INCLUDES += bionic
 endif
 
+include $(LOCAL_PATH)/../utils/utils.mk
+
 LOCAL_SRC_FILES += \
-    sources/rga_im2d_slt.cpp \
-    sources/drm_alloc.cpp \
-    sources/dma_alloc.cpp
+    sources/rga_im2d_slt.cpp
 
 LOCAL_MODULE:= im2d_slt
 

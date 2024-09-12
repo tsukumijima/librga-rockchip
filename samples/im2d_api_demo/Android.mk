@@ -71,27 +71,11 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),rk3188)
 LOCAL_CFLAGS += -DRK3188
 endif
 
-LOCAL_SRC_FILES:= \
+LOCAL_SRC_FILES := \
     rgaImDemo.cpp \
     args.cpp
 
-# utils
-LOCAL_C_INCLUDES += \
-    $(LOCAL_PATH)/../utils/ \
-	$(LOCAL_PATH)/../../include
-
-LOCAL_SRC_FILES += \
-	../utils/utils.cpp
-
-# allocator
-LOCAL_C_INCLUDES += \
-	$(LOCAL_PATH)/../utils/allocator/include \
-    $(LOCAL_PATH)/../utils/3rdparty/libdrm/include \
-	$(LOCAL_PATH)/../utils/3rdparty/libdrm/include/libdrm \
-
-LOCAL_SRC_FILES += \
-	../utils/allocator/dma_alloc.cpp \
-	../utils/allocator/drm_alloc.cpp \
+include $(LOCAL_PATH)/../utils/utils.mk
 
 LOCAL_MODULE:= rgaImDemo
 

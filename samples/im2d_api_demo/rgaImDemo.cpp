@@ -163,7 +163,7 @@ int main(int argc, char*  argv[]) {
     heap_name = RV1106_CMA_HEAP_PATH;
     flush_cache = true;
 #else
-    heap_name = DMA_HEAP_DMA32_UNCACHE_PATCH;
+    heap_name = DMA_HEAP_DMA32_UNCACHED_PATH;
 #endif
 
     /********** Get parameters **********/

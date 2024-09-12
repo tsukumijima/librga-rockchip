@@ -24,6 +24,7 @@ librga_srcs = [
 	'core/RgaApi.cpp',
 	'core/rga_sync.cpp',
     'im2d_api/src/im2d_log.cpp',
+    'im2d_api/src/im2d_debugger.cpp',
     'im2d_api/src/im2d_impl.cpp',
 	'im2d_api/src/im2d.cpp',
 ]
@@ -36,6 +37,15 @@ librga = shared_library(
     dependencies : [libthreads_dep],
 	include_directories : incdir,
     version : meson.project_version(),
+    cpp_args : ['-w'],
+    install : true,
+)
+
+librga = static_library(
+    'rga',
+    librga_srcs,
+    dependencies : [libthreads_dep],
+        include_directories : incdir,
     cpp_args : ['-w'],
     install : true,
 )
@@ -68,6 +78,7 @@ pkgconfig.generate(
     name : 'librga',
     version : meson.project_version(),
     description : 'Userspace interface to Rockchip RGA 2D accelerator',
+    extra_cflags : ['-I${includedir}/rga'],
 )
 
 librga_demo_option = get_option('librga_demo')

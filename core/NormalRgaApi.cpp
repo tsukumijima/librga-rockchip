@@ -545,6 +545,9 @@ bool NormalRgaIsYuvFormat(int format) {
         case RK_FORMAT_YCrCb_420_SP_10B:
         case RK_FORMAT_YCrCb_422_10b_SP:
         case RK_FORMAT_YCbCr_422_10b_SP:
+        case RK_FORMAT_YCbCr_444_SP:
+        case RK_FORMAT_YCrCb_444_SP:
+        case RK_FORMAT_Y8:
             ret = true;
             break;
     }
@@ -603,6 +606,7 @@ bool NormalRgaFormatHasAlpha(int format) {
         case RK_FORMAT_ABGR_5551:
         case RK_FORMAT_ABGR_4444:
         case RK_FORMAT_RGBA2BPP:
+        case RK_FORMAT_A8:
             ret = true;
             break;
         default:
@@ -618,13 +622,13 @@ bool NormalRgaFormatHasAlpha(int format) {
 // dither en flag
 // AA flag
 int NormalRgaSetBitbltMode(struct rga_req *msg,
-                           unsigned char scale_mode,  unsigned char rotate_mode,
+                           struct rga_interp interp,  unsigned char rotate_mode,
                            unsigned int  angle,       unsigned int  dither_en,
                            unsigned int  AA_en,       unsigned int  yuv2rgb_mode) {
     unsigned int alpha_mode;
     msg->render_mode = bitblt_mode;
 
-    msg->scale_mode = scale_mode;
+    msg->interp = interp;
     msg->rotate_mode = rotate_mode;
 
     msg->sina = sina_table[angle];
@@ -637,7 +641,7 @@ int NormalRgaSetBitbltMode(struct rga_req *msg,
 
     alpha_mode = msg->alpha_rop_mode & 3;
     if(rotate_mode == BB_ROTATE) {
-        if (AA_en == ENABLE) {
+        if (AA_en == true) {
             if ((msg->alpha_rop_flag & 0x3) == 0x1) {
                 if (alpha_mode == 0) {
                     msg->alpha_rop_mode = 0x2;
@@ -965,7 +969,7 @@ int NormalRgaFullColorSpaceConvert(struct rga_req *msg, int color_space_mode) {
 
     if (color_space_mode >> 8) {
         memcpy(&msg->full_csc, &default_csc_table, sizeof(full_csc_t));
-        memcpy(&msg->full_csc_clip, clip_ptr, sizeof(full_csc_t));
+        memcpy(&msg->full_csc_clip, clip_ptr, sizeof(struct rga_csc_clip));
         msg->feature.full_csc_clip_en = true;
     }
 
@@ -981,7 +985,7 @@ int NormalRgaDitherMode(struct rga_req *msg, rga_info *dst, int format)
         msg->alpha_rop_flag |= (dst->dither.enable << 5);
     }
 
-    if (format == RK_FORMAT_Y4)
+    if (format == RK_FORMAT_Y4 || format == RK_FORMAT_Y8)
     {
         msg->dither_mode = dst->dither.mode;
 

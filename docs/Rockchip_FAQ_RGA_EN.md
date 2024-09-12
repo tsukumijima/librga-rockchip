@@ -98,10 +98,9 @@ The API version number consists of major, minor, revision and build. The four le
 
     https://github.com/airockchip/librga
 
-  - Baidu Cloud：
-
-
-​				https://eyun.baidu.com/s/3jJ9Aiz0
+  - Zbox Cloud：
+  
+    https://console.zbox.filez.com/l/fuGojC (fetch code: rkrga)
 
 
 
@@ -123,9 +122,9 @@ The driver version number consists of major, minor, revision and build. The four
 
   When it is found that the version does not meet the requirements, you can obtain the source code or precompiled library files in the following ways.
 
-  - Baidu Cloud：
-
-​				https://eyun.baidu.com/s/3dGhufEL
+  - Zbox Cloud：
+  
+    https://console.zbox.filez.com/l/7oOrKO (fetch code: rkrga)
 
 
 
@@ -142,11 +141,11 @@ When using RGA, you need to confirm that the current operating environment can w
 
 Usually the released SDK version matches, but because some applications depend on the higher version librga.so, you can use the following Baidu Cloud link to obtain the RGA module code update package:
 
-https://eyun.baidu.com/s/3i6sbsDR
+https://console.zbox.filez.com/l/mu2SOR (fetch code: rkrga)
 
 - update-to-MULTI_RGA
 
-​		When the original driver is RGA Device Driver or RGA2 Device Driver, use this update package to update the driver to RGA multicore Device Driver and update the matching version of librga.
+  When the original driver is RGA Device Driver or RGA2 Device Driver, use this update package to update the driver to RGA multicore Device Driver and update the matching version of librga.
 
 - MUTIL_RGA
 
@@ -1132,8 +1131,6 @@ Date:   Tue Nov 24 19:50:17 2020 +0800
 **A2.11**：This is usually caused by a mismatch between librga and kernel. For detailed version description, see **A2.4**. The problem usually occurs after librga available on Github is used in SDK released before November 2020. Librga on Github is of new version, which does not match the older version RGA driver. Here, some configurations about color space have been changed, which causes the obvious color deviation.
 
 ​			There are two solutions to this problem: one is to update the SDK or RGA driver and keep librga matching with the driver; the other is to use the librga provided with SDK if the functions only available in the new version librga are not needed.
-
-​			The rga module source code update package can be obtained through Baidu Netdisk: https://eyun.baidu.com/s/3i6sbsDR
 
 
 

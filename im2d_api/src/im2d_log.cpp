@@ -44,6 +44,23 @@ static atomic_int g_log_en = ATOMIC_VAR_INIT(rga_log_property_get());
 static atomic_int g_log_level = ATOMIC_VAR_INIT(rga_log_level_property_get());
 static size_t g_start_time = rga_get_current_time_ms();
 
+const char *rga_get_error_type_str(int type) {
+    switch (type & IM_LOG_LEVEL_MASK) {
+        case IM_LOG_DEBUG:
+            return "D";
+        case IM_LOG_INFO:
+            return "I";
+        case IM_LOG_WARN:
+            return "W";
+        case IM_LOG_ERROR:
+            return "E";
+        case IM_LOG_UNKNOWN:
+        case IM_LOG_DEFAULT:
+        default:
+            return "unkonwn";
+    }
+}
+
 int rga_error_msg_set(const char* format, ...) {
     int ret = 0;
     va_list ap;

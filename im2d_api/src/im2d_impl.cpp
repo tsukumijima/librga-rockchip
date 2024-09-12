@@ -32,6 +32,7 @@
 #include "im2d_impl.h"
 #include "im2d_log.h"
 #include "im2d_hardware.h"
+#include "im2d_debugger.h"
 
 #include "RockchipRga.h"
 #include "core/NormalRga.h"
@@ -70,25 +71,6 @@ IM_API static IM_STATUS rga_get_context(void) {
     }
 
     return IM_STATUS_SUCCESS;
-}
-
-static const char *srting_color_space(int mode) {
-    switch (mode) {
-        case IM_RGB_FULL:
-            return "RGB_FULL";
-        case IM_RGB_CLIP:
-            return "RGB_CLIP";
-        case IM_YUV_BT601_LIMIT_RANGE:
-            return "YUV_BT601_LIMIT";
-        case IM_YUV_BT601_FULL_RANGE:
-            return "YUV_BT601_FULL";
-        case IM_YUV_BT709_LIMIT_RANGE:
-            return "YUV_BT709_LIMIT";
-        case IM_YUV_BT709_FULL_RANGE:
-            return "YUV_BT709_FULL";
-        default:
-            return "UNKNOWN";
-    }
 }
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
@@ -640,6 +622,17 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
+        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
+                   rgaCtx->mHwVersions.version[i].minor == 0xe) {
+            switch (rgaCtx->mHwVersions.version[i].revision) {
+                case 0x19357:
+                    // RK3576
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
         } else if (rgaCtx->mHwVersions.version[i].major == 4 &&
                    rgaCtx->mHwVersions.version[i].minor == 0) {
             switch (rgaCtx->mHwVersions.version[i].revision) {
@@ -851,11 +844,17 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
             return IM_STATUS_NOT_SUPPORTED;
         }
-    } else if (format == RK_FORMAT_RGBA_4444 || format == RK_FORMAT_BGRA_4444 ||
-               format == RK_FORMAT_RGBA_5551 || format == RK_FORMAT_BGRA_5551 ||
-               format == RK_FORMAT_ARGB_4444 || format == RK_FORMAT_ABGR_4444 ||
+    } else if (format == RK_FORMAT_ARGB_4444 || format == RK_FORMAT_ABGR_4444 ||
                format == RK_FORMAT_ARGB_5551 || format == RK_FORMAT_ABGR_5551) {
-        if (~format_usage & IM_RGA_SUPPORT_FORMAT_RGB_OTHER) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_ARGB_16BIT) {
+            IM_LOGW("%s unsupported ARGB 4444/5551 format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+    } else if (format == RK_FORMAT_RGBA_4444 || format == RK_FORMAT_BGRA_4444 ||
+               format == RK_FORMAT_RGBA_5551 || format == RK_FORMAT_BGRA_5551) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_RGBA_16BIT) {
             IM_LOGW("%s unsupported RGBA 4444/5551 format, format = 0x%x(%s)\n%s",
                     name, info.format, translate_format_str(info.format),
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
@@ -990,6 +989,35 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
             return IM_STATUS_NOT_SUPPORTED;
         }
+    } else if (format == RK_FORMAT_A8) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT) {
+            IM_LOGW("%s unsupported Alpha-8bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+    } else if (format == RK_FORMAT_YCrCb_444_SP || format == RK_FORMAT_YCbCr_444_SP) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_444_SEMI_PLANNER_8_BIT) {
+            IM_LOGW("%s unsupported YUV444 semi-planner 8bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        ret = rga_yuv_legality_check(name, info, rect);
+        if (ret != IM_STATUS_SUCCESS)
+            return ret;
+    } else if (format == RK_FORMAT_Y8) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_Y8) {
+            IM_LOGW("%s unsupported Y8 format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        ret = rga_yuv_legality_check(name, info, rect);
+        if (ret != IM_STATUS_SUCCESS)
+            return ret;
     } else {
         IM_LOGW("%s unsupported this format, format = 0x%x(%s)\n%s",
                 name, info.format, translate_format_str(info.format),
@@ -1209,6 +1237,12 @@ IM_STATUS rga_check_feature(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst
 
     if ((mode_usage & IM_PRE_INTR) && (~feature_usage & IM_RGA_SUPPORT_FEATURE_PRE_INTR)) {
         IM_LOGW("The platform does not support pre_intr featrue. \n%s",
+                querystring(RGA_FEATURE));
+        return IM_STATUS_NOT_SUPPORTED;
+    }
+
+    if ((mode_usage & IM_ALPHA_BIT_MAP) && (~feature_usage & IM_RGA_SUPPORT_FEATURE_ALPHA_BIT_MAP)) {
+        IM_LOGW("The platform does not support alpha-bit map featrue. \n%s",
                 querystring(RGA_FEATURE));
         return IM_STATUS_NOT_SUPPORTED;
     }
@@ -1442,90 +1476,6 @@ IM_API IM_STATUS rga_release_buffer(int handle) {
     return rga_release_buffers(&buffer_pool);
 }
 
-static void rga_dump_channel_info(int log_level, const char *name, im_rect &rect, rga_buffer_t &image) {
-    log_level |= IM_LOG_FORCE;
-
-    IM_LOG(log_level,
-           "%s_channel: \n"
-           "  rect[x,y,w,h] = [%d, %d, %d, %d]\n"
-           "  image[w,h,ws,hs,f] = [%d, %d, %d, %d, %s]\n"
-           "  buffer[handle,fd,va,pa] = [%d, %d, %lx, %lx]\n"
-           "  color_space = 0x%x, global_alpha = 0x%x, rd_mode = 0x%x\n",
-           name,
-           rect.x, rect.y, rect.width, rect.height,
-           image.width, image.height, image.wstride, image.hstride, translate_format_str(image.format),
-           image.handle, image.fd, (unsigned long)image.vir_addr, (unsigned long)image.phy_addr,
-           image.color_space_mode, image.global_alpha, image.rd_mode);
-}
-
-static void rga_dump_osd_info(int log_level, im_osd_t &osd_info) {
-    IM_LOG(log_level, "osd_mode[0x%x]:\n", osd_info.osd_mode);
-
-    IM_LOG(log_level, "  block: \n"
-                      "    width_mode[0x%x], width/witdh_index[0x%x], block_count[%d]\n"
-                      "    background_config[0x%x], direction[0x%x], color_mode[0x%x]\n"
-                      "    normal_color[0x%x], invert_color[0x%x]\n",
-           osd_info.block_parm.width_mode, osd_info.block_parm.width, osd_info.block_parm.block_count,
-           osd_info.block_parm.background_config, osd_info.block_parm.direction, osd_info.block_parm.color_mode,
-           osd_info.block_parm.normal_color.value, osd_info.block_parm.invert_color.value);
-
-    IM_LOG(log_level, "  invert_config:\n"
-                      "    channel[0x%x], flags_mode[0x%x], flages_index[%d] threash[0x%x]\n"
-                      "    flages: invert[0x%llx], current[0x%llx]\n"
-                      "    invert_mode[%x]",
-           osd_info.invert_config.invert_channel, osd_info.invert_config.flags_mode,
-           osd_info.invert_config.flags_index, osd_info.invert_config.threash,
-           (unsigned long long)osd_info.invert_config.invert_flags,
-           (unsigned long long)osd_info.invert_config.current_flags,
-           osd_info.invert_config.invert_mode);
-    if (osd_info.invert_config.invert_mode == IM_OSD_INVERT_USE_FACTOR)
-        IM_LOG(log_level, "    factor[min,max] = alpha[0x%x, 0x%x], yg[0x%x, 0x%x], crb[0x%x, 0x%x]\n",
-               osd_info.invert_config.factor.alpha_min, osd_info.invert_config.factor.alpha_max,
-               osd_info.invert_config.factor.yg_min, osd_info.invert_config.factor.yg_max,
-               osd_info.invert_config.factor.crb_min, osd_info.invert_config.factor.crb_max);
-    else
-        IM_LOG(log_level, "\n");
-
-    IM_LOG(log_level, "  bpp2rgb info:\n"
-                      "    ac_swap[0x%x], endian_swap[0x%x], color0[0x%x], color1[0x%x]\n",
-           osd_info.bpp2_info.ac_swap, osd_info.bpp2_info.endian_swap,
-           osd_info.bpp2_info.color0.value, osd_info.bpp2_info.color1.value);
-}
-
-static void rga_dump_opt(int log_level, im_opt_t &opt, int usage) {
-    log_level |= IM_LOG_FORCE;
-
-    IM_LOG(log_level, "opt version[0x%x]:\n", opt.version);
-    IM_LOG(log_level, "set_core[0x%x], priority[%d]\n", opt.core, opt.priority);
-
-    if (usage & IM_COLOR_FILL)
-        IM_LOG(log_level, "color[0x%x] ", opt.color);
-    if (usage & IM_MOSAIC)
-        IM_LOG(log_level, "mosaic[%d] ", opt.mosaic_mode);
-    if (usage & IM_ROP)
-        IM_LOG(log_level, "rop[0x%x] ", opt.rop_code);
-    if (usage & IM_ALPHA_COLORKEY_MASK)
-        IM_LOG(log_level, "color_key[min,max] = [0x%x, 0x%x] ",
-               opt.colorkey_range.min, opt.colorkey_range.max);
-    if (usage & (IM_COLOR_FILL | IM_MOSAIC | IM_ROP | IM_ALPHA_COLORKEY_MASK))
-        IM_LOG(log_level, "\n");
-
-    if (usage & IM_NN_QUANTIZE)
-        IM_LOG(log_level, "nn:\n"
-                          "  scale[r,g,b] = [%d, %d, %d], offset[r,g,b] = [0x%x, 0x%x, 0x%x]\n",
-               opt.nn.scale_r, opt.nn.scale_g, opt.nn.scale_b,
-               opt.nn.offset_r, opt.nn.offset_g, opt.nn.offset_b);
-
-    if (usage & IM_OSD)
-        rga_dump_osd_info(log_level, opt.osd_config);
-
-    if (usage & IM_PRE_INTR)
-        IM_LOG(log_level, "pre_intr:\n"
-                          "  flags[0x%x], read_threshold[0x%x], write_start[0x%x], write_step[0x%x]\n",
-               opt.intr_config.flags, opt.intr_config.read_threshold,
-               opt.intr_config.write_start, opt.intr_config.write_step);
-}
-
 IM_STATUS rga_get_opt(im_opt_t *opt, void *ptr) {
     if (opt == NULL || ptr == NULL)
         return IM_STATUS_FAILED;
@@ -1565,8 +1515,18 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
     im_opt_t opt;
 
-    if (rga_get_opt(&opt, opt_ptr) == IM_STATUS_FAILED)
-        memset(&opt, 0x0, sizeof(opt));
+    ret = rga_get_context();
+    if (ret != IM_STATUS_SUCCESS)
+        return (IM_STATUS)ret;
+
+    is_debug_log();
+    if (is_out_log())
+        rga_dump_info(IM_LOG_DEBUG | IM_LOG_FORCE,
+                      job_handle, &src, &dst, &pat, &srect, &drect, &prect,
+                      acquire_fence_fd, release_fence_fd, opt_ptr, usage);
+
+    memset(&opt, 0x0, sizeof(opt));
+    rga_get_opt(&opt, opt_ptr);
 
     memset(&srcinfo, 0, sizeof(rga_info_t));
     memset(&dstinfo, 0, sizeof(rga_info_t));
@@ -1622,6 +1582,20 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     if(ret != IM_STATUS_NOERROR)
         return (IM_STATUS)ret;
 
+    /* scaling interpolation */
+    if (opt.interp & IM_INTERP_HORIZ_FLAG ||
+        opt.interp & IM_INTERP_VERTI_FLAG) {
+        if (opt.interp & IM_INTERP_HORIZ_FLAG) {
+            srcinfo.scale_mode |= opt.interp & (IM_INTERP_MASK << IM_INTERP_HORIZ_SHIFT);
+        }
+        if (opt.interp & IM_INTERP_VERTI_FLAG) {
+            srcinfo.scale_mode |= opt.interp & (IM_INTERP_MASK << IM_INTERP_VERTI_SHIFT);
+        }
+    } else {
+        srcinfo.scale_mode |= (opt.interp & IM_INTERP_MASK) << IM_INTERP_HORIZ_SHIFT;
+        srcinfo.scale_mode |= (opt.interp & IM_INTERP_MASK) << IM_INTERP_VERTI_SHIFT;
+    }
+
     /* Transform */
     if (usage & IM_HAL_TRANSFORM_MASK) {
         switch (usage & (IM_HAL_TRANSFORM_ROT_90 + IM_HAL_TRANSFORM_ROT_180 + IM_HAL_TRANSFORM_ROT_270)) {
@@ -1656,6 +1630,15 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
         if(srcinfo.rotation ==0)
             IM_LOGE("rga_im2d: Could not find rotate/flip usage : 0x%x \n", usage);
+    }
+
+    /* set 5551 Alpha bit */
+    if ((usage & IM_ALPHA_BIT_MAP) &&
+        (pat.format == RK_FORMAT_RGBA_5551 || pat.format == RK_FORMAT_BGRA_5551 ||
+         pat.format == RK_FORMAT_ARGB_5551 || pat.format == RK_FORMAT_ABGR_5551)) {
+        srcinfo.rgba5551_flags = 1;
+        srcinfo.rgba5551_alpha0 = pat.alpha_bit.alpha0;
+        srcinfo.rgba5551_alpha1 = pat.alpha_bit.alpha1;
     }
 
     /* Blend */
@@ -1916,8 +1899,8 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                     case IM_RGB_CLIP:
                     default:
                         IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                srting_color_space(src.color_space_mode), src.color_space_mode,
-                                srting_color_space(dst.color_space_mode), dst.color_space_mode);
+                                string_color_space(src.color_space_mode), src.color_space_mode,
+                                string_color_space(dst.color_space_mode), dst.color_space_mode);
                         return IM_STATUS_NOT_SUPPORTED;
                 }
                 break;
@@ -1941,8 +1924,8 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                     case IM_RGB_CLIP:
                     default:
                         IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                srting_color_space(src.color_space_mode), src.color_space_mode,
-                                srting_color_space(dst.color_space_mode), dst.color_space_mode);
+                                string_color_space(src.color_space_mode), src.color_space_mode,
+                                string_color_space(dst.color_space_mode), dst.color_space_mode);
                         return IM_STATUS_NOT_SUPPORTED;
                 }
                 break;
@@ -1966,8 +1949,8 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                     case IM_RGB_CLIP:
                     default:
                         IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                srting_color_space(src.color_space_mode), src.color_space_mode,
-                                srting_color_space(dst.color_space_mode), dst.color_space_mode);
+                                string_color_space(src.color_space_mode), src.color_space_mode,
+                                string_color_space(dst.color_space_mode), dst.color_space_mode);
                         return IM_STATUS_NOT_SUPPORTED;
                 }
                 break;
@@ -1991,8 +1974,8 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                     case IM_RGB_CLIP:
                     default:
                         IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                srting_color_space(src.color_space_mode), src.color_space_mode,
-                                srting_color_space(dst.color_space_mode), dst.color_space_mode);
+                                string_color_space(src.color_space_mode), src.color_space_mode,
+                                string_color_space(dst.color_space_mode), dst.color_space_mode);
                         return IM_STATUS_NOT_SUPPORTED;
                 }
                 break;
@@ -2016,8 +1999,8 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                     case IM_RGB_CLIP:
                     default:
                         IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                srting_color_space(src.color_space_mode), src.color_space_mode,
-                                srting_color_space(dst.color_space_mode), dst.color_space_mode);
+                                string_color_space(src.color_space_mode), src.color_space_mode,
+                                string_color_space(dst.color_space_mode), dst.color_space_mode);
                         return IM_STATUS_NOT_SUPPORTED;
                 }
                 break;
@@ -2025,13 +2008,13 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
             case IM_RGB_CLIP:
             default:
                 IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                        srting_color_space(src.color_space_mode), src.color_space_mode,
-                        srting_color_space(dst.color_space_mode), dst.color_space_mode);
+                        string_color_space(src.color_space_mode), src.color_space_mode,
+                        string_color_space(dst.color_space_mode), dst.color_space_mode);
                 return IM_STATUS_NOT_SUPPORTED;
         }
     }
 
-    if (dst.format == RK_FORMAT_Y4) {
+    if (dst.format == RK_FORMAT_Y4 || dst.format == RK_FORMAT_Y8) {
         switch (dst.color_space_mode) {
             case IM_RGB_TO_Y4 :
                 dstinfo.dither.enable = 0;
@@ -2094,16 +2077,11 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
     if (ret) {
         IM_LOGE("Failed to call RockChipRga interface, please use 'dmesg' command to view driver error log.");
-        rga_dump_channel_info(IM_LOG_ERROR | IM_LOG_FORCE, "src", srect, src);
-        if (rga_is_buffer_valid(pat))
-            rga_dump_channel_info(IM_LOG_ERROR | IM_LOG_FORCE, "src1/pat", prect, pat);
-        rga_dump_channel_info(IM_LOG_ERROR | IM_LOG_FORCE, "dst", drect, dst);
 
-        if (opt_ptr != NULL)
-            rga_dump_opt(IM_LOG_ERROR | IM_LOG_FORCE, *opt_ptr, usage);
-
-        IM_LOGFE("acquir_fence[%d], release_fence_ptr[0x%lx], usage[0x%x]\n",
-                 acquire_fence_fd, (unsigned long)release_fence_fd, usage);
+        if (!is_out_log())
+            rga_dump_info(IM_LOG_ERROR | IM_LOG_FORCE,
+                          job_handle, &src, &dst, &pat, &srect, &drect, &prect,
+                          acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
         return IM_STATUS_FAILED;
     }
