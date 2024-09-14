@@ -22,6 +22,7 @@ LOCAL_C_INCLUDES += hardware/rk29/librga \
     system/core/liblog/include \
     hardware/rockchip/librga \
     hardware/rockchip/librga/include \
+    hardware/rockchip/librga/im2d_api
     # $(LOCAL_PATH)/third-party/libdrm/include \
     # $(LOCAL_PATH)/third-party/libdrm/include/libdrm
 
