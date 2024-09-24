@@ -1516,7 +1516,11 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
         }
     }
 
-    dst->out_fence_fd = rgaReg.out_fence_fd;
+    if (ctx->driver == RGA_DRIVER_IOC_MULTI_RGA)
+        dst->out_fence_fd = rgaReg.out_fence_fd;
+    else
+        /* release_fence fd set to -1 when driver do not support fence */
+        dst->out_fence_fd = -1;
 
     if (rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE &&
         dst->in_fence_fd > 0 &&
