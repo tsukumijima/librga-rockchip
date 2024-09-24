@@ -1106,52 +1106,15 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     pat_isRGB = NormalRgaIsRgbFormat(pat_fmt);
     dst_isRGB = NormalRgaIsRgbFormat(dst_fmt);
 
-    /**************** blend mode check ****************/
-    switch (mode_usage & IM_ALPHA_BLEND_MASK) {
-        case IM_ALPHA_BLEND_SRC :
-        case IM_ALPHA_BLEND_DST :
-            break;
-        case IM_ALPHA_BLEND_SRC_OVER :
-            if (!NormalRgaFormatHasAlpha(src_fmt)) {
-                IM_LOGW("Blend mode 'src_over' unsupported src format without alpha, "
-                        "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                        src_fmt, translate_format_str(src_fmt),
-                        pat_fmt, translate_format_str(pat_fmt),
-                        dst_fmt, translate_format_str(dst_fmt));
-                return IM_STATUS_NOT_SUPPORTED;
-            }
-            break;
-        case IM_ALPHA_BLEND_DST_OVER :
-            if (pat_enable) {
-                if (!NormalRgaFormatHasAlpha(pat_fmt)) {
-                    IM_LOGW("Blend mode 'dst_over' unsupported pat format without alpha, "
-                            "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                            src_fmt, translate_format_str(src_fmt),
-                            pat_fmt, translate_format_str(pat_fmt),
-                            dst_fmt, translate_format_str(dst_fmt));
-                    return IM_STATUS_NOT_SUPPORTED;
-                }
-            } else {
-                if (!NormalRgaFormatHasAlpha(dst_fmt)) {
-                    IM_LOGW("Blend mode 'dst_over' unsupported dst format without alpha, "
-                            "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                            src_fmt, translate_format_str(src_fmt),
-                            pat_fmt, translate_format_str(pat_fmt),
-                            dst_fmt, translate_format_str(dst_fmt));
-                    return IM_STATUS_NOT_SUPPORTED;
-                }
-            }
-            break;
-        default :
-            if (!(NormalRgaFormatHasAlpha(src_fmt) || NormalRgaFormatHasAlpha(dst_fmt))) {
-                IM_LOGW("Blend mode unsupported format without alpha, "
-                        "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                        src_fmt, translate_format_str(src_fmt),
-                        pat_fmt, translate_format_str(pat_fmt),
-                        dst_fmt, translate_format_str(dst_fmt));
-                return IM_STATUS_NOT_SUPPORTED;
-            }
-            break;
+    /* bg format check */
+    if (rga_is_buffer_valid(pat) && !pat_isRGB) {
+        IM_LOGW("Blend mode background layer unsupport non-RGB format, pat format = %#x(%s)",
+            pat_fmt, translate_format_str(pat_fmt));
+        return IM_STATUS_NOT_SUPPORTED;
+    } else if (!dst_isRGB) {
+        IM_LOGW("Blend mode background layer unsupport non-RGB format, dst format = %#x(%s)",
+            dst_fmt, translate_format_str(dst_fmt));
+        return IM_STATUS_NOT_SUPPORTED;
     }
 
     /* src1 don't support scale, and src1's size must aqual to dst.' */
