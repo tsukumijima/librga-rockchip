@@ -1107,14 +1107,18 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     dst_isRGB = NormalRgaIsRgbFormat(dst_fmt);
 
     /* bg format check */
-    if (rga_is_buffer_valid(pat) && !pat_isRGB) {
-        IM_LOGW("Blend mode background layer unsupport non-RGB format, pat format = %#x(%s)",
-            pat_fmt, translate_format_str(pat_fmt));
-        return IM_STATUS_NOT_SUPPORTED;
-    } else if (!dst_isRGB) {
-        IM_LOGW("Blend mode background layer unsupport non-RGB format, dst format = %#x(%s)",
-            dst_fmt, translate_format_str(dst_fmt));
-        return IM_STATUS_NOT_SUPPORTED;
+    if (rga_is_buffer_valid(pat)) {
+        if (!pat_isRGB) {
+            IM_LOGW("Blend mode background layer unsupport non-RGB format, pat format = %#x(%s)",
+                pat_fmt, translate_format_str(pat_fmt));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+    } else {
+        if (!dst_isRGB) {
+            IM_LOGW("Blend mode background layer unsupport non-RGB format, dst format = %#x(%s)",
+                dst_fmt, translate_format_str(dst_fmt));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
     }
 
     /* src1 don't support scale, and src1's size must aqual to dst.' */
