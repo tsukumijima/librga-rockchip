@@ -924,7 +924,7 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
         if (ret != IM_STATUS_SUCCESS)
             return ret;
         IM_LOGW("If it is an RK encoder output, it needs to be aligned with an odd multiple of 256.\n");
-    } else if (format == RK_FORMAT_YCrCb_422_10b_SP || format == RK_FORMAT_YCbCr_422_10b_SP) {
+    } else if (format == RK_FORMAT_YCrCb_422_SP_10B || format == RK_FORMAT_YCbCr_422_SP_10B) {
         if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT) {
             IM_LOGW("%s unsupported YUV422 semi-planner 10bit format, format = 0x%x(%s)\n%s",
                     name, info.format, translate_format_str(info.format),

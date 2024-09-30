@@ -86,8 +86,8 @@ const struct format_table_entry format_table[] = {
 
     { RK_FORMAT_YCbCr_420_SP_10B,   "nv12_10" },
     { RK_FORMAT_YCrCb_420_SP_10B,   "crcb420sp_10" },
-    { RK_FORMAT_YCbCr_422_10b_SP,   "cbcr422_10b" },
-    { RK_FORMAT_YCrCb_422_10b_SP,   "crcb422_10b" },
+    { RK_FORMAT_YCbCr_422_SP_10B,   "cbcr422_10b" },
+    { RK_FORMAT_YCrCb_422_SP_10B,   "crcb422_10b" },
 
     { RK_FORMAT_BGR_565,            "bgr565" },
     { RK_FORMAT_BGRA_5551,          "bgra5551" },
@@ -224,8 +224,8 @@ float get_bpp_from_format(int format) {
         case RK_FORMAT_YCrCb_420_SP_10B:
             bpp = 2;
             break;
-        case RK_FORMAT_YCbCr_422_10b_SP:
-        case RK_FORMAT_YCrCb_422_10b_SP:
+        case RK_FORMAT_YCbCr_422_SP_10B:
+        case RK_FORMAT_YCrCb_422_SP_10B:
             bpp = 2.5;
             break;
         case RK_FORMAT_BGR_888:
@@ -299,8 +299,8 @@ int get_perPixel_stride_from_format(int format) {
             return  (1 * 8);
         case RK_FORMAT_YCbCr_420_SP_10B:
         case RK_FORMAT_YCrCb_420_SP_10B:
-        case RK_FORMAT_YCbCr_422_10b_SP:
-        case RK_FORMAT_YCrCb_422_10b_SP:
+        case RK_FORMAT_YCbCr_422_SP_10B:
+        case RK_FORMAT_YCrCb_422_SP_10B:
             return  (1 * 10);
         case RK_FORMAT_RGB_565:
         case RK_FORMAT_RGBA_5551:
