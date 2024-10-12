@@ -23,6 +23,7 @@
 
 #include "rga_ioctl.h"
 #include "im2d_type.h"
+#include "im2d_context.h"
 
 #ifdef __cplusplus
 #define IM2D_JOB_USE_MAP true

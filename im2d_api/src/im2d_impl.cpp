@@ -62,6 +62,12 @@ using namespace android;
     })
 #define GET_LCM(n1, n2, gcd) (((n1) * (n2)) / gcd)
 
+#ifdef RT_THREAD
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#endif
+
 __thread im_context_t g_im2d_context;
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
