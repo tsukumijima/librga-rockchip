@@ -53,7 +53,7 @@ LOCAL_CCFLAGS += ' -lm -D_USE_MATH_DEFINES -Wno-unused-command-line-argument'
 LOCAL_CCFLAGS += ' -Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-unused-variable -Wno-incompatible-pointer-types -Wno-format -Wno-initializer-overrides'
 LOCAL_CCFLAGS += ' -w'
 
-group = DefineGroup('librga', src, depend = ['RT_USING_LIBRGA'], LOCAL_CPPPATH = LOCAL_CPPPATH, LOCAL_CCFLAGS = LOCAL_CCFLAGS, CPPPATH = im2d_public_include)
+group = DefineGroup('librga', src, depend = ['RT_USING_RGA'], LOCAL_CPPPATH = LOCAL_CPPPATH, LOCAL_CCFLAGS = LOCAL_CCFLAGS, CPPPATH = im2d_public_include)
 
 list = os.listdir(cwd)
 for d in list:
