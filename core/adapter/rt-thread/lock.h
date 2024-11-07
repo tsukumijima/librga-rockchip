@@ -70,6 +70,8 @@ typedef struct rt_spinlock spinlock_t;
 #define spin_lock_init rt_spin_lock_init
 #endif
 
+#ifndef RT_USING_PTHREADS
+
 /* pthread_mutex */
 #define pthread_mutex_t struct rt_mutex
 // typedef struct rt_mutex pthread_mutex_t;
@@ -107,5 +109,7 @@ typedef struct rt_mutex pthread_rwlock_t;
     assert(__rc == RT_EOK); \
     __rc; \
 })
+
+#endif /* #ifndef RT_USING_PTHREADS */
 
 #endif /* #ifndef __RTT_ADAPTER_LINUX_LOCK_H__ */
