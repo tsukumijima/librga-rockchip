@@ -74,7 +74,7 @@ set(IM2D_INCLUDE
     ./core/hardware
     ./core/utils
     ./core/3rdparty/libdrm/include/drm
-    hardware/libhardware/include/hardware
+    ./core/3rdparty/android_hal
     hardware/libhardware/modules/gralloc
     system/core/liblog/includeNDROID_NDK_REVISION_REGEX
     system/core/libion/kernel-headers)

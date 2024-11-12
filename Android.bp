@@ -58,6 +58,7 @@ cc_library_shared {
         "hardware/rockchip/librga/core/hardware",
         "hardware/rockchip/librga/core/utils",
         "hardware/rockchip/librga/core/3rdparty/libdrm/include/drm",
+        "hardware/rockchip/librga/core/3rdparty/android_hal",
         "frameworks/native/libs/nativewindow/include",
     ],
 

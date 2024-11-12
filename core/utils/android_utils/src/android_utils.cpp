@@ -22,12 +22,9 @@
 #include "rga.h"
 
 #ifdef ANDROID
-#include <ui/PixelFormat.h>
-#include <hardware/hardware.h>
 
-#ifdef USE_HARDWARE_ROCKCHIP
-#include <hardware/hardware_rockchip.h>
-#endif
+#include "system/graphics.h"
+#include "hardware/hardware_rockchip.h"
 
 const static std::unordered_map<uint32_t, uint32_t> android_hal_table = {
     // { , RK_FORMAT_ABGR_8888 },
@@ -48,18 +45,19 @@ const static std::unordered_map<uint32_t, uint32_t> android_hal_table = {
     // { , RK_FORMAT_BGRA_4444 },
     // { , RK_FORMAT_RGBA_4444 },
 
-    // { , RK_FORMAT_BGR_888 },
+    { HAL_PIXEL_FORMAT_BGR_888, RK_FORMAT_BGR_888 },
     { HAL_PIXEL_FORMAT_RGB_888, RK_FORMAT_RGB_888 },
     // { , RK_FORMAT_BGR_565 },
     { HAL_PIXEL_FORMAT_RGB_565, RK_FORMAT_RGB_565 },
 
-    // { , RK_FORMAT_YCbCr_422_SP },
+    { HAL_PIXEL_FORMAT_YCbCr_422_SP, RK_FORMAT_YCbCr_422_SP },
     // { , RK_FORMAT_YCrCb_422_SP },
     // { , RK_FORMAT_YCbCr_422_P },
     // { , RK_FORMAT_YCrCb_422_P },
     // { , RK_FORMAT_YCbCr_422_SP_10B },
     // { , RK_FORMAT_YCrCb_422_SP_10B },
     { HAL_PIXEL_FORMAT_YCrCb_NV12, RK_FORMAT_YCbCr_420_SP },
+    { HAL_PIXEL_FORMAT_YCBCR_420_888, RK_FORMAT_YCbCr_420_SP },
     { HAL_PIXEL_FORMAT_YCrCb_420_SP, RK_FORMAT_YCrCb_420_SP },
     // { , RK_FORMAT_YCbCr_420_P },
     // { , RK_FORMAT_YCrCb_420_P },
@@ -83,6 +81,10 @@ const static std::unordered_map<uint32_t, uint32_t> android_hal_table = {
     // { , RK_FORMAT_BPP4 },
     // { , RK_FORMAT_BPP8 },
     // { , RK_FORMAT_RGBA2BPP },
+    // { , RK_FORMAT_A8 },
+    // { , RK_FORMAT_YCbCr_444_SP },
+    // { , RK_FORMAT_YCrCb_444_SP },
+    // { , RK_FORMAT_Y8 },
     // { , RK_FORMAT_UNKNOWN },
 };
 #else

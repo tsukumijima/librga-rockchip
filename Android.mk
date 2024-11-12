@@ -51,6 +51,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/im2d_api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/utils
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/libdrm/include/drm
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/android_hal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/hardware
 
 LOCAL_CFLAGS := \
@@ -160,6 +161,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/im2d_api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/utils
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/libdrm/include/drm
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/android_hal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/hardware
 
 LOCAL_SHARED_LIBRARIES := libdrm
@@ -239,6 +241,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/im2d_api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/utils
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/libdrm/include/drm
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/android_hal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/hardware
 
 LOCAL_SHARED_LIBRARIES := libdrm
