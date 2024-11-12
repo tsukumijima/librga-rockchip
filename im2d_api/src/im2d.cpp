@@ -232,21 +232,19 @@ IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t  handle,
 IM_API rga_buffer_handle_t importbuffer_GraphicBuffer_handle(buffer_handle_t hnd) {
     int ret = 0;
     int fd = -1;
+    int size = 0;
     void *virt_addr = NULL;
-    std::vector<int> dstAttrs;
-    im_handle_param_t param;
+    rga_gralloc_attr_t dstAttrs;
 
     RockchipRga& rkRga(RockchipRga::get());
 
     ret = RkRgaGetHandleAttributes(hnd, &dstAttrs);
     if (ret) {
         IM_LOGE("handle get Attributes fail ret = %d,hnd=%p", ret, &hnd);
-        return -1;
+        return IM_STATUS_ILLEGAL_PARAM;
     }
 
-    param.width = dstAttrs.at(ASTRIDE);
-    param.height = dstAttrs.at(AHEIGHT);
-    param.format = dstAttrs.at(AFORMAT);
+    size = dstAttrs.at(ASIZE);
 
     ret = rkRga.RkRgaGetBufferFd(hnd, &fd);
     if (ret)
@@ -258,10 +256,10 @@ IM_API rga_buffer_handle_t importbuffer_GraphicBuffer_handle(buffer_handle_t hnd
             IM_LOGE("invaild GraphicBuffer, can not get fd and virtual address, hnd = %p", (void *)hnd);
             return -1;
         } else {
-            return importbuffer_virtualaddr(virt_addr, &param);
+            return importbuffer_virtualaddr(virt_addr, size);
         }
     } else {
-        return importbuffer_fd(fd, &param);
+        return importbuffer_fd(fd, size);
     }
 }
 
@@ -273,8 +271,9 @@ IM_API rga_buffer_handle_t importbuffer_GraphicBuffer(sp<GraphicBuffer> buf) {
 /*it is necessary to check whether fd and virtual address of the return rga_buffer_t are valid parameters*/
 IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
     int ret = 0;
+    int format;
     rga_buffer_t buffer;
-    std::vector<int> dstAttrs;
+    rga_gralloc_attr_t dstAttrs;
 
     RockchipRga& rkRga(RockchipRga::get());
 
@@ -298,14 +297,21 @@ IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
         goto INVAILD;
     }
 
+    if (dstAttrs.at(AFOURCC) > 0)
+        format = get_format_from_drm_fourcc(dstAttrs.at(AFOURCC));
+    else
+        format = get_format_from_android_hal(dstAttrs.at(AFORMAT));
+
     set_default_rga_buffer(&buffer,
-                           dstAttrs.at(AWIDTH), dstAttrs.at(AHEIGHT), dstAttrs.at(AFORMAT),
+                           dstAttrs.at(AWIDTH), dstAttrs.at(AHEIGHT), format,
                            dstAttrs.at(ASTRIDE), dstAttrs.at(AHEIGHT));
 
     if (buffer.wstride % 16) {
         IM_LOGE("Graphicbuffer wstride needs align to 16, please align to 16 or use other buffer types, wstride = %d", buffer.wstride);
         goto INVAILD;
     }
+
+    buffer.rd_mode = get_mode_from_drm_modifier(dstAttrs.at(AMODIFIER));
 
 INVAILD:
     return buffer;

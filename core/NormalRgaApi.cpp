@@ -173,7 +173,7 @@ int isRectValid(rga_rect_t rect) {
 int NormalRgaGetRects(buffer_handle_t src,
                       buffer_handle_t dst,int* sType,int* dType,drm_rga_t* tmpRects) {
     int ret = 0;
-    std::vector<int> srcAttrs,dstAttrs;
+    rga_gralloc_attr_t srcAttrs,dstAttrs;
     if (src)
         ret = RkRgaGetHandleAttributes(src, &srcAttrs);
     if (ret) {
@@ -217,7 +217,7 @@ int NormalRgaGetRects(buffer_handle_t src,
 
 int NormalRgaGetRect(buffer_handle_t hnd, rga_rect_t *rect) {
     int ret = 0;
-    std::vector<int> dstAttrs;
+    rga_gralloc_attr_t dstAttrs;
 
     if (!rect) {
         ALOGE("Get rect but rect[%p] is null point", rect);
@@ -244,7 +244,7 @@ int NormalRgaGetRect(buffer_handle_t hnd, rga_rect_t *rect) {
 
 int NormalRgaGetMmuType(buffer_handle_t hnd, int *mmuType) {
     int ret = 0;
-    std::vector<int> dstAttrs;
+    rga_gralloc_attr_t dstAttrs;
 
     if (!mmuType) {
         ALOGE("Get rect but mmuType[%p] is null point", mmuType);

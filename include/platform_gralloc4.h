@@ -24,7 +24,7 @@
  *          < 习语 和 缩略语 > :
  *
  *          -----------------------------------------------------------------------------------
- *  Usage:        
+ *  Usage:
  *
  *  Note:
  *
@@ -33,7 +33,7 @@
  *  Log:
  *      init.
     ----Fri Aug 28 10:10:14 2020
- *      
+ *
  *  --------------------------------------------------------------------------------------------------------
  */
 
@@ -88,6 +88,10 @@ int get_usage(buffer_handle_t handle, uint64_t* usage);
 int get_allocation_size(buffer_handle_t handle, uint64_t* usage);
 
 int get_share_fd(buffer_handle_t handle, int* share_fd);
+
+uint32_t get_fourcc_format(buffer_handle_t handle);
+
+uint64_t get_format_modifier(buffer_handle_t handle);
 
 using android::status_t;
 
