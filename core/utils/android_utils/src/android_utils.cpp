@@ -17,9 +17,11 @@
  */
 
 #include <unordered_map>
+#include <set>
 #include <stdint.h>
 
 #include "rga.h"
+#include "im2d_type.h"
 
 #ifdef ANDROID
 
@@ -86,9 +88,32 @@ const static std::unordered_map<uint32_t, uint32_t> android_hal_table = {
     // { , RK_FORMAT_YCrCb_444_SP },
     // { , RK_FORMAT_Y8 },
     // { , RK_FORMAT_UNKNOWN },
+
+    // /* AFBC */
+    // { HAL_PIXEL_FORMAT_YUV420_8BIT_I, RK_FORMAT_YCbCr_420_SP },
+    // { HAL_PIXEL_FORMAT_YUV420_10BIT_I, RK_FORMAT_YCbCr_420_SP_10B },
+
+    /* RFBC */
+    { HAL_PIXEL_FORMAT_YUV420_8BIT_RFBC, RK_FORMAT_YCbCr_420_SP },
+    { HAL_PIXEL_FORMAT_YUV422_8BIT_RFBC, RK_FORMAT_YCbCr_422_SP },
+    { HAL_PIXEL_FORMAT_YUV444_8BIT_RFBC, RK_FORMAT_YCbCr_444_SP },
+    { HAL_PIXEL_FORMAT_YUV420_10BIT_RFBC, RK_FORMAT_YCbCr_420_SP_10B },
+    { HAL_PIXEL_FORMAT_YUV422_10BIT_RFBC, RK_FORMAT_YCbCr_422_SP_10B },
+    // { HAL_PIXEL_FORMAT_YUV444_10BIT_RFBC,  },
+
 };
+
+const static std::set<int> android_hal_rfbc_table({
+    HAL_PIXEL_FORMAT_YUV420_8BIT_RFBC,
+    HAL_PIXEL_FORMAT_YUV422_8BIT_RFBC,
+    HAL_PIXEL_FORMAT_YUV444_8BIT_RFBC,
+    HAL_PIXEL_FORMAT_YUV420_10BIT_RFBC,
+    HAL_PIXEL_FORMAT_YUV422_10BIT_RFBC,
+    HAL_PIXEL_FORMAT_YUV444_10BIT_RFBC,
+});
 #else
 const static std::unordered_map<uint32_t, uint32_t> android_hal_table;
+const static std::set<int> android_hal_rfbc_table;
 #endif
 
 uint32_t get_format_from_android_hal(uint32_t android_hal_format) {
@@ -97,4 +122,11 @@ uint32_t get_format_from_android_hal(uint32_t android_hal_format) {
         return RK_FORMAT_UNKNOWN;
 
     return entry->second;
+}
+
+int get_mode_from_android_hal(uint32_t android_hal_format) {
+    if (android_hal_rfbc_table.count(android_hal_format))
+        return IM_RKFBC64x4_MODE;
+
+    return IM_RASTER_MODE;
 }

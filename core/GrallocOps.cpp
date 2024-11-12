@@ -206,6 +206,8 @@ int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
     attributes->push_back(hnd->format);
     attributes->push_back(hnd->size);
     attributes->push_back(hnd->type);
+    attributes->push_back(0); //drm fourcc, unused
+    attributes->push_back(0); //drm modifier, unused
     return 0;
 }
 
@@ -227,6 +229,8 @@ int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
     attributes->push_back(hnd->format);
     attributes->push_back(hnd->size);
     attributes->push_back(hnd->type);
+    attributes->push_back(0); //drm fourcc, unused
+    attributes->push_back(0); //drm modifier, unused
     return 0;
 }
 
@@ -302,6 +306,8 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
     attrs->emplace_back(format);
     attrs->emplace_back(size);
     attrs->emplace_back(0); //type, unused
+    attrs->emplace_back(0); //drm fourcc, unused
+    attrs->emplace_back(0); //drm modifier, unused
 
 #else
 

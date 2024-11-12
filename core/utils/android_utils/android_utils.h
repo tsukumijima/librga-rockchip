@@ -25,4 +25,6 @@
 
 uint32_t get_format_from_android_hal(uint32_t android_hal_format);
 
+int get_mode_from_android_hal(uint32_t android_hal_format);
+
 #endif /* #ifndef _RGA_UTILS_ADNDROID_UTILS_H_ */

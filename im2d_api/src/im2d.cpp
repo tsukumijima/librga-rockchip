@@ -271,7 +271,7 @@ IM_API rga_buffer_handle_t importbuffer_GraphicBuffer(sp<GraphicBuffer> buf) {
 /*it is necessary to check whether fd and virtual address of the return rga_buffer_t are valid parameters*/
 IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
     int ret = 0;
-    int format;
+    int format, rd_mode;
     rga_buffer_t buffer;
     rga_gralloc_attr_t dstAttrs;
 
@@ -297,10 +297,13 @@ IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
         goto INVAILD;
     }
 
-    if (dstAttrs.at(AFOURCC) > 0)
+    if (dstAttrs.at(AFOURCC) > 0) {
         format = get_format_from_drm_fourcc(dstAttrs.at(AFOURCC));
-    else
+        rd_mode = get_mode_from_drm_modifier(dstAttrs.at(AMODIFIER));
+    } else {
         format = get_format_from_android_hal(dstAttrs.at(AFORMAT));
+        rd_mode = get_mode_from_android_hal(dstAttrs.at(AFORMAT));
+    }
 
     set_default_rga_buffer(&buffer,
                            dstAttrs.at(AWIDTH), dstAttrs.at(AHEIGHT), format,
@@ -311,7 +314,7 @@ IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
         goto INVAILD;
     }
 
-    buffer.rd_mode = get_mode_from_drm_modifier(dstAttrs.at(AMODIFIER));
+    buffer.rd_mode = rd_mode;
 
 INVAILD:
     return buffer;
