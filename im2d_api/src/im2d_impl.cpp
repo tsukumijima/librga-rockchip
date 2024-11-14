@@ -764,6 +764,13 @@ IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rec
     }
 
     /**************** rect judgment ****************/
+    if ((rect.width == 0 && rect.height > 0) ||
+        (rect.width > 0 && rect.height == 0)) {
+        IM_LOGW("Illegal %s rect, width or height cannot be 0, rect[x,y,w,h] = [%d, %d, %d, %d]",
+                name, rect.x, rect.y, rect.width, rect.height);
+        return IM_STATUS_ILLEGAL_PARAM;
+    }
+
     if (rect.width < 0 || rect.height < 0 || rect.x < 0 || rect.y < 0) {
         IM_LOGW("Illegal %s rect, the parameter cannot be negative, rect[x,y,w,h] = [%d, %d, %d, %d]",
                 name, rect.x, rect.y, rect.width, rect.height);
