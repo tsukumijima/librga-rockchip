@@ -2,9 +2,9 @@
 
 ID: RK-KF-YF-403
 
-Release Version: V2.2.4
+Release Version: V2.2.5
 
-Release Date: 2024-08-22
+Release Date: 2024-11-18
 
 Security Level: □Top-Secret   □Secret   □Internal   ■Public
 
@@ -55,6 +55,7 @@ This document (this guide) is mainly intended for:
 | 2023/06/28 | 2.2.2 | Yu Qiaowei | - Add chip RK3562 introduction<br/>- Improve the precautions for grayscale images |
 | 2024/03/06 | 2.2.3 | Yu Qiaowei | Add chip RK3576 introduction |
 | 2024/08/22 | 2.2.4 | Yu Qiaowei | - Add chip RK3506、RV1103B introduction |
+| 2024/11/18 | 2.2.5 | Yu Qiaowei | Add the support status of APIs in different environments. |
 
 ---
 
@@ -848,6 +849,558 @@ The software support library provides the following API, asynchronous mode only 
 - **imcheck**： Verify whether the parameters are valid and whether the current hardware supports the operation.
 - **imsync**： Synchronize task completion status in asynchronous mode.
 - **imconfig**： Add default configuration to current thread context.
+
+Support status of each API in different environments:
+
+<table><thead>
+  <tr>
+    <th>Item</th>
+    <th>API</th>
+    <th>Language</th>
+    <th>System</th>
+    <th>librga</th>
+    <th>RGA2 driver</th>
+    <th>Multi_RGA driver</th>
+  </tr></thead>
+<tbody>
+  <tr>
+    <td rowspan="6">common API</td>
+    <td>querystring</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>imcheckHeader</td>
+    <td>C++</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>≥1.9.0</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>imcheck</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imStrError</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>imsync</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.6.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imconfig</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.6.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td rowspan="8">buffer API</td>
+    <td>importbuffer_virtualaddr</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.7.2</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>importbuffer_physicaladdr</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.7.2</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>importbuffer_fd</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.7.2</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>releasebuffer_handle</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.7.2</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_handle</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.7.2</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_virtualaddr</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_physicaladdr</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_fd</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td rowspan="22">single process API</td>
+    <td>imcopy</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imresize</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>impyramind</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imcrop</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imtranslate</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imcvtcolor</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imrotate</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imflip</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imblend</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imcomposite</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imcolorkey</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imosd</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>≥1.8.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imquantize</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imrop</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imfill</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imfillArray</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imrectangle</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>imrectangleArray</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>immakeBorder</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>immosaic</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>≥1.8.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>immosaicArray</td>
+    <td>C++/C</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td>improcess</td>
+    <td>C++/C</td>
+    <td>Android / Linux / QNX / RT-thread</td>
+    <td>√</td>
+    <td>√</td>
+    <td>√</td>
+  </tr>
+  <tr>
+    <td rowspan="24">task process API</td>
+    <td>imbeginJob</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imendJob</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imcancelJob</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imcopyTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imresizeTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imcropTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imtranslateTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imcvtcolorTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imrotateTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imflipTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imblendTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imcompositeTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imcolorkeyTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imosdTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imquantizeTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imropTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imfillTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imfillTaskArray</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imrectangleTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>imrectangleTaskArray</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>immosaicTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>immosaicTaskArray</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>immosaicTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td>improcessTask</td>
+    <td>C++</td>
+    <td>Android / Linux</td>
+    <td>≥1.9.0</td>
+    <td>×</td>
+    <td>≥1.2.25</td>
+  </tr>
+  <tr>
+    <td rowspan="6">expand API</td>
+    <td>importbuffer_GraphicBuffer</td>
+    <td>C++</td>
+    <td>Android</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>importbuffer_GraphicBuffer_handle</td>
+    <td>C++</td>
+    <td>Android</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>importbuffer_AHardwareBuffer</td>
+    <td>C++</td>
+    <td>Android</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_GraphicBuffer</td>
+    <td>C++</td>
+    <td>Android</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_handle（GraphicBuffer handle）</td>
+    <td>C++</td>
+    <td>Android</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+  <tr>
+    <td>wrapbuffer_AHardwareBuffer</td>
+    <td>C++</td>
+    <td>Android</td>
+    <td>√</td>
+    <td>/</td>
+    <td>/</td>
+  </tr>
+</tbody></table>
+
+> Note:
+>
+> (√): Supported, (×): Not supported, (/): Not applicable.
 
 
 
