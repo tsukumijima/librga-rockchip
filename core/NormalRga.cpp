@@ -879,12 +879,6 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
             return -EINVAL;
     }
 
-    if ((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) &&
-        relDstRect.width > 4096) {
-        ALOGE("bi-linear scale-down only supports vertical direction smaller than 4096.");
-        return -EINVAL;
-    }
-
     if(is_out_log())
         ALOGD("interp[horiz,verti] = [0x%x, 0x%x] , stretch = 0x%x",
               interp.horiz, interp.verti, stretch);
