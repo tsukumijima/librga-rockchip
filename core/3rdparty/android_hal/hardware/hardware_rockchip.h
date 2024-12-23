@@ -1,6 +1,8 @@
 #ifndef LIBHARDWARE_HARDWARE_ROCKCHIP_H
 #define LIBHARDWARE_HARDWARE_ROCKCHIP_H
 
+#include "stdio.h"
+
 __BEGIN_DECLS
 
 #define HWC_BLENDING_DIM            0x0805

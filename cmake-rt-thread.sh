@@ -16,8 +16,13 @@ if [ ! -e ${TOOLCHAIN_PATH} ]; then
 	exit 1
 fi
 
-echo "compile with C"
-BUILD_SOURCE_TYPE=c
+if [ -n "${1}" ] && [ "${1}" == 'c' ]; then
+    echo "compile with C"
+        BUILD_SOURCE_TYPE=c
+else
+    echo "compile with C++"
+        BUILD_SOURCE_TYPE=cpp
+fi
 
 rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR

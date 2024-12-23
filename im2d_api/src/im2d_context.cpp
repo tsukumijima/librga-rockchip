@@ -82,7 +82,7 @@ static IM_STATUS rga_device_init(rga_session_t *session) {
     if (ret < 0)
     {
         rt_kprintf("failed to fine %s device\n", RGA_DRIVER_NAME);
-        return -1;
+        return IM_STATUS_FAILED;
     }
 
     ret = rt_device_control(device, RGA_IOC_GET_DRVIER_VERSION, &session->driver_verison);
@@ -266,10 +266,10 @@ int is_debug_en(void) {
 }
 
 /* Pre-processing during librga load/unload */
-__attribute__((constructor)) static void librga_init() {
+__attribute__((constructor)) static int librga_init() {
     if (pthread_rwlock_init(&g_rga_session.rwlock, NULL) != 0) {
         IM_LOGE("im2d API context init failed!\n");
-        return;
+        return -1;
     }
 
 #ifdef RT_THREAD
@@ -277,6 +277,8 @@ __attribute__((constructor)) static void librga_init() {
 #else
     g_rga_session.rga_dev_fd = -1;
 #endif
+
+    return 0;
 }
 
 __attribute__((destructor)) static void librga_exit() {

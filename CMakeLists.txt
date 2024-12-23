@@ -71,7 +71,10 @@ if (CMAKE_BUILD_TARGET STREQUAL rt_thread)
     string(REPLACE "-pthread" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
     string(REPLACE "-pthread" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-unused-variable -Wno-incompatible-pointer-types -Wno-format")
+    set(WARNING_IGNORE "-Wno-maybe-uninitialized -Wno-unused-but-set-variable -Wno-unused-variable -Wno-incompatible-pointer-types -Wno-format -Wno-unused-function -Wno-class-memaccess")
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WARNING_IGNORE}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WARNING_IGNORE}")
     set(RGA_SAMPLES_ENABLE false)
 endif()
 
@@ -152,7 +155,7 @@ set(IM2D_PUBLIC_CPP_HEADER
 #set source
 if (RGA_SOURCE_CODE_TYPE STREQUAL c)
     set_source_files_properties(${IM2D_SRCS} PROPERTIES LANGUAGE C COMPILE_FLAGS "-x c")
-else()
+elseif(NOT CMAKE_BUILD_TARGET STREQUAL rt_thread)
     set(IM2D_SRCS
         ${IM2D_SRCS}
         ${IM2D_CORE_CPP_SRCS}
