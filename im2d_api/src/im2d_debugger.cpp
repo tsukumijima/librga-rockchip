@@ -37,10 +37,16 @@ const char *string_rd_mode(uint32_t mode) {
     switch (mode) {
         case IM_RASTER_MODE:
             return "raster";
-        case IM_FBC_MODE:
+        case IM_AFBC16x16_MODE:
             return "afbc16x16";
-        case IM_TILE_MODE:
+        case IM_TILE8x8_MODE:
             return "tile8x8";
+        case IM_TILE4x4_MODE:
+            return "tile4x4";
+        case IM_RKFBC64x4_MODE:
+            return "rkfbc64x4";
+        case IM_AFBC32x8_MODE:
+            return "afbc32x8";
         default:
             return "unknown";
     }
