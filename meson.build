@@ -31,7 +31,7 @@ librga_srcs = [
 	'im2d_api/src/im2d.cpp',
 ]
 
-incdir = include_directories('include', 'im2d_api', 'core/hardware', 'core/utils', 'core/3rdparty/libdrm/include/drm')
+incdir = include_directories('include', 'im2d_api', 'core/hardware', 'core/utils', 'core/3rdparty/libdrm/include/drm', 'core/3rdparty/android_hal')
 
 librga = shared_library(
     'rga',
