@@ -412,7 +412,7 @@ static int rga_run(void *args, rga_slt_case running_case) {
     char *src_buf = NULL, *dst_buf = NULL, *tmp_buf = NULL;
     int src_dma_fd = -1, dst_dma_fd = -1, tmp_dma_fd = -1;
     rga_buffer_handle_t src_handle = 0, dst_handle = 0, tmp_handle = 0;
-    im_handle_param_t src_param, tmp_param, dst_param;
+    im_handle_param_t src_param, dst_param;
 
     rga_buffer_t src;
     rga_buffer_t tmp;
