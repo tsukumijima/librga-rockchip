@@ -826,6 +826,17 @@ void rga_check_perpare(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
     (void)(mode_usage);
 }
 
+void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
+                     im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt) {
+    static __thread int i = 0;
+
+    if (i == 0) {
+        IM_LOGFW("The current API has been deprecated. Please update the relevant calling modules in time or stop using the API in your own programs.");
+        i++;
+    }
+    empty_unused_structure(src, dst, pat, srect, drect, prect, opt);
+}
+
 IM_API IM_STATUS imsync(int fence_fd) {
     int ret = 0;
 
@@ -893,7 +904,7 @@ IM_API IM_STATUS imcopy(const rga_buffer_t src, rga_buffer_t dst, int sync, int 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     if ((src.width != dst.width) || (src.height != dst.height)) {
         IM_LOGW("imcopy cannot support scale, src[w,h] = [%d, %d], dst[w,h] = [%d, %d]",
@@ -923,7 +934,7 @@ IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx, d
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     if (fx > 0 || fy > 0) {
         if (fx == 0) fx = 1;
@@ -977,7 +988,7 @@ IM_API IM_STATUS imcvtcolor(rga_buffer_t src, rga_buffer_t dst, int sfmt, int df
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     src.format = sfmt;
     dst.format = dfmt;
@@ -1006,7 +1017,7 @@ IM_API IM_STATUS imcrop(const rga_buffer_t src, rga_buffer_t dst, im_rect rect, 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, NULL, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, NULL, &drect, &prect, &opt);
 
     drect.width = rect.width;
     drect.height = rect.height;
@@ -1033,7 +1044,7 @@ IM_API IM_STATUS imtranslate(const rga_buffer_t src, rga_buffer_t dst, int x, in
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     if ((src.width != dst.width) || (src.height != dst.height)) {
         IM_LOGW("The width and height of src and dst need to be equal, src[w,h] = [%d, %d], dst[w,h] = [%d, %d]",
@@ -1070,7 +1081,7 @@ IM_API IM_STATUS imrotate(const rga_buffer_t src, rga_buffer_t dst, int rotation
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= rotation;
 
@@ -1096,7 +1107,7 @@ IM_API IM_STATUS imflip(const rga_buffer_t src, rga_buffer_t dst, int mode, int 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= mode;
 
@@ -1120,7 +1131,7 @@ IM_API IM_STATUS imcomposite(const rga_buffer_t srcA, const rga_buffer_t srcB, r
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
 
     usage |= mode;
 
@@ -1177,7 +1188,7 @@ IM_API IM_STATUS imcolorkey(const rga_buffer_t src, rga_buffer_t dst, im_colorke
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= mode;
 
@@ -1205,7 +1216,7 @@ IM_API IM_STATUS imquantize(const rga_buffer_t src, rga_buffer_t dst, im_nn_t nn
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= IM_NN_QUANTIZE;
 
@@ -1233,7 +1244,7 @@ IM_API IM_STATUS imrop(const rga_buffer_t src, rga_buffer_t dst, int rop_code, i
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= IM_ROP;
 
@@ -1309,7 +1320,7 @@ IM_API IM_STATUS imgaussianBlur(rga_buffer_t src, rga_buffer_t dst,
 
     im_opt_t opt;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     /* Scaling is not supported. */
     if ((src.width != dst.width) || (src.height != dst.height)) {
@@ -1339,7 +1350,7 @@ IM_API IM_STATUS impalette(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t lut,
 
     im_opt_t opt;
 
-    empty_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
 
     /*Don't know if it supports zooming.*/
     if ((src.width != dst.width) || (src.height != dst.height)) {
@@ -1372,7 +1383,7 @@ IM_API IM_STATUS imfill(rga_buffer_t dst, im_rect rect, int color, int sync, int
     im_rect srect;
     im_rect prect;
 
-    empty_structure(&src, NULL, &pat, &srect, NULL, &prect, &opt);
+    empty_unused_structure(&src, NULL, &pat, &srect, NULL, &prect, &opt);
 
     memset(&src, 0, sizeof(rga_buffer_t));
 
@@ -1650,7 +1661,7 @@ IM_API IM_STATUS imcopyTask(im_job_handle_t job_handle, const rga_buffer_t src, 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     if ((src.width != dst.width) || (src.height != dst.height)) {
         IM_LOGW("imcopy cannot support scale, src[w,h] = [%d, %d], dst[w,h] = [%d, %d]",
@@ -1670,7 +1681,7 @@ IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle, const rga_buffer_t src
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     if (fx > 0 || fy > 0) {
         if (fx == 0) fx = 1;
@@ -1712,7 +1723,7 @@ IM_API IM_STATUS imcropTask(im_job_handle_t job_handle, const rga_buffer_t src, 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, NULL, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, NULL, &drect, &prect, &opt);
 
     drect.width = rect.width;
     drect.height = rect.height;
@@ -1728,7 +1739,7 @@ IM_API IM_STATUS imcvtcolorTask(im_job_handle_t job_handle, rga_buffer_t src, rg
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     src.format = sfmt;
     dst.format = dfmt;
@@ -1746,7 +1757,7 @@ IM_API IM_STATUS imtranslateTask(im_job_handle_t job_handle, const rga_buffer_t 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     if ((src.width != dst.width) || (src.height != dst.height)) {
         IM_LOGW("The width and height of src and dst need to be equal, src[w,h] = [%d, %d], dst[w,h] = [%d, %d]",
@@ -1773,7 +1784,7 @@ IM_API IM_STATUS imrotateTask(im_job_handle_t job_handle, const rga_buffer_t src
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= rotation;
 
@@ -1788,7 +1799,7 @@ IM_API IM_STATUS imflipTask(im_job_handle_t job_handle, const rga_buffer_t src, 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= mode;
 
@@ -1802,7 +1813,7 @@ IM_API IM_STATUS imcompositeTask(im_job_handle_t job_handle, const rga_buffer_t 
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
 
     usage |= mode;
 
@@ -1825,7 +1836,7 @@ IM_API IM_STATUS imcolorkeyTask(im_job_handle_t job_handle, const rga_buffer_t s
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= mode;
 
@@ -1860,7 +1871,7 @@ IM_API IM_STATUS imquantizeTask(im_job_handle_t job_handle, const rga_buffer_t s
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= IM_NN_QUANTIZE;
 
@@ -1877,7 +1888,7 @@ IM_API IM_STATUS imropTask(im_job_handle_t job_handle, const rga_buffer_t src, r
     im_rect drect;
     im_rect prect;
 
-    empty_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, &pat, &srect, &drect, &prect, &opt);
 
     usage |= IM_ROP;
 
@@ -1924,7 +1935,7 @@ IM_API IM_STATUS imfillTask(im_job_handle_t job_handle, rga_buffer_t dst, im_rec
     im_rect srect;
     im_rect prect;
 
-    empty_structure(&src, NULL, &pat, &srect, NULL, &prect, &opt);
+    empty_unused_structure(&src, NULL, &pat, &srect, NULL, &prect, &opt);
 
     memset(&src, 0, sizeof(rga_buffer_t));
 
@@ -1983,7 +1994,7 @@ IM_API IM_STATUS impaletteTask(im_job_handle_t job_handle, rga_buffer_t src, rga
 
     im_opt_t opt;
 
-    empty_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
+    empty_unused_structure(NULL, NULL, NULL, &srect, &drect, &prect, &opt);
 
     /*Don't know if it supports zooming.*/
     if ((src.width != dst.width) || (src.height != dst.height)) {

@@ -405,8 +405,8 @@ bool rga_is_rect_valid(im_rect rect) {
     return (rect.x > 0 || rect.y > 0 || (rect.width > 0 && rect.height > 0));
 }
 
-void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
-                     im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt) {
+void empty_unused_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
+                            im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt) {
     if (src != NULL)
         memset(src, 0, sizeof(*src));
     if (dst != NULL)
