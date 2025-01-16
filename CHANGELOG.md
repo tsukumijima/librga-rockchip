@@ -1,5 +1,37 @@
 # 更新日志
 
+## 1.10.2 （2024-12-26）
+
+该版本RGA驱动建议更新至1.3.5及以上版本，最低支持1.2.4。
+
+### 新增
+
+- 支持Android 15。
+- meson支持编译静态库。
+- 支持RGB、YUV等没有Alpha通道的格式之间通过GlobalAlpha执行alpha叠加。
+- 支持对FBC压缩格式GraphicBuffer自动配置为对应FBC格式。
+
+### 优化
+
+- 优化SLT功能覆盖。
+- SLT支持RK3576。
+- 调整IM2D API调试日志格式。
+
+### 变更
+
+- 更新文档网盘链接，由原来的百度网盘更改为联想网盘。
+- task-mode最大支持task数由50变更为256。（驱动须更新至1.3.4）
+- imsetAlphaBit/imsetOpacity/imsetColorSpace变更为C API。
+
+### 修复
+
+- 修复 ‘ENABLE’ 与Android HAL定义冲突的问题。
+- 修复开始调试日志后无法获取context报错。
+- 修复opt存在非预期配置的异常。
+- 修复full_csc配置导致出现非预期配置的异常。
+- 修复RK_FORMAT_YCbCr_422_10b_SP、RK_FORMAT_YCrCb_422_10b_SP定义错误问题。
+- 修复alpha_demo错误的配置YUV格式在dst通道的问题。
+
 ## 1.10.1 （2024-03-06）
 
 该版本RGA驱动建议更新至1.3.0及以上版本，最低支持1.2.4。
