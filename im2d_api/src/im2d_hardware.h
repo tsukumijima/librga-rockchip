@@ -162,7 +162,7 @@ typedef struct {
 } rga_version_bind_table_entry_t;
 
 static const rga_info_table_entry hw_info_table[] = {
-    { IM_RGA_HW_VERSION_RGA_V_ERR       , {0, 0}, {0, 0}, 0, 0, 0,   0, 0, 0, {0} },
+    { IM_RGA_HW_VERSION_RGA_V_ERR       , {0, 0}, {0, 0}, 0, 0, 0, 0, 0, 0, 0, (char){0} },
     {   IM_RGA_HW_VERSION_RGA_1         , {8192, 8192}, {2048, 2048}, 4, 8, 1,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -187,7 +187,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         0,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_1_PLUS      , {8192, 8192}, {4096, 4096}, 4, 8, 1,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -211,7 +211,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         0,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_2           , {8192, 8192}, {4096, 4096}, 4, 16, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -235,7 +235,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         1928,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_2_LITE0     , {8192, 8192}, {4096, 4096}, 4, 8, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -259,7 +259,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         1928,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_2_LITE1     , {8192, 8192}, {4096, 4096}, 4, 8, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -286,7 +286,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         1928,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_2_ENHANCE   , {8192, 8192}, {4096, 4096}, 4, 16,  2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -316,7 +316,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         1928,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_2_PRO       , {8192, 8192}, {8192, 8192}, 4, 16,  2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -362,7 +362,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         1928,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
     { IM_RGA_HW_VERSION_RGA_2_LITE2     , {2880, 1620}, {2880, 1620}, 4, 16, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
@@ -393,7 +393,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         0,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
 
     { IM_RGA_HW_VERSION_RGA_3           , {8176, 8176}, {8128, 8128}, 16, 8,  4,
                                         /* input format */
@@ -417,7 +417,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         /* special limit */
                                         8128,
                                         /* reserved */
-                                        {0} },
+                                        (char){0} },
 };
 
 /*
