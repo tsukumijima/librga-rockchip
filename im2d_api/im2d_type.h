@@ -34,9 +34,6 @@
 #define IM_EXPORT_API
 #endif
 
-#define IM_LECACY_SYMBOL /* legacy symbols, do not use */
-#define IM_LECACY_C_SYMBOL
-
 #ifdef __cplusplus
 #define DEFAULT_INITIALIZER(x) = x
 #else

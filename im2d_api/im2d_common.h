@@ -123,6 +123,9 @@ IM_API IM_STATUS imcheckHeader(im_api_version_t header_version = RGA_CURRENT_API
     })
 IM_C_API IM_STATUS imcheck_t(const rga_buffer_t src, const rga_buffer_t dst, const rga_buffer_t pat,
                              const im_rect src_rect, const im_rect dst_rect, const im_rect pat_rect, const int mode_usage);
+/* Compatible with the legacy symbol */
+IM_C_API void rga_check_perpare(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
+                                im_rect *src_rect, im_rect *dst_rect, im_rect *pat_rect, int mode_usage);
 
 /**
  * block until all execution is complete
@@ -144,12 +147,5 @@ IM_EXPORT_API IM_STATUS imsync(int release_fence_fd);
  * @returns success or else negative error code.
  */
 IM_EXPORT_API IM_STATUS imconfig(IM_CONFIG_NAME name, uint64_t value);
-
-/* Compatible with the legacy symbol, do not use */
-IM_LECACY_C_SYMBOL void rga_check_perpare(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
-                                im_rect *src_rect, im_rect *dst_rect, im_rect *pat_rect, int mode_usage);
-
-IM_LECACY_SYMBOL void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
-                                im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt);
 
 #endif /* #ifndef _im2d_common_h_ */
