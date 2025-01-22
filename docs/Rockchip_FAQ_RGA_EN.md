@@ -2,9 +2,9 @@
 
 File No.：RK-PC-YF-404
 
-Release Version: V1.1.2
+Release Version: V1.1.3
 
-Release Date: 2023-06-28
+Release Date: 2025-01-22
 
 Security Level: □Top-Secret   □Secret   □Internal   ■Public
 
@@ -49,6 +49,7 @@ This document (this guide) is mainly intended for:
 | 2022/12/21 | 1.1.0 | Yu Qiaowei | Add multi_rga driver related cases. |
 | 2023/02/09 | 1.1.1 | Yu Qiaowei | Format document. |
 | 2023/06/28 | 1.1.2 | Yu Qiaowei | Supplementary Q&A |
+| 2025/01/22 | 1.1.3 | Yu Qiaowei | Supplementary Q&A |
 
 ---
 
@@ -1454,6 +1455,27 @@ When this error occurs, there are usually the following scenarios and correspond
 
 For example:
 
+Enable the driver run log, see **《Driver Debug Node》** chapter for detailed description of the run log:
+
+```bash
+/# echo msg > /sys/kerne/debug/rkrga/debug
+/# dmesg       //For logs opened through nodes, the printing level is KERNEL_DEBUG. You need to run the dmesg command to view the corresponding logs on the serial port or adb.
+[ 4802.344683] rga2: open rga2 reg!
+```
+
+You can check whether the corresponding MSG logging switch is turned on by checking the status of the debug node run logging switch:
+
+```bash
+/# cat /sys/kerne/debug/rkrga/debug
+REG [DIS]
+MSG [EN]
+TIME [DIS]
+INT [DIS]
+MM [DIS]
+```
+
+Execution problem scenarios, you can see the specific matching failure reasons for the corresponding task in the core matching phase based on the run log:
+
 ```
 rga_policy: start policy on core = 4
 rga_policy: RGA2 only support under 4G memory! //Indicates that the current RGA2 core only supports memory within 4G.
@@ -1500,7 +1522,9 @@ In the above two cases, you can confirm the configured parameter information acc
 
 ​			5). RGA of some chips is overclocked to a higher frequency, at which case RGA frequency rises but the voltage does not, leading to the overall performance of RGA decreases significantly and the work cannot be completed within the specified threshold. As a result,the driver returns with exception and report the error message. In this scenario, developers are advised to change the RGA frequency to proper frequency.  Overclocking will affect the stability and service life of the overall chip, so this behavior is strongly not recommended.
 
-​			6). If no error is found in any of the above scenarios, try to write the data in the target memory to file after an RGA timeout error is reported, and check whether part of the data is written to RGA. If some data is written to RGA, reconfirm scenarios 1 to 5. This is obviously caused by insufficient RGA performance. If no data is written to the target memory by RGA, collect corresponding log information and related experiments, and contact RGA maintenance engineers.
+​			6).  When the source data is not FBC data, mistakenly configuring the corresponding channel to FBC mode causes the FBC to fail to decode the data, which also leads to a hardware timeout. When there is a hardware timeout when FBC configuration exists, you can try to turn off the FBC to compare and verify.
+
+​			7). If no error is found in any of the above scenarios, try to write the data in the target memory to file after an RGA timeout error is reported, and check whether part of the data is written to RGA. If some data is written to RGA, reconfirm scenarios 1 to 5. This is obviously caused by insufficient RGA performance. If no data is written to the target memory by RGA, collect corresponding log information and related experiments, and contact RGA maintenance engineers.
 
 
 
@@ -1509,3 +1533,29 @@ In the above two cases, you can confirm the configured parameter information acc
 **A4.9**：When this log appears, it means that the CPU core responsible for interrupts in the current system environment has been preempted, causing the RGA driver to wait for the soft interrupt in the lower half after the hardware interrupt in the upper half ends. After the timeout threshold set by the driver is exceeded, the driver reports timeout error.
 
 ​			This kind of situation is common when there is a real-time process in the application layer that preempts the CPU, causing the drive device to fail to work normally. It is not recommended to use real-time processes to forcibly preempt CPU resources. If this problem occurs, it can only be optimized from the CPU side to avoid the interruption of the CPU core. Preemption cannot execute softirqs of other device drivers.
+
+
+
+**Q4.10**: What are the reasons for the following error messages when a process exits normally or abnormally?
+
+> rga_mm: [tgid:500] Decrement the reference of handle[622] when the user exits
+>
+> rga_mm: [tgid:500] Decrement the reference of handle[623] when the user exits
+
+**A4.10**: When these logs appear, it indicates that process ID 500 has an RGA buffer_handle leak (specifically handles 622 and 623). Common causes include the following:
+
+​			1). After calling the importbuffer_xx() API, releasebuffer_handle() was not called immediately, resulting in the RGA buffer_handle not being released promptly.
+
+​			2). Importing the same memory block multiple times but only calling releasebuffer_handle() once, thus leading to an RGA buffer_handle leak.
+
+​			3). Abnormal application exit. In this case, due to process termination, corresponding post-processing is not performed. In principle, this is still equivalent to not calling releasebuffer_handle() for the imported RGA buffer_handle.
+
+​			For these types of issues, the core reason is that importbuffer_xx() and releasebuffer_handle() are not used in pairs. This leads to the RGA buffer_handles still holding instances when the corresponding process exits. From a memory protection standpoint, the driver destroys these buffer handles, and subsequently prints the corresponding logs to remind that this abnormal behavior requires attention.
+
+**Q4.11**: What are the reasons for the following memory-related error message?
+
+> rga: 12491 12491 : ID[58447384]: Only get buffer 1382400 byte from handle[555], but current required 3686400 byte
+
+**A4.11**: This error message indicates that the currently configured image parameters require a buffer size of 3686400 bytes, but the configured RGA buffer_handle only has a buffer size of 1382400 bytes. Therefore, the currently configured buffer cannot meet the requirements of the image parameter configuration.
+
+​			This type of problem commonly occurs when the size configured during the importbuffer_xx() API call is inconsistent with the size required for actual image processing. For example, in this error message, the size configured during importbuffer was 1280 * 720 * 1.5 (NV12) = 1382400 bytes, but the image parameters actually used with this buffer_handle were for 1280 * 720 RGBA8888 (which is expected to require a buffer size of 1280 * 720 * 4 = 3686400 bytes). This discrepancy leads to the buffer size not meeting the requirements, resulting in the error message being returned.
