@@ -37,9 +37,11 @@ int RkRgaGetHandleFd(buffer_handle_t handle, int *fd) {
 }
 
 int RkRgaGetHandleAttributes(buffer_handle_t handle,
-                             std::vector<int> *attrs) {
+                             rga_gralloc_attr_t *attrs) {
     uint64_t w, h, size;
     int pixel_stride, format;
+    uint32_t fourcc_format;
+    uint64_t format_modifier;
     int err = 0;
 
     err = gralloc4::get_width(handle, &w);
@@ -77,12 +79,18 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
         return -1;
     }
 
+    fourcc_format = gralloc4::get_fourcc_format(handle);
+    format_modifier = gralloc4::get_format_modifier(handle);
+
     //add to attrs.
-    attrs->emplace_back(w);
-    attrs->emplace_back(h);
-    attrs->emplace_back(pixel_stride);
-    attrs->emplace_back(format);
-    attrs->emplace_back(size);
+    attrs->emplace_back((uint64_t)w);
+    attrs->emplace_back((uint64_t)h);
+    attrs->emplace_back((uint64_t)pixel_stride);
+    attrs->emplace_back((uint64_t)format);
+    attrs->emplace_back((uint64_t)size);
+    attrs->emplace_back(0); //type, unused
+    attrs->emplace_back((uint64_t)fourcc_format);
+    attrs->emplace_back((uint64_t)format_modifier);
 
     return err;
 }
@@ -190,7 +198,7 @@ int gralloc_backend_get_fd(private_handle_t* hnd, int *fd) {
 }
 
 int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
-    std::vector<int> *attributes = (std::vector<int> *)attrs;
+    rga_gralloc_attr_t *attributes = (rga_gralloc_attr_t *)attrs;
     attributes->clear();
     attributes->push_back(hnd->width);
     attributes->push_back(hnd->height);
@@ -198,6 +206,8 @@ int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
     attributes->push_back(hnd->format);
     attributes->push_back(hnd->size);
     attributes->push_back(hnd->type);
+    attributes->push_back(0); //drm fourcc, unused
+    attributes->push_back(0); //drm modifier, unused
     return 0;
 }
 
@@ -211,7 +221,7 @@ int gralloc_backend_get_fd(private_handle_t* hnd, int *fd) {
 }
 
 int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
-    std::vector<int> *attributes = (std::vector<int> *)attrs;
+    rga_gralloc_attr_t *attributes = (rga_gralloc_attr_t *)attrs;
     attributes->clear();
     attributes->push_back(hnd->width);
     attributes->push_back(hnd->height);
@@ -219,6 +229,8 @@ int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
     attributes->push_back(hnd->format);
     attributes->push_back(hnd->size);
     attributes->push_back(hnd->type);
+    attributes->push_back(0); //drm fourcc, unused
+    attributes->push_back(0); //drm modifier, unused
     return 0;
 }
 
@@ -264,7 +276,7 @@ int RkRgaGetHandleFd(buffer_handle_t handle, int *fd) {
 }
 
 int RkRgaGetHandleAttributes(buffer_handle_t handle,
-                             std::vector<int> *attrs) {
+                             rga_gralloc_attr_t *attrs) {
     int ret = 0;
 
     if (!mAllocMod)
@@ -293,6 +305,9 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
     attrs->emplace_back(pixel_stride);
     attrs->emplace_back(format);
     attrs->emplace_back(size);
+    attrs->emplace_back(0); //type, unused
+    attrs->emplace_back(0); //drm fourcc, unused
+    attrs->emplace_back(0); //drm modifier, unused
 
 #else
 

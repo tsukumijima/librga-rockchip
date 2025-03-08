@@ -27,20 +27,26 @@
 #include <string.h>
 #include <errno.h>
 
-#include "RockchipRga.h"
-
 #include "im2d_debugger.h"
 #include "im2d_impl.h"
 #include "im2d_log.h"
+
+#include "RgaUtils.h"
 
 const char *string_rd_mode(uint32_t mode) {
     switch (mode) {
         case IM_RASTER_MODE:
             return "raster";
-        case IM_FBC_MODE:
+        case IM_AFBC16x16_MODE:
             return "afbc16x16";
-        case IM_TILE_MODE:
+        case IM_TILE8x8_MODE:
             return "tile8x8";
+        case IM_TILE4x4_MODE:
+            return "tile4x4";
+        case IM_RKFBC64x4_MODE:
+            return "rkfbc64x4";
+        case IM_AFBC32x8_MODE:
+            return "afbc32x8";
         default:
             return "unknown";
     }
@@ -234,6 +240,20 @@ static void rga_dump_osd_info(int log_level, const im_osd_t *osd_info) {
            osd_info->bpp2_info.color0.value, osd_info->bpp2_info.color1.value);
 }
 
+static void rga_dump_gauss_matrix(int log_level, im_size_t ksize, double *matrix) {
+    int i, j;
+
+    IM_LOG(log_level, "\t\tkernel_matrix[%p]:\n", matrix);
+    for (i = 0; i < ksize.height; i++) {
+        printf("\t\t\t");
+        for (j = 0; j < ksize.width; j++) {
+            IM_LOG(log_level, "%.6f ",
+                   matrix[i * ksize.width + j]);
+        }
+        printf("\n");
+    }
+}
+
 void rga_dump_image(int log_level,
                     const rga_buffer_t *src, const rga_buffer_t *dst, const rga_buffer_t *pat,
                     const im_rect *srect, const im_rect *drect, const im_rect *prect) {
@@ -310,6 +330,14 @@ void rga_dump_opt(int log_level, const im_opt_t *opt, const int usage) {
         IM_LOG(log_level, "\t\tflags[0x%x], read_threshold[0x%x], write_start[0x%x], write_step[0x%x]",
                opt->intr_config.flags, opt->intr_config.read_threshold,
                opt->intr_config.write_start, opt->intr_config.write_step);
+    }
+
+    if (usage & IM_GAUSS) {
+        IM_LOG(log_level, "\tGaussian Blur:\n"
+                          "\t\tksize[%dx%d], sigma[x,y] = [%lf, %lf]\n",
+               opt->gauss_config.ksize.width, opt->gauss_config.ksize.height,
+               opt->gauss_config.sigma_x, opt->gauss_config.sigma_y);
+        rga_dump_gauss_matrix(log_level, opt->gauss_config.ksize,opt->gauss_config.matrix);
     }
 }
 

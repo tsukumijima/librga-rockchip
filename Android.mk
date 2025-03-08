@@ -51,6 +51,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/im2d_api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/utils
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/libdrm/include/drm
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/android_hal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/hardware
 
 LOCAL_CFLAGS := \
@@ -91,6 +92,8 @@ LOCAL_SRC_FILES:= \
     core/rga_sync.cpp \
     im2d_api/src/im2d_log.cpp \
     im2d_api/src/im2d_debugger.cpp \
+    im2d_api/src/im2d_context.cpp \
+    im2d_api/src/im2d_job.cpp \
     im2d_api/src/im2d_impl.cpp \
     im2d_api/src/im2d.cpp
 
@@ -145,6 +148,8 @@ LOCAL_SRC_FILES += \
     core/rga_sync.cpp \
     im2d_api/src/im2d_log.cpp \
     im2d_api/src/im2d_debugger.cpp \
+    im2d_api/src/im2d_context.cpp \
+    im2d_api/src/im2d_job.cpp \
     im2d_api/src/im2d_impl.cpp \
     im2d_api/src/im2d.cpp
 
@@ -160,6 +165,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/im2d_api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/utils
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/libdrm/include/drm
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/android_hal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/hardware
 
 LOCAL_SHARED_LIBRARIES := libdrm
@@ -226,6 +232,8 @@ LOCAL_SRC_FILES += \
     core/rga_sync.cpp \
     im2d_api/src/im2d_log.cpp \
     im2d_api/src/im2d_debugger.cpp \
+    im2d_api/src/im2d_context.cpp \
+    im2d_api/src/im2d_job.cpp \
     im2d_api/src/im2d_impl.cpp \
     im2d_api/src/im2d.cpp
 
@@ -239,6 +247,7 @@ LOCAL_C_INCLUDES += $(LOCAL_PATH)/include
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/im2d_api
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/utils
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/libdrm/include/drm
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/3rdparty/android_hal
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/core/hardware
 
 LOCAL_SHARED_LIBRARIES := libdrm

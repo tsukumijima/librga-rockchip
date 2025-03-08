@@ -19,11 +19,12 @@
 #ifndef _RGA_IM2D_IMPL_H_
 #define _RGA_IM2D_IMPL_H_
 
+#include <stdbool.h>
+
+#include "rga_ioctl.h"
 #include "drmrga.h"
 #include "im2d.h"
 #include "im2d_hardware.h"
-#include <map>
-#include <mutex>
 
 #define ALIGN(val, align) (((val) + ((align) - 1)) & ~((align) - 1))
 #define DOWN_ALIGN(val, align) ((val) & ~((align) - 1))
@@ -35,12 +36,12 @@
  *     16~23b minor
  *     24~31b major
  */
-#define RGA_GET_API_VERSION(v) {\
+#define RGA_GET_API_VERSION(v) ((struct rga_version_t){\
     (((v) >> 24) & 0xff), \
     (((v) >> 16) & 0xff), \
     (((v) >> 8) & 0xff), \
     {0}\
-    }
+    })
 #define RGA_SET_VERSION(major, minor, revision) \
     (struct rga_version_t) { \
     (major), (minor), (revision),  \
@@ -52,11 +53,11 @@
 
 
 typedef struct rga_version_check_ops {
-    IM_STATUS (*get_current_index_failed)(rga_version_t &current, rga_version_t &minimum);
-    IM_STATUS (*get_minimum_index_failed)(rga_version_t &current, rga_version_t &minimum);
-    IM_STATUS (*witnin_minimun_range)(rga_version_t &current, rga_version_t &minimum);
-    IM_STATUS (*above_minimun_range)(rga_version_t &current, rga_version_t &minimum, const rga_version_bind_table_entry_t *least_version_table);
-    IM_STATUS (*below_minimun_range)(rga_version_t &current, rga_version_t &minimum, const rga_version_bind_table_entry_t *least_version_table);
+    IM_STATUS (*get_current_index_failed)(struct rga_version_t current, struct rga_version_t minimum);
+    IM_STATUS (*get_minimum_index_failed)(struct rga_version_t current, struct rga_version_t minimum);
+    IM_STATUS (*witnin_minimun_range)(struct rga_version_t current, struct rga_version_t minimum);
+    IM_STATUS (*above_minimun_range)(struct rga_version_t current, struct rga_version_t minimum, const rga_version_bind_table_entry_t *least_version_table);
+    IM_STATUS (*below_minimun_range)(struct rga_version_t current, struct rga_version_t minimum, const rga_version_bind_table_entry_t *least_version_table);
 } rga_version_check_ops_t;
 
 typedef struct im_context {
@@ -65,33 +66,17 @@ typedef struct im_context {
     int check_mode;
 } im_context_t;
 
-typedef struct im_rga_job {
-    struct rga_req req[RGA_TASK_NUM_MAX];
-    int task_count;
-
-    int id;
-} im_rga_job_t;
-
-struct im2d_job_manager {
-    std::map<im_job_handle_t, im_rga_job_t *> job_map;
-    int job_count;
-
-    std::mutex mutex;
-};
-
 int rga_version_compare(struct rga_version_t version1, struct rga_version_t version2);
-int rga_version_table_get_current_index(rga_version_t &version, const rga_version_bind_table_entry_t *table, int table_size);
-int rga_version_table_get_minimum_index(rga_version_t &version, const rga_version_bind_table_entry_t *table, int table_size);
-int rga_version_table_check_minimum_range(rga_version_t &version,
+int rga_version_table_get_current_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size);
+int rga_version_table_get_minimum_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size);
+int rga_version_table_check_minimum_range(struct rga_version_t version,
                                           const rga_version_bind_table_entry_t *table,
                                           int table_size, int index);
 
 bool rga_is_buffer_valid(rga_buffer_t buf);
 bool rga_is_rect_valid(im_rect rect);
 void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
-                                im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt);
-IM_STATUS rga_set_buffer_info(rga_buffer_t dst, rga_info_t* dstinfo);
-IM_STATUS rga_set_buffer_info(const rga_buffer_t src, rga_buffer_t dst, rga_info_t* srcinfo, rga_info_t* dstinfo);
+                     im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt);
 inline void rga_apply_rect(rga_buffer_t *image, im_rect *rect) {
     if (rect->width > 0 && rect->height > 0) {
         image->width = rect->width;
@@ -99,10 +84,10 @@ inline void rga_apply_rect(rga_buffer_t *image, im_rect *rect) {
     }
 }
 
-IM_STATUS rga_get_info(rga_info_table_entry *return_table);
+IM_STATUS rga_get_info(struct rga_hw_versions_t * version, rga_info_table_entry *return_table);
 
-IM_STATUS rga_check_header(rga_version_t header_version);
-IM_STATUS rga_check_driver(rga_version_t &driver_version);
+IM_STATUS rga_check_header(struct rga_version_t header_version);
+IM_STATUS rga_check_driver(struct rga_version_t driver_version);
 IM_STATUS rga_check_external(const rga_buffer_t src, const rga_buffer_t dst, const rga_buffer_t pat,
                              const im_rect src_rect, const im_rect dst_rect, const im_rect pat_rect,
                              int mode_usage);
@@ -110,7 +95,7 @@ IM_STATUS rga_check_external(const rga_buffer_t src, const rga_buffer_t dst, con
 IM_API IM_STATUS rga_import_buffers(struct rga_buffer_pool *buffer_pool);
 IM_API IM_STATUS rga_release_buffers(struct rga_buffer_pool *buffer_pool);
 IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, uint32_t size);
-IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, im_handle_param_t *param);
+IM_API rga_buffer_handle_t rga_import_buffer_param(uint64_t memory, int type, im_handle_param_t *param);
 IM_API IM_STATUS rga_release_buffer(int handle);
 
 IM_STATUS rga_get_opt(im_opt_t *opt, void *ptr);
@@ -122,6 +107,7 @@ IM_STATUS rga_single_task_submit(rga_buffer_t src, rga_buffer_t dst, rga_buffer_
 IM_STATUS rga_task_submit(im_job_handle_t job_handle,
                           rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
                           im_rect srect, im_rect drect, im_rect prect,
+                          int acquire_fence_fd, int *release_fence_fd,
                           im_opt_t *opt_ptr, int usage);
 
 im_job_handle_t rga_job_create(uint32_t flags);

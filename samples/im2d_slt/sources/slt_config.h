@@ -31,6 +31,8 @@
 #define IM2D_SLT_TEST_RGA3_0_EN             0   /* Enable rga3_core0 case. */
 #define IM2D_SLT_TEST_RGA3_1_EN             0   /* Enable rga3_core1 case. */
 
+#define IM2d_SLT_TEST_DISABLE_ALPHA         0   /* Disable Alpha case */
+
 #define IM2D_SLT_TEST_SPECIAL_EN            1   /* Enable special test. */
 /* special test */
 #define IM2D_SLT_TEST_RGA2_0_TILE_EN        0   /* Enable rga2_core0 TILE4x4 case. */

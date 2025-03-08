@@ -24,22 +24,29 @@
 #endif
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/ioctl.h>
+#include <math.h>
 
 #include "im2d.h"
-#include "im2d_impl.h"
+#include "im2d_job.h"
 #include "im2d_log.h"
 #include "im2d_hardware.h"
 #include "im2d_debugger.h"
+#include "im2d_context.h"
 
-#include "RockchipRga.h"
+#include "im2d_impl.h"
+
 #include "core/NormalRga.h"
 #include "RgaUtils.h"
 #include "utils.h"
 
+#define NORMAL_API_LOG_EN 0
+
 #ifdef ANDROID
+#include "GrallocOps.h"
+
 using namespace android;
 #endif
 
@@ -55,23 +62,13 @@ using namespace android;
     })
 #define GET_LCM(n1, n2, gcd) (((n1) * (n2)) / gcd)
 
-extern struct rgaContext *rgaCtx;
+#ifdef RT_THREAD
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#endif
 
-struct im2d_job_manager g_im2d_job_manager;
 __thread im_context_t g_im2d_context;
-
-IM_API static IM_STATUS rga_get_context(void) {
-    if (rgaCtx == NULL) {
-        RockchipRga& rkRga(RockchipRga::get());
-        if (rgaCtx == NULL) {
-            IM_LOGE("The current RockchipRga singleton is destroyed. "
-                    "Please check if RkRgaInit/RkRgaDeInit are called, if so, please disable them.");
-            return IM_STATUS_FAILED;
-        }
-    }
-
-    return IM_STATUS_SUCCESS;
-}
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
     if (dst_table == NULL || merge_table == NULL) {
@@ -84,11 +81,23 @@ static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, r
     dst_table->output_format        |= merge_table->output_format;
     dst_table->feature              |= merge_table->feature;
 
-    dst_table->input_resolution     = MAX(dst_table->input_resolution, merge_table->input_resolution);
-    dst_table->output_resolution    = MAX(dst_table->output_resolution, merge_table->output_resolution);
+    if (merge_table->input_resolution.width > dst_table->input_resolution.width &&
+        merge_table->input_resolution.height > dst_table->input_resolution.height) {
+        dst_table->input_resolution.width = merge_table->input_resolution.width;
+        dst_table->input_resolution.height = merge_table->input_resolution.height;
+    }
+
+    if (merge_table->output_resolution.width > dst_table->output_resolution.width &&
+        merge_table->output_resolution.height > dst_table->output_resolution.height) {
+        dst_table->output_resolution.width = merge_table->output_resolution.width;
+        dst_table->output_resolution.height = merge_table->output_resolution.height;
+    }
+
     dst_table->byte_stride          = MAX(dst_table->byte_stride, merge_table->byte_stride);
     dst_table->scale_limit          = MAX(dst_table->scale_limit, merge_table->scale_limit);
     dst_table->performance          = MAX(dst_table->performance, merge_table->performance);
+    dst_table->scale_ver_bicubic_limit = MAX(dst_table->scale_ver_bicubic_limit,
+                                             merge_table->scale_ver_bicubic_limit);
 
     return IM_STATUS_SUCCESS;
 }
@@ -125,7 +134,7 @@ int rga_version_compare(struct rga_version_t version1, struct rga_version_t vers
  *
  * @returns if return value >= 0, then index is found, otherwise, the query fails.
  */
-int rga_version_table_get_current_index(rga_version_t &version, const rga_version_bind_table_entry_t *table, int table_size) {
+int rga_version_table_get_current_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size) {
     int index = -1;
 
     for (int i = (table_size - 1); i >= 0; i--) {
@@ -152,7 +161,7 @@ int rga_version_table_get_current_index(rga_version_t &version, const rga_versio
  *
  * @returns if return value >= 0, then index is found, otherwise, the query fails.
  */
-int rga_version_table_get_minimum_index(rga_version_t &version, const rga_version_bind_table_entry_t *table, int table_size) {
+int rga_version_table_get_minimum_index(struct rga_version_t version, const rga_version_bind_table_entry_t *table, int table_size) {
     int index = -1;
 
     for (int i = (table_size - 1); i >= 0; i--) {
@@ -182,7 +191,7 @@ int rga_version_table_get_minimum_index(rga_version_t &version, const rga_versio
  *   return value = 0, within range.
  *   return value < 0, below range.
  */
-int rga_version_table_check_minimum_range(rga_version_t &version,
+int rga_version_table_check_minimum_range(struct rga_version_t version,
                                           const rga_version_bind_table_entry_t *table,
                                           int table_size, int index) {
     if (rga_version_compare(version, table[index].minimum) >= 0) {
@@ -198,28 +207,28 @@ int rga_version_table_check_minimum_range(rga_version_t &version,
     }
 }
 
-static IM_STATUS rga_version_get_current_index_failed_default(rga_version_t &current, rga_version_t &minimum) {
+static IM_STATUS rga_version_get_current_index_failed_default(struct rga_version_t current, struct rga_version_t minimum) {
     UNUSED(current);
     UNUSED(minimum);
 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_minimum_index_failed_default(rga_version_t &current, rga_version_t &minimum) {
+static IM_STATUS rga_version_get_minimum_index_failed_default(struct rga_version_t current, struct rga_version_t minimum) {
     UNUSED(current);
     UNUSED(minimum);
 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_witnin_minimun_range_default(rga_version_t &current, rga_version_t &minimum) {
+static IM_STATUS rga_version_witnin_minimun_range_default(struct rga_version_t current, struct rga_version_t minimum) {
     UNUSED(current);
     UNUSED(minimum);
 
     return IM_STATUS_SUCCESS;
 }
 
-static IM_STATUS rga_version_above_minimun_range_default(rga_version_t &current, rga_version_t &minimum, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_above_minimun_range_default(struct rga_version_t current, struct rga_version_t minimum, const rga_version_bind_table_entry_t *least_version_table) {
     UNUSED(current);
     UNUSED(minimum);
     UNUSED(least_version_table);
@@ -227,7 +236,7 @@ static IM_STATUS rga_version_above_minimun_range_default(rga_version_t &current,
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_below_minimun_range_default(rga_version_t &current, rga_version_t &minimum, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_below_minimun_range_default(struct rga_version_t current, struct rga_version_t minimum, const rga_version_bind_table_entry_t *least_version_table) {
     UNUSED(current);
     UNUSED(minimum);
     UNUSED(least_version_table);
@@ -235,7 +244,7 @@ static IM_STATUS rga_version_below_minimun_range_default(rga_version_t &current,
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_current_index_failed_user_header(rga_version_t &user_version, rga_version_t &header_version) {
+static IM_STATUS rga_version_get_current_index_failed_user_header(struct rga_version_t user_version, struct rga_version_t header_version) {
     IM_LOGE("Failed to get the version binding table of librga, "
             "current version: librga: %s, header: %s",
             user_version.str, header_version.str);
@@ -243,7 +252,7 @@ static IM_STATUS rga_version_get_current_index_failed_user_header(rga_version_t 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_minimum_index_failed_user_header(rga_version_t &user_version, rga_version_t &header_version) {
+static IM_STATUS rga_version_get_minimum_index_failed_user_header(struct rga_version_t user_version, struct rga_version_t header_version) {
     IM_LOGE("Failed to get the version binding table of header file, "
             "current version: librga: %s, header: %s",
             user_version.str, header_version.str);
@@ -251,7 +260,7 @@ static IM_STATUS rga_version_get_minimum_index_failed_user_header(rga_version_t 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_above_minimun_range_user_header(rga_version_t &user_version, rga_version_t &header_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_above_minimun_range_user_header(struct rga_version_t user_version, struct rga_version_t header_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The current referenced header_version is %s, but the running librga's version(%s) is too old, "
             "The librga must to be updated to version %s at least. "
             "You can try to update the SDK or update librga.so and header files "
@@ -262,7 +271,7 @@ static IM_STATUS rga_version_above_minimun_range_user_header(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_below_minimun_range_user_header(rga_version_t &user_version, rga_version_t &header_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_below_minimun_range_user_header(struct rga_version_t user_version, struct rga_version_t header_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The current librga.so's verison is %s, but the referenced header_version(%s) is too old, "
             "it is recommended to update the librga's header_version to %s and above."
             "You can try to update the SDK or update librga.so and header files "
@@ -273,7 +282,7 @@ static IM_STATUS rga_version_below_minimun_range_user_header(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_current_index_faile_user_driver(rga_version_t &user_version, rga_version_t &driver_version) {
+static IM_STATUS rga_version_get_current_index_faile_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version) {
     IM_LOGE("Failed to get the version binding table of librga, "
             "current version: librga: %s, driver: %s",
             user_version.str, driver_version.str);
@@ -281,7 +290,7 @@ static IM_STATUS rga_version_get_current_index_faile_user_driver(rga_version_t &
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_get_minimum_index_failed_user_driver(rga_version_t &user_version, rga_version_t &driver_version) {
+static IM_STATUS rga_version_get_minimum_index_failed_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version) {
     IM_LOGE("Failed to get the version binding table of rga_driver, "
             "current version: librga: %s, driver: %s",
             user_version.str, driver_version.str);
@@ -289,7 +298,7 @@ static IM_STATUS rga_version_get_minimum_index_failed_user_driver(rga_version_t 
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_above_minimun_range_user_driver(rga_version_t &user_version, rga_version_t &driver_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_above_minimun_range_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The librga must to be updated to version %s at least. "
             "You can try to update the SDK or update librga.so and header files "
             "through github(https://github.com/airockchip/librga/). "
@@ -300,7 +309,7 @@ static IM_STATUS rga_version_above_minimun_range_user_driver(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static IM_STATUS rga_version_below_minimun_range_user_driver(rga_version_t &user_version, rga_version_t &driver_version, const rga_version_bind_table_entry_t *least_version_table) {
+static IM_STATUS rga_version_below_minimun_range_user_driver(struct rga_version_t user_version, struct rga_version_t driver_version, const rga_version_bind_table_entry_t *least_version_table) {
     IM_LOGE("The driver may be compatible, "
             "but it is best to update the driver to version %s. "
             "You can try to update the SDK or update the "
@@ -312,23 +321,23 @@ static IM_STATUS rga_version_below_minimun_range_user_driver(rga_version_t &user
     return IM_STATUS_ERROR_VERSION;
 }
 
-static const rga_version_check_ops_t rga_version_check_user_header_ops {
-    .get_current_index_failed = rga_version_get_current_index_failed_user_header,
-    .get_minimum_index_failed = rga_version_get_minimum_index_failed_user_header,
-    .witnin_minimun_range = rga_version_witnin_minimun_range_default,
-    .above_minimun_range = rga_version_above_minimun_range_user_header,
-    .below_minimun_range = rga_version_below_minimun_range_user_header,
+static const rga_version_check_ops_t rga_version_check_user_header_ops = {
+    rga_version_get_current_index_failed_user_header,
+    rga_version_get_minimum_index_failed_user_header,
+    rga_version_witnin_minimun_range_default,
+    rga_version_above_minimun_range_user_header,
+    rga_version_below_minimun_range_user_header,
 };
 
-static const rga_version_check_ops_t rga_version_check_user_driver_ops {
-    .get_current_index_failed = rga_version_get_current_index_faile_user_driver,
-    .get_minimum_index_failed = rga_version_get_minimum_index_failed_user_driver,
-    .witnin_minimun_range = rga_version_witnin_minimun_range_default,
-    .above_minimun_range = rga_version_above_minimun_range_user_driver,
-    .below_minimun_range = rga_version_below_minimun_range_user_driver,
+static const rga_version_check_ops_t rga_version_check_user_driver_ops = {
+    rga_version_get_current_index_faile_user_driver,
+    rga_version_get_minimum_index_failed_user_driver,
+    rga_version_witnin_minimun_range_default,
+    rga_version_above_minimun_range_user_driver,
+    rga_version_below_minimun_range_user_driver,
 };
 
-static int rga_version_check(rga_version_t &current_version, rga_version_t &minimum_version,
+static int rga_version_check(struct rga_version_t current_version, struct rga_version_t minimum_version,
                              const rga_version_bind_table_entry_t *table, int table_size,
                              const rga_version_check_ops_t *ops) {
     int ret;
@@ -414,99 +423,50 @@ void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
         memset(opt, 0, sizeof(*opt));
 }
 
-IM_STATUS rga_set_buffer_info(rga_buffer_t dst, rga_info_t* dstinfo) {
-    if(NULL == dstinfo) {
-        IM_LOGE("Invaild dstinfo, dst structure address is NULL!");
+IM_STATUS static rga_set_buffer_info(const char *name, rga_buffer_t image, rga_info_t* info) {
+    if(!info) {
+        IM_LOGE("Invaild rga_info_t, %s structure address is NULL!", name);
         return IM_STATUS_INVALID_PARAM;
     }
 
-    if (dst.handle > 0) {
-        dstinfo->handle = dst.handle;
-    } else if(dst.phy_addr != NULL) {
-        dstinfo->phyAddr= dst.phy_addr;
-    } else if(dst.fd > 0) {
-        dstinfo->fd = dst.fd;
-        dstinfo->mmuFlag = 1;
-    } else if(dst.vir_addr != NULL) {
-        dstinfo->virAddr = dst.vir_addr;
-        dstinfo->mmuFlag = 1;
+    if (image.handle > 0) {
+        info->handle = image.handle;
+    } else if(image.phy_addr != NULL) {
+        info->phyAddr= image.phy_addr;
+    } else if(image.fd > 0) {
+        info->fd = image.fd;
+        info->mmuFlag = 1;
+    } else if(image.vir_addr != NULL) {
+        info->virAddr = image.vir_addr;
+        info->mmuFlag = 1;
     } else {
-        IM_LOGE("Invaild dst buffer, no address available in dst buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
-                (unsigned long)dst.phy_addr, dst.fd, (unsigned long)dst.vir_addr, dst.handle);
+        IM_LOGE("Invaild %s image buffer, no address available in buffer buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
+                name, (unsigned long)image.phy_addr, image.fd, (unsigned long)image.vir_addr, image.handle);
         return IM_STATUS_INVALID_PARAM;
     }
 
     return IM_STATUS_SUCCESS;
 }
 
-IM_STATUS rga_set_buffer_info(const rga_buffer_t src, rga_buffer_t dst, rga_info_t* srcinfo, rga_info_t* dstinfo) {
-    if(NULL == srcinfo) {
-        IM_LOGE("Invaild srcinfo, src structure address is NULL.");
-        return IM_STATUS_INVALID_PARAM;
-    }
-    if(NULL == dstinfo) {
-        IM_LOGE("Invaild dstinfo, dst structure address is NULL.");
-        return IM_STATUS_INVALID_PARAM;
-    }
-
-    if (src.handle > 0) {
-        srcinfo->handle = src.handle;
-    } else if(src.phy_addr != NULL) {
-        srcinfo->phyAddr = src.phy_addr;
-    } else if(src.fd > 0) {
-        srcinfo->fd = src.fd;
-        srcinfo->mmuFlag = 1;
-    } else if(src.vir_addr != NULL) {
-        srcinfo->virAddr = src.vir_addr;
-        srcinfo->mmuFlag = 1;
-    } else {
-        IM_LOGE("Invaild src buffer, no address available in src buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
-                (unsigned long)src.phy_addr, src.fd, (unsigned long)src.vir_addr, src.handle);
-        return IM_STATUS_INVALID_PARAM;
-    }
-
-    if (dst.handle > 0) {
-        dstinfo->handle = dst.handle;
-    } else if(dst.phy_addr != NULL) {
-        dstinfo->phyAddr= dst.phy_addr;
-    } else if(dst.fd > 0) {
-        dstinfo->fd = dst.fd;
-        dstinfo->mmuFlag = 1;
-    } else if(dst.vir_addr != NULL) {
-        dstinfo->virAddr = dst.vir_addr;
-        dstinfo->mmuFlag = 1;
-    } else {
-        IM_LOGE("Invaild dst buffer, no address available in dst buffer, phy_addr = %ld, fd = %d, vir_addr = %ld, handle = %d",
-                (unsigned long)dst.phy_addr, dst.fd, (unsigned long)dst.vir_addr, dst.handle);
-        return IM_STATUS_INVALID_PARAM;
-    }
-
-    return IM_STATUS_SUCCESS;
-}
-
-IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
+IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *return_table) {
     int ret;
     int  rga_version = 0;
     rga_info_table_entry merge_table;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
-
     memset(&merge_table, 0x0, sizeof(merge_table));
 
-    for (uint32_t i = 0; i < rgaCtx->mHwVersions.size; i++) {
-        if (rgaCtx->mHwVersions.version[i].major == 2 &&
-            rgaCtx->mHwVersions.version[i].minor == 0) {
-            if (rgaCtx->mHwVersions.version[i].revision == 0) {
+    for (uint32_t i = 0; i < version->size; i++) {
+        if (version->version[i].major == 2 &&
+            version->version[i].minor == 0) {
+            if (version->version[i].revision == 0) {
                 rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
                 memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
             } else {
                 goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0) {
+            switch (version->version[i].revision) {
                 case 0x16445 :
                     // RK3288
                     rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
@@ -525,9 +485,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 2) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 2) {
+            switch (version->version[i].revision) {
                 case 0x18218 :
                     // RK3399
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -553,9 +513,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 3) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 3) {
+            switch (version->version[i].revision) {
                 case 0x87975:
                     // RV1106
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -576,9 +536,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 6) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 6) {
+            switch (version->version[i].revision) {
                 case 0x92812:
                     // RK3562
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -599,9 +559,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
                 }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 7) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 7) {
+            switch (version->version[i].revision) {
                 case 0x93215:
                     // RK3528
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
@@ -622,9 +582,34 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 3 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0xe) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0xa) {
+            switch (version->version[i].revision) {
+                case 0x07135:
+                    // RK3506
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+                    merge_table.input_resolution.width = 1280;
+                    merge_table.input_resolution.height = 1280;
+                    merge_table.output_resolution.width = 1280;
+                    merge_table.output_resolution.height = 1280;
+
+                    merge_table.input_format |= IM_RGA_SUPPORT_FORMAT_YUYV_422 |
+                                                IM_RGA_SUPPORT_FORMAT_YUV_400 |
+                                                IM_RGA_SUPPORT_FORMAT_ALPHA_8_BIT;
+                    merge_table.output_format |= IM_RGA_SUPPORT_FORMAT_YUV_400;
+                    merge_table.feature |= IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC |
+                                           IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC |
+                                           IM_RGA_SUPPORT_FEATURE_GAUSS;
+                    merge_table.feature &= ~IM_RGA_SUPPORT_FEATURE_ROP;
+                    merge_table.scale_ver_bicubic_limit = 600;
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0xe) {
+            switch (version->version[i].revision) {
                 case 0x19357:
                     // RK3576
                     rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
@@ -633,9 +618,21 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 4 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0) {
-            switch (rgaCtx->mHwVersions.version[i].revision) {
+        } else if (version->version[i].major == 3 &&
+                   version->version[i].minor == 0xf) {
+            switch (version->version[i].revision) {
+                case 0x23690:
+                    // RV1103B
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_LITE2_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
+
+        } else if (version->version[i].major == 4 &&
+                   version->version[i].minor == 0) {
+            switch (version->version[i].revision) {
                 case 0x18632 :
                     // RK3366/RK3368
                     rga_version = IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX;
@@ -655,9 +652,9 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
-        } else if (rgaCtx->mHwVersions.version[i].major == 42 &&
-                   rgaCtx->mHwVersions.version[i].minor == 0) {
-            if (rgaCtx->mHwVersions.version[i].revision == 0x17760) {
+        } else if (version->version[i].major == 42 &&
+                   version->version[i].minor == 0) {
+            if (version->version[i].revision == 0x17760) {
                 // RK3228
                 rga_version = IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX;
                 memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
@@ -674,22 +671,22 @@ IM_STATUS rga_get_info(rga_info_table_entry *return_table) {
     return IM_STATUS_SUCCESS;
 
 TRY_TO_COMPATIBLE:
-    if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "1.3", 3) == 0)
+    if (strncmp((char *)version->version[0].str, "1.3", 3) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_1_INDEX;
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "1.6", 3) == 0)
+    else if (strncmp((char *)version->version[0].str, "1.6", 3) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_1_PLUS_INDEX;
     /*3288 vesion is 2.00*/
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "2.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "2.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
     /*3288w version is 3.00*/
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "3.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "3.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_INDEX;
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "3.02", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "3.02", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "4.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "4.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_LITE0_INDEX;
     /*The version number of lite1 cannot be obtained temporarily.*/
-    else if (strncmp((char *)rgaCtx->mHwVersions.version[0].str, "4.00", 4) == 0)
+    else if (strncmp((char *)version->version[0].str, "4.00", 4) == 0)
         rga_version = IM_RGA_HW_VERSION_RGA_2_LITE1_INDEX;
     else
         rga_version = IM_RGA_HW_VERSION_RGA_V_ERR_INDEX;
@@ -698,17 +695,17 @@ TRY_TO_COMPATIBLE:
 
     if (rga_version == IM_RGA_HW_VERSION_RGA_V_ERR_INDEX) {
         IM_LOGE("Can not get the correct RGA version, please check the driver, version=%s\n",
-                rgaCtx->mHwVersions.version[0].str);
+                version->version[0].str);
         return IM_STATUS_FAILED;
     }
 
     return IM_STATUS_SUCCESS;
 }
 
-IM_STATUS rga_check_header(rga_version_t header_version) {
+IM_STATUS rga_check_header(struct rga_version_t header_version) {
     int ret;
     int table_size = sizeof(user_header_bind_table) / sizeof(rga_version_bind_table_entry_t);
-    rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
+    struct rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
 
     ret = rga_version_check(user_version, header_version,
                             user_header_bind_table, table_size,
@@ -723,10 +720,10 @@ IM_STATUS rga_check_header(rga_version_t header_version) {
     }
 }
 
-IM_STATUS rga_check_driver(rga_version_t &driver_version) {
+IM_STATUS rga_check_driver(struct rga_version_t driver_version) {
     int ret;
     int table_size = sizeof(user_driver_bind_table) / sizeof(rga_version_bind_table_entry_t);
-    rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
+    struct rga_version_t user_version = RGA_SET_CURRENT_API_VERSION;
 
     ret =  rga_version_check(user_version, driver_version,
                              user_driver_bind_table, table_size,
@@ -741,7 +738,7 @@ IM_STATUS rga_check_driver(rga_version_t &driver_version) {
     }
 }
 
-IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rect rect, int resolution_usage) {
+IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rect rect, rga_info_resolution_t resolution_usage) {
     /**************** src/dst judgment ****************/
     if (info.width <= 0 || info.height <= 0 || info.format < 0) {
         IM_LOGW("Illegal %s, the parameter cannot be negative or 0, width = %d, height = %d, format = 0x%x(%s)",
@@ -764,6 +761,13 @@ IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rec
     }
 
     /**************** rect judgment ****************/
+    if ((rect.width == 0 && rect.height > 0) ||
+        (rect.width > 0 && rect.height == 0)) {
+        IM_LOGW("Illegal %s rect, width or height cannot be 0, rect[x,y,w,h] = [%d, %d, %d, %d]",
+                name, rect.x, rect.y, rect.width, rect.height);
+        return IM_STATUS_ILLEGAL_PARAM;
+    }
+
     if (rect.width < 0 || rect.height < 0 || rect.x < 0 || rect.y < 0) {
         IM_LOGW("Illegal %s rect, the parameter cannot be negative, rect[x,y,w,h] = [%d, %d, %d, %d]",
                 name, rect.x, rect.y, rect.width, rect.height);
@@ -786,15 +790,15 @@ IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rec
     }
 
     /**************** resolution check ****************/
-    if (info.width > resolution_usage ||
-        info.height > resolution_usage) {
-        IM_LOGW("Unsupported %s to input resolution more than %d, width = %d, height = %d",
-                name, resolution_usage, info.width, info.height);
+    if (info.width > resolution_usage.width ||
+        info.height > resolution_usage.height) {
+        IM_LOGW("Unsupported %s resolution more than %dx%d, width = %d, height = %d",
+                name, resolution_usage.width, resolution_usage.height, info.width, info.height);
         return IM_STATUS_NOT_SUPPORTED;
-    } else if ((rect.width > 0 && rect.width > resolution_usage) ||
-               (rect.height > 0 && rect.height > resolution_usage)) {
-        IM_LOGW("Unsupported %s rect to output resolution more than %d, rect[x,y,w,h] = [%d, %d, %d, %d]",
-                name, resolution_usage, rect.x, rect.y, rect.width, rect.height);
+    } else if ((rect.width > 0 && rect.width > resolution_usage.width) ||
+               (rect.height > 0 && rect.height > resolution_usage.height)) {
+        IM_LOGW("Unsupported %s rect resolution more than %dx%d, rect[x,y,w,h] = [%d, %d, %d, %d]",
+                name, resolution_usage.width, resolution_usage.height, rect.x, rect.y, rect.width, rect.height);
         return IM_STATUS_NOT_SUPPORTED;
     }
 
@@ -924,7 +928,7 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
         if (ret != IM_STATUS_SUCCESS)
             return ret;
         IM_LOGW("If it is an RK encoder output, it needs to be aligned with an odd multiple of 256.\n");
-    } else if (format == RK_FORMAT_YCrCb_422_10b_SP || format == RK_FORMAT_YCbCr_422_10b_SP) {
+    } else if (format == RK_FORMAT_YCrCb_422_SP_10B || format == RK_FORMAT_YCbCr_422_SP_10B) {
         if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT) {
             IM_LOGW("%s unsupported YUV422 semi-planner 10bit format, format = 0x%x(%s)\n%s",
                     name, info.format, translate_format_str(info.format),
@@ -1102,56 +1106,23 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     pat_fmt = pat.format;
     dst_fmt = dst.format;
 
-    src_isRGB = NormalRgaIsRgbFormat(src_fmt);
-    pat_isRGB = NormalRgaIsRgbFormat(pat_fmt);
-    dst_isRGB = NormalRgaIsRgbFormat(dst_fmt);
+    src_isRGB = is_rga_format(src_fmt);
+    pat_isRGB = is_rga_format(pat_fmt);
+    dst_isRGB = is_rga_format(dst_fmt);
 
-    /**************** blend mode check ****************/
-    switch (mode_usage & IM_ALPHA_BLEND_MASK) {
-        case IM_ALPHA_BLEND_SRC :
-        case IM_ALPHA_BLEND_DST :
-            break;
-        case IM_ALPHA_BLEND_SRC_OVER :
-            if (!NormalRgaFormatHasAlpha(src_fmt)) {
-                IM_LOGW("Blend mode 'src_over' unsupported src format without alpha, "
-                        "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                        src_fmt, translate_format_str(src_fmt),
-                        pat_fmt, translate_format_str(pat_fmt),
-                        dst_fmt, translate_format_str(dst_fmt));
-                return IM_STATUS_NOT_SUPPORTED;
-            }
-            break;
-        case IM_ALPHA_BLEND_DST_OVER :
-            if (pat_enable) {
-                if (!NormalRgaFormatHasAlpha(pat_fmt)) {
-                    IM_LOGW("Blend mode 'dst_over' unsupported pat format without alpha, "
-                            "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                            src_fmt, translate_format_str(src_fmt),
-                            pat_fmt, translate_format_str(pat_fmt),
-                            dst_fmt, translate_format_str(dst_fmt));
-                    return IM_STATUS_NOT_SUPPORTED;
-                }
-            } else {
-                if (!NormalRgaFormatHasAlpha(dst_fmt)) {
-                    IM_LOGW("Blend mode 'dst_over' unsupported dst format without alpha, "
-                            "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                            src_fmt, translate_format_str(src_fmt),
-                            pat_fmt, translate_format_str(pat_fmt),
-                            dst_fmt, translate_format_str(dst_fmt));
-                    return IM_STATUS_NOT_SUPPORTED;
-                }
-            }
-            break;
-        default :
-            if (!(NormalRgaFormatHasAlpha(src_fmt) || NormalRgaFormatHasAlpha(dst_fmt))) {
-                IM_LOGW("Blend mode unsupported format without alpha, "
-                        "format[src,src1,dst] = [0x%x(%s), 0x%x(%s), 0x%x(%s)]",
-                        src_fmt, translate_format_str(src_fmt),
-                        pat_fmt, translate_format_str(pat_fmt),
-                        dst_fmt, translate_format_str(dst_fmt));
-                return IM_STATUS_NOT_SUPPORTED;
-            }
-            break;
+    /* bg format check */
+    if (rga_is_buffer_valid(pat)) {
+        if (!pat_isRGB) {
+            IM_LOGW("Blend mode background layer unsupport non-RGB format, pat format = %#x(%s)",
+                pat_fmt, translate_format_str(pat_fmt));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+    } else {
+        if (!dst_isRGB) {
+            IM_LOGW("Blend mode background layer unsupport non-RGB format, dst format = %#x(%s)",
+                dst_fmt, translate_format_str(dst_fmt));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
     }
 
     /* src1 don't support scale, and src1's size must aqual to dst.' */
@@ -1165,8 +1136,8 @@ IM_STATUS rga_check_blend(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst, 
     return IM_STATUS_NOERROR;
 }
 
-IM_STATUS rga_check_rotate(int mode_usage, rga_info_table_entry &table) {
-    if (table.version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
+IM_STATUS rga_check_rotate(int mode_usage, rga_info_table_entry *table) {
+    if (table->version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
         if (mode_usage & IM_HAL_TRANSFORM_FLIP_H_V) {
             IM_LOGW("RGA1/RGA1_PLUS cannot support H_V mirror.");
             return IM_STATUS_NOT_SUPPORTED;
@@ -1247,6 +1218,12 @@ IM_STATUS rga_check_feature(rga_buffer_t src, rga_buffer_t pat, rga_buffer_t dst
         return IM_STATUS_NOT_SUPPORTED;
     }
 
+    if ((mode_usage & IM_GAUSS) && (~feature_usage & IM_RGA_SUPPORT_FEATURE_GAUSS)) {
+        IM_LOGW("The platform does not support gauss featrue.\n%s",
+                querystring(RGA_FEATURE));
+        return IM_STATUS_NOT_SUPPORTED;
+    }
+
     return IM_STATUS_NOERROR;
 }
 
@@ -1254,14 +1231,14 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
                     const im_rect src_rect, const im_rect dst_rect, const im_rect pat_rect, int mode_usage) {
     bool pat_enable = 0;
     IM_STATUS ret = IM_STATUS_NOERROR;
-    rga_info_table_entry rga_info;
+    rga_session_t *session;
+    rga_info_table_entry *rga_info;
 
-    memset(&rga_info, 0x0, sizeof(rga_info));
-    ret = rga_get_info(&rga_info);
-    if (IM_STATUS_FAILED == ret) {
-        IM_LOGE("rga im2d: rga2 get info failed!\n");
-        return IM_STATUS_FAILED;
-    }
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
+
+    rga_info = &session->hardware_info;
 
     if (mode_usage & IM_ALPHA_BLEND_MASK) {
         if (rga_is_buffer_valid(pat))
@@ -1269,52 +1246,52 @@ IM_STATUS rga_check(const rga_buffer_t src, const rga_buffer_t dst, const rga_bu
     }
 
     /**************** feature judgment ****************/
-    ret = rga_check_feature(src, pat, dst, pat_enable, mode_usage, rga_info.feature);
+    ret = rga_check_feature(src, pat, dst, pat_enable, mode_usage, rga_info->feature);
     if (ret != IM_STATUS_NOERROR)
         return ret;
 
     /**************** info judgment ****************/
     if (~mode_usage & IM_COLOR_FILL) {
-        ret = rga_check_info("src", src, src_rect, rga_info.input_resolution);
+        ret = rga_check_info("src", src, src_rect, rga_info->input_resolution);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_format("src", src, src_rect, rga_info.input_format, mode_usage);
+        ret = rga_check_format("src", src, src_rect, rga_info->input_format, mode_usage);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_align("src", src, rga_info.byte_stride, true);
+        ret = rga_check_align("src", src, rga_info->byte_stride, true);
         if (ret != IM_STATUS_NOERROR)
             return ret;
     }
     if (pat_enable) {
         /* RGA1 cannot support src1. */
-        if (rga_info.version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
+        if (rga_info->version & (IM_RGA_HW_VERSION_RGA_1 | IM_RGA_HW_VERSION_RGA_1_PLUS)) {
             IM_LOGW("RGA1/RGA1_PLUS cannot support src1.");
             return IM_STATUS_NOT_SUPPORTED;
         }
 
 
-        ret = rga_check_info("pat", pat, pat_rect, rga_info.input_resolution);
+        ret = rga_check_info("pat", pat, pat_rect, rga_info->input_resolution);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_format("pat", pat, pat_rect, rga_info.input_format, mode_usage);
+        ret = rga_check_format("pat", pat, pat_rect, rga_info->input_format, mode_usage);
         if (ret != IM_STATUS_NOERROR)
             return ret;
-        ret = rga_check_align("pat", pat, rga_info.byte_stride, true);
+        ret = rga_check_align("pat", pat, rga_info->byte_stride, true);
         if (ret != IM_STATUS_NOERROR)
             return ret;
     }
-    ret = rga_check_info("dst", dst, dst_rect, rga_info.output_resolution);
+    ret = rga_check_info("dst", dst, dst_rect, rga_info->output_resolution);
     if (ret != IM_STATUS_NOERROR)
         return ret;
-    ret = rga_check_format("dst", dst, dst_rect, rga_info.output_format, mode_usage);
+    ret = rga_check_format("dst", dst, dst_rect, rga_info->output_format, mode_usage);
     if (ret != IM_STATUS_NOERROR)
         return ret;
-    ret = rga_check_align("dst", dst, rga_info.byte_stride, false);
+    ret = rga_check_align("dst", dst, rga_info->byte_stride, false);
     if (ret != IM_STATUS_NOERROR)
         return ret;
 
     if ((~mode_usage & IM_COLOR_FILL)) {
-        ret = rga_check_limit(src, dst, rga_info.scale_limit, mode_usage);
+        ret = rga_check_limit(src, dst, rga_info->scale_limit, mode_usage);
         if (ret != IM_STATUS_NOERROR)
             return ret;
     }
@@ -1374,17 +1351,18 @@ IM_STATUS rga_check_external(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pa
 
 IM_API IM_STATUS rga_import_buffers(struct rga_buffer_pool *buffer_pool) {
     int ret = 0;
+    rga_session_t *session;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     if (buffer_pool == NULL) {
         IM_LOGW("buffer pool is null!");
         return IM_STATUS_FAILED;
     }
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_IMPORT_BUFFER, buffer_pool);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_IMPORT_BUFFER, buffer_pool);
     if (ret < 0) {
         IM_LOGW("RGA_IOC_IMPORT_BUFFER fail! %s", strerror(errno));
         return IM_STATUS_FAILED;
@@ -1413,7 +1391,7 @@ IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, uint32_t
     return buffers[0].handle;
 }
 
-IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, im_handle_param_t *param) {
+IM_API rga_buffer_handle_t rga_import_buffer_param(uint64_t memory, int type, im_handle_param_t *param) {
     int format;
     struct rga_buffer_pool buffer_pool;
     struct rga_external_buffer buffers[1];
@@ -1442,17 +1420,18 @@ IM_API rga_buffer_handle_t rga_import_buffer(uint64_t memory, int type, im_handl
 
 IM_API IM_STATUS rga_release_buffers(struct rga_buffer_pool *buffer_pool) {
     int ret = 0;
+    rga_session_t *session;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     if (buffer_pool == NULL) {
         IM_LOGW("buffer pool is null!");
         return IM_STATUS_FAILED;
     }
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_RELEASE_BUFFER, buffer_pool);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_RELEASE_BUFFER, buffer_pool);
     if (ret < 0) {
         IM_LOGW("RGA_IOC_RELEASE_BUFFER fail! %s", strerror(errno));
         return IM_STATUS_FAILED;
@@ -1503,10 +1482,107 @@ IM_STATUS rga_get_opt(im_opt_t *opt, void *ptr) {
     return IM_STATUS_SUCCESS;
 }
 
-static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
-                                 im_rect srect, im_rect drect, im_rect prect,
-                                 int acquire_fence_fd, int *release_fence_fd,
-                                 im_opt_t *opt_ptr, int usage) {
+int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst, rga_info_t *src1);
+int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst);
+int generate_color_palette_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst, rga_info_t *lut);
+
+void generate_gaussian_kernel(double sigma_x, double sigma_y, im_size_t ksize, double *kernel) {
+    int i, j;
+    double sum = 0.0;
+    double sX = 2.0 * sigma_x * sigma_x;
+    double sY = 2.0 * sigma_y * sigma_y;
+
+    /* Calculate the weight of the Gaussian kernel */
+    for (i = -ksize.height / 2; i <= ksize.height / 2; i++) {
+        for (j = -ksize.width / 2; j <= ksize.width / 2; j++) {
+            int index = (i + ksize.height / 2) * ksize.width + (j + ksize.width / 2);
+            double weightX = exp(-(j * j) / sX);
+            double weightY = exp(-(i * i) / sY);
+            kernel[index] = weightX * weightY / (M_PI * sigma_x * sigma_y);
+            sum += kernel[index];
+        }
+    }
+
+    /* normalized */
+    for (i = 0; i < ksize.width * ksize.height; i++) {
+        kernel[i] /= sum;
+    }
+}
+
+int get_gaussian_special_points(int rows, int cols, double *gauss_kernel, uint32_t *special_points, int factor, int center_factor) {
+    int i;
+    int index = 0;
+    int center_rows = rows / 2;
+    int center_cols = cols / 2;
+
+    /* get (0,x) */
+    for (i = 0; i <= center_rows; i++) {
+        special_points[index] = (gauss_kernel[0 + i] * factor) + 0.5;
+        index++;
+    }
+
+    /* get (x,center_rows) */
+    for (i = 1; i <= center_cols; i++) {
+        special_points[index] =
+            (gauss_kernel[i * rows + center_rows] * (i == center_cols ? center_factor : factor)) + 0.5;
+        index++;
+    }
+
+    return index;
+}
+
+IM_STATUS generate_gauss_coe(im_gauss_t *gauss, struct rga_gauss_config *config) {
+    double *kernel;
+    uint32_t *coe;
+    int factor, center_factor;
+
+    if (gauss->ksize.width != 3 ||
+        gauss->ksize.height != 3) {
+        IM_LOGW("Only supports 3x3 Gaussian blur, please modify ksize[%d, %d]\n",
+                gauss->ksize.width, gauss->ksize.height);
+        return IM_STATUS_NOT_SUPPORTED;
+    }
+
+    /* Calculate sigma */
+    if (gauss->sigma_x <= 0 && gauss->sigma_y > 0)
+        gauss->sigma_x = 0.3 * ((gauss->ksize.width - 1) * 0.5 - 1) + 0.8;
+
+    if (gauss->sigma_x <= 0 && gauss->sigma_y <= 0) {
+        gauss->sigma_x = 0.3 * ((gauss->ksize.width - 1) * 0.5 - 1) + 0.8;
+        gauss->sigma_y = 0.3 * ((gauss->ksize.height - 1) * 0.5 - 1) + 0.8;
+    }
+
+    if (gauss->sigma_y <= 0)
+        gauss->sigma_y = gauss->sigma_x;
+
+    /* generate guassian kernel */
+    if (gauss->matrix == NULL) {
+        kernel = (double *)malloc(gauss->ksize.width * gauss->ksize.height * sizeof(double));
+
+        generate_gaussian_kernel(gauss->sigma_x, gauss->sigma_y, gauss->ksize, kernel);
+    } else {
+        kernel = gauss->matrix;
+    }
+
+    factor = 0xff;
+    center_factor = 0xff;
+
+    config->size = (gauss->ksize.width + gauss->ksize.height) / 2;
+    coe = (uint32_t *)malloc(config->size * sizeof(uint32_t));
+    get_gaussian_special_points(gauss->ksize.width, gauss->ksize.height,
+                                kernel, coe, factor, center_factor);
+    config->coe_ptr = ptr_to_u64(coe);
+
+    if (gauss->matrix == NULL)
+        free(kernel);
+
+    return IM_STATUS_SUCCESS;
+}
+
+IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
+                          im_rect srect, im_rect drect, im_rect prect,
+                          int acquire_fence_fd, int *release_fence_fd,
+                          im_opt_t *opt_ptr, int usage) {
     int ret;
     int format;
     rga_info_t srcinfo;
@@ -1515,12 +1591,18 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
     im_opt_t opt;
 
-    ret = rga_get_context();
-    if (ret != IM_STATUS_SUCCESS)
-        return (IM_STATUS)ret;
+    struct rga_req req;
+    struct rga2_req compat_req;
+    void *ioc_req = NULL;
 
-    is_debug_log();
-    if (is_out_log())
+    rga_session_t *session;
+
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
+
+    get_debug_state();
+    if (is_debug_en())
         rga_dump_info(IM_LOG_DEBUG | IM_LOG_FORCE,
                       job_handle, &src, &dst, &pat, &srect, &drect, &prect,
                       acquire_fence_fd, release_fence_fd, opt_ptr, usage);
@@ -1531,11 +1613,14 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     memset(&srcinfo, 0, sizeof(rga_info_t));
     memset(&dstinfo, 0, sizeof(rga_info_t));
     memset(&patinfo, 0, sizeof(rga_info_t));
+    memset(&req, 0, sizeof(req));
 
-    if (usage & IM_COLOR_FILL)
-        ret = rga_set_buffer_info(dst, &dstinfo);
-    else
-        ret = rga_set_buffer_info(src, dst, &srcinfo, &dstinfo);
+    if (usage & IM_COLOR_FILL) {
+        ret = rga_set_buffer_info("dst", dst, &dstinfo);
+    } else {
+        ret = rga_set_buffer_info("src", src, &srcinfo);
+        ret = rga_set_buffer_info("dst", dst, &dstinfo);
+    }
 
     if (ret <= 0)
         return (IM_STATUS)ret;
@@ -1563,7 +1648,7 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     if (((usage & IM_COLOR_PALETTE) || (usage & IM_ALPHA_BLEND_MASK)) &&
         rga_is_buffer_valid(pat)) {
 
-        ret = rga_set_buffer_info(pat, &patinfo);
+        ret = rga_set_buffer_info("src1/pat", pat, &patinfo);
         if (ret <= 0)
             return (IM_STATUS)ret;
 
@@ -1814,9 +1899,9 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
     /* special config for color space convert */
     if ((dst.color_space_mode & IM_YUV_TO_RGB_MASK) && (dst.color_space_mode & IM_RGB_TO_YUV_MASK)) {
         if (rga_is_buffer_valid(pat) &&
-            NormalRgaIsYuvFormat(src.format) &&
-            NormalRgaIsRgbFormat(pat.format) &&
-            NormalRgaIsYuvFormat(dst.format)) {
+            is_yuv_format(src.format) &&
+            is_rgb_format(pat.format) &&
+            is_yuv_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
         } else {
             IM_LOGW("Not yuv + rgb -> yuv does not need for color_sapce_mode R2Y & Y2R, please fix, "
@@ -1828,12 +1913,12 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
         }
     } else if (dst.color_space_mode & (IM_YUV_TO_RGB_MASK)) {
         if (rga_is_buffer_valid(pat) &&
-            NormalRgaIsYuvFormat(src.format) &&
-            NormalRgaIsRgbFormat(pat.format) &&
-            NormalRgaIsRgbFormat(dst.format)) {
+            is_yuv_format(src.format) &&
+            is_rgb_format(pat.format) &&
+            is_rgb_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
-        } else if (NormalRgaIsYuvFormat(src.format) &&
-                   NormalRgaIsRgbFormat(dst.format)) {
+        } else if (is_yuv_format(src.format) &&
+                   is_rgb_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
         } else {
             IM_LOGW("Not yuv to rgb does not need for color_sapce_mode, please fix, "
@@ -1845,12 +1930,12 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
         }
     } else if (dst.color_space_mode & (IM_RGB_TO_YUV_MASK)) {
         if (rga_is_buffer_valid(pat) &&
-            NormalRgaIsRgbFormat(src.format) &&
-            NormalRgaIsRgbFormat(pat.format) &&
-            NormalRgaIsYuvFormat(dst.format)) {
+            is_rgb_format(src.format) &&
+            is_rgb_format(pat.format) &&
+            is_yuv_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
-        } else if (NormalRgaIsRgbFormat(src.format) &&
-                   NormalRgaIsYuvFormat(dst.format)) {
+        } else if (is_rgb_format(src.format) &&
+                   is_yuv_format(dst.format)) {
             dstinfo.color_space_mode = dst.color_space_mode;
         } else {
             IM_LOGW("Not rgb to yuv does not need for color_sapce_mode, please fix, "
@@ -1864,17 +1949,17 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
                dst.color_space_mode & IM_FULL_CSC_MASK) {
         /* Get default color space */
         if (src.color_space_mode == IM_COLOR_SPACE_DEFAULT) {
-            if  (NormalRgaIsRgbFormat(src.format)) {
+            if  (is_rgb_format(src.format)) {
                 src.color_space_mode = IM_RGB_FULL;
-            } else if (NormalRgaIsYuvFormat(src.format)) {
+            } else if (is_yuv_format(src.format)) {
                 src.color_space_mode = IM_YUV_BT601_LIMIT_RANGE;
             }
         }
 
         if (dst.color_space_mode == IM_COLOR_SPACE_DEFAULT) {
-            if  (NormalRgaIsRgbFormat(dst.format)) {
+            if  (is_rgb_format(dst.format)) {
                 dst.color_space_mode = IM_RGB_FULL;
-            } else if (NormalRgaIsYuvFormat(dst.format)) {
+            } else if (is_yuv_format(dst.format)) {
                 dst.color_space_mode = IM_YUV_BT601_LIMIT_RANGE;
             }
         }
@@ -2039,22 +2124,41 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
         dstinfo.dither.lut1_h = 0xfedc;
     }
 
+    /* set gauss */
+    if (usage & IM_GAUSS) {
+        if (usage & IM_HAL_TRANSFORM_MASK) {
+            IM_LOGW("Gaussian blur does not support rotation/mirror\n");
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        if ((src.width != dst.width) || (src.height != dst.height)) {
+            IM_LOGW("Gaussian blur does not support scaling, src[w,h] = [%d, %d], dst[w,h] = [%d, %d]",
+                    src.width, src.height, dst.width, dst.height);
+            return IM_STATUS_INVALID_PARAM;
+        }
+
+        ret = generate_gauss_coe(&opt.gauss_config, &srcinfo.gauss_config);
+        if (ret != IM_STATUS_SUCCESS)
+            return (IM_STATUS)ret;
+
+        srcinfo.blend |= (src.global_alpha & 0xff) << 16;
+    }
+
     srcinfo.rd_mode = src.rd_mode;
     dstinfo.rd_mode = dst.rd_mode;
     if (rga_is_buffer_valid(pat))
         patinfo.rd_mode = pat.rd_mode;
 
-    RockchipRga& rkRga(RockchipRga::get());
-
     if (usage & IM_ASYNC) {
         if (release_fence_fd == NULL) {
             IM_LOGW("Async mode release_fence_fd cannot be NULL!");
-            return IM_STATUS_ILLEGAL_PARAM;
+            ret = IM_STATUS_ILLEGAL_PARAM;
+            goto release_resource;
         }
 
         dstinfo.sync_mode = RGA_BLIT_ASYNC;
 
-    } else if (usage & IM_SYNC) {
+    } else {
         dstinfo.sync_mode = RGA_BLIT_SYNC;
     }
 
@@ -2066,30 +2170,98 @@ static IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, r
 
     if (usage & IM_COLOR_FILL) {
         dstinfo.color = opt.color;
-        ret = rkRga.RkRgaCollorFill(&dstinfo);
+
+        ret = generate_fill_req(&req, &dstinfo);
     } else if (usage & IM_COLOR_PALETTE) {
-        ret = rkRga.RkRgaCollorPalette(&srcinfo, &dstinfo, &patinfo);
+        ret = generate_color_palette_req(&req, &srcinfo, &dstinfo, &patinfo);
     } else if ((usage & IM_ALPHA_BLEND_MASK) && rga_is_buffer_valid(pat)) {
-        ret = rkRga.RkRgaBlit(&srcinfo, &dstinfo, &patinfo);
-    }else {
-        ret = rkRga.RkRgaBlit(&srcinfo, &dstinfo, NULL);
+        ret = generate_blit_req(&req, &srcinfo, &dstinfo, &patinfo);
+    } else {
+        ret = generate_blit_req(&req, &srcinfo, &dstinfo, NULL);
+    }
+    if (ret < 0) {
+        IM_LOGE("failed to generate task req!\n");
+
+        rga_dump_info(IM_LOG_ERROR | IM_LOG_FORCE,
+                      job_handle, &src, &dst, &pat, &srect, &drect, &prect,
+                      acquire_fence_fd, release_fence_fd, opt_ptr, usage);
+
+        ret = IM_STATUS_FAILED;
+        goto release_resource;
     }
 
-    if (ret) {
-        IM_LOGE("Failed to call RockChipRga interface, please use 'dmesg' command to view driver error log.");
+    if (job_handle > 0) {
+        im_rga_job_t *job = NULL;
 
-        if (!is_out_log())
+        pthread_mutex_lock(&g_im2d_job_manager.mutex);
+
+        job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+        if (job == NULL) {
+            IM_LOGE("cannot find job_handle[%d]\n", job_handle);
+            pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+            ret = IM_STATUS_ILLEGAL_PARAM;
+            goto release_resource;
+        } else if (job->task_count >= RGA_TASK_NUM_MAX) {
+            IM_LOGE("job[%d] add task failed! too many tasks, count = %d\n", job_handle, job->task_count);
+
+            pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+            ret = IM_STATUS_ILLEGAL_PARAM;
+            goto release_resource;
+        }
+
+        job->req[job->task_count] = req;
+        job->task_count++;
+
+        pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+    } else {
+        switch (session->driver_type) {
+            case RGA_DRIVER_IOC_RGA1:
+            case RGA_DRIVER_IOC_RGA2:
+                memset(&compat_req, 0x0, sizeof(compat_req));
+                NormalRgaCompatModeConvertRga2(&compat_req, &req);
+
+                ioc_req = &compat_req;
+                break;
+            case RGA_DRIVER_IOC_MULTI_RGA:
+                ioc_req = &req;
+                break;
+
+            default:
+                IM_LOGW("unknow driver[0x%x]\n", session->driver_type);
+                ret = IM_STATUS_FAILED;
+                goto release_resource;
+        }
+
+        do {
+            ret = ioctl(session->rga_dev_fd, dstinfo.sync_mode, ioc_req);
+        } while (ret == -1 && (errno == EINTR || errno == 512));   /* ERESTARTSYS is 512. */
+        if (ret) {
+            IM_LOGE("Failed to call RockChipRga interface, please use 'dmesg' command to view driver error log.");
+
             rga_dump_info(IM_LOG_ERROR | IM_LOG_FORCE,
-                          job_handle, &src, &dst, &pat, &srect, &drect, &prect,
-                          acquire_fence_fd, release_fence_fd, opt_ptr, usage);
+                        job_handle, &src, &dst, &pat, &srect, &drect, &prect,
+                        acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 
-        return IM_STATUS_FAILED;
+            ret = IM_STATUS_FAILED;
+            goto release_resource;
+        }
+
+        if (usage & IM_ASYNC) {
+            *release_fence_fd = req.out_fence_fd;
+
+            if (session->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE &&
+                acquire_fence_fd > 0)
+                close(acquire_fence_fd);
+        }
     }
 
-    if (usage & IM_ASYNC)
-        *release_fence_fd = dstinfo.out_fence_fd;
+    ret = IM_STATUS_SUCCESS;
 
-    return IM_STATUS_SUCCESS;
+release_resource:
+    if (usage & IM_GAUSS && req.gauss_config.coe_ptr != 0)
+        free(u64_to_ptr(req.gauss_config.coe_ptr));
+
+    return (IM_STATUS)ret;
 }
 
 IM_STATUS rga_single_task_submit(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
@@ -2099,54 +2271,52 @@ IM_STATUS rga_single_task_submit(rga_buffer_t src, rga_buffer_t dst, rga_buffer_
     return rga_task_submit(0, src, dst, pat, srect, drect, prect, acquire_fence_fd, release_fence_fd, opt_ptr, usage);
 }
 
-IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
-                          im_rect srect, im_rect drect, im_rect prect, im_opt_t *opt_ptr, int usage) {
-    return rga_task_submit(job_handle, src, dst, pat, srect, drect, prect, 0, NULL, opt_ptr, usage);
-}
-
 im_job_handle_t rga_job_create(uint32_t flags) {
     int ret;
     im_job_handle_t job_handle;
     im_rga_job_t *job = NULL;
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
-        return IM_STATUS_FAILED;
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
-    if (ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_CREATE, &flags) < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
-        return IM_STATUS_FAILED;
+    if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CREATE, &flags) < 0) {
+        IM_LOGE(" %s(%d) request create fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
+        return 0;
     }
 
     job_handle = flags;
 
-    g_im2d_job_manager.mutex.lock();
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-    if (g_im2d_job_manager.job_map.count(job_handle) != 0) {
-        IM_LOGE("job_map error! handle[%d] already exists[%lu]!\n",
-                job_handle, (unsigned long)g_im2d_job_manager.job_map.count(job_handle));
-        ret = IM_STATUS_FAILED;
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job != NULL) {
+        IM_LOGE("job_map error! handle[%d] already exists[%d]!\n",
+                job_handle, job->task_count);
+        ret = 0;
         goto error_cancel_job;
     }
 
     job = (im_rga_job_t *)malloc(sizeof(*job));
     if (job == NULL) {
         IM_LOGE("rga job alloc error!\n");
-        ret = IM_STATUS_FAILED;
+        ret = 0;
         goto error_cancel_job;
     }
 
     memset(job, 0x0, sizeof(*job));
 
     job->id = job_handle;
-    g_im2d_job_manager.job_map[job_handle] = job;
+    rga_map_insert_job(&g_im2d_job_manager.job_map, job_handle, job);
     g_im2d_job_manager.job_count++;
 
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
     return job_handle;
 
 error_cancel_job:
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
     rga_job_cancel(job_handle);
 
     return ret;
@@ -2154,26 +2324,26 @@ error_cancel_job:
 
 IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
     im_rga_job_t *job = NULL;
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
-        return IM_STATUS_FAILED;
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
-    g_im2d_job_manager.mutex.lock();
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-    if (g_im2d_job_manager.job_map.count(job_handle) > 0) {
-        job = g_im2d_job_manager.job_map[job_handle];
-        if (job != NULL)
-            free(job);
-
-        g_im2d_job_manager.job_map.erase(job_handle);
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job != NULL) {
+        rga_map_delete_job(&g_im2d_job_manager.job_map, job_handle);
+        free(job);
     }
 
     g_im2d_job_manager.job_count--;
 
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
-    if (ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_CANCEL, &job_handle) < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+    if (ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CANCEL, &job_handle) < 0) {
+        IM_LOGE(" %s(%d) request cancel fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;
     }
 
@@ -2184,9 +2354,11 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
     int ret;
     im_rga_job_t *job = NULL;
     struct rga_user_request submit_request = {0};
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
-        return IM_STATUS_FAILED;
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2200,36 +2372,29 @@ IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_
             return IM_STATUS_ILLEGAL_PARAM;
     }
 
-    g_im2d_job_manager.mutex.lock();
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
 
-    if (g_im2d_job_manager.job_map.count(job_handle) == 0) {
-        IM_LOGE("job_handle[%d] is illegal!\n", job_handle);
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job == NULL) {
+        IM_LOGE("%s job_handle[%d] is illegal!\n", __func__, job_handle);
 
-        g_im2d_job_manager.mutex.unlock();
+        pthread_mutex_unlock(&g_im2d_job_manager.mutex);
         return IM_STATUS_ILLEGAL_PARAM;
     }
 
-    job = g_im2d_job_manager.job_map[job_handle];
-    if (job == NULL) {
-        IM_LOGE("job is NULL!\n");
-
-        g_im2d_job_manager.mutex.unlock();
-        return IM_STATUS_FAILED;
-    }
-
-    g_im2d_job_manager.job_map.erase(job_handle);
+    rga_map_delete_job(&g_im2d_job_manager.job_map, job_handle);
     g_im2d_job_manager.job_count--;
 
-    g_im2d_job_manager.mutex.unlock();
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
 
     submit_request.task_ptr = ptr_to_u64(job->req);
     submit_request.task_num = job->task_count;
     submit_request.id = job->id;
     submit_request.acquire_fence_fd = acquire_fence_fd;
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_SUBMIT, &submit_request);
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_SUBMIT, &submit_request);
     if (ret < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        IM_LOGE(" %s(%d) request submit fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
         ret = IM_STATUS_FAILED;
         goto free_job;
     } else {
@@ -2248,35 +2413,12 @@ free_job:
 IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
     int ret;
     im_rga_job_t *job = NULL;
-    struct rga_user_request config_request;
+    struct rga_user_request config_request = {0};
+    rga_session_t *session;
 
-    if (rga_get_context() != IM_STATUS_SUCCESS)
-        return IM_STATUS_FAILED;
-
-    g_im2d_job_manager.mutex.lock();
-
-    if (g_im2d_job_manager.job_map.count(job_handle) == 0) {
-        IM_LOGE("job_handle[%d] is illegal!\n", job_handle);
-
-        g_im2d_job_manager.mutex.unlock();
-        return IM_STATUS_ILLEGAL_PARAM;
-    }
-
-    job = g_im2d_job_manager.job_map[job_handle];
-    if (job == NULL) {
-        IM_LOGE("job is NULL!\n");
-
-        g_im2d_job_manager.mutex.unlock();
-        return IM_STATUS_FAILED;
-    }
-
-    memset(&config_request, 0x0, sizeof(config_request));
-
-    config_request.task_ptr = ptr_to_u64(&job->req);
-    config_request.task_num = job->task_count;
-    config_request.id = job->id;
-
-    g_im2d_job_manager.mutex.unlock();
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2290,12 +2432,29 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
             return IM_STATUS_ILLEGAL_PARAM;
     }
 
+    pthread_mutex_lock(&g_im2d_job_manager.mutex);
+
+    job = rga_map_find_job(&g_im2d_job_manager.job_map, job_handle);
+    if (job == NULL) {
+        IM_LOGE("%s job_handle[%d] is illegal!\n", __func__, job_handle);
+
+        pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+        return IM_STATUS_ILLEGAL_PARAM;
+    }
+
+    config_request.task_ptr = ptr_to_u64(job->req);
+    config_request.task_num = job->task_count;
+    config_request.id = job->id;
     config_request.acquire_fence_fd = acquire_fence_fd;
 
-    ret = ioctl(rgaCtx->rgaFd, RGA_IOC_REQUEST_CONFIG, &config_request);
+    pthread_mutex_unlock(&g_im2d_job_manager.mutex);
+
+    ret = ioctl(session->rga_dev_fd, RGA_IOC_REQUEST_CONFIG, &config_request);
     if (ret < 0) {
-        IM_LOGE(" %s(%d) start config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        IM_LOGE(" %s(%d) request config fail: %s",__FUNCTION__, __LINE__,strerror(errno));
         return IM_STATUS_FAILED;
+    } else {
+        ret = IM_STATUS_SUCCESS;
     }
 
     if ((sync_mode == IM_ASYNC) && release_fence_fd)
@@ -2303,3 +2462,1970 @@ IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_
 
     return IM_STATUS_SUCCESS;
 }
+
+int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst, rga_info_t *src1) {
+    int srcVirW,srcVirH,srcActW,srcActH,srcXPos,srcYPos;
+    int dstVirW,dstVirH,dstActW,dstActH,dstXPos,dstYPos;
+    int src1VirW,src1VirH,src1ActW,src1ActH,src1XPos,src1YPos;
+    int rotateMode,orientation,ditherEn;
+    int srcType,dstType,src1Type,srcMmuFlag,dstMmuFlag,src1MmuFlag;
+    int fg_global_alpha, bg_global_alpha;
+    int dstFd = -1;
+    int srcFd = -1;
+    int src1Fd = -1;
+    int rotation;
+    int stretch = 0;
+    float hScale = 1;
+    float vScale = 1;
+    struct rga_interp interp;
+    int ret = 0;
+    rga_rect_t relSrcRect,tmpSrcRect,relDstRect,tmpDstRect;
+    rga_rect_t relSrc1Rect,tmpSrc1Rect;
+    unsigned int blend;
+    unsigned int yuvToRgbMode;
+    bool perpixelAlpha = 0;
+    void *srcBuf = NULL;
+    void *dstBuf = NULL;
+    void *src1Buf = NULL;
+    RECT clip;
+    int sync_mode = RGA_BLIT_SYNC;
+    struct rga_req rgaReg;
+
+    rga_session_t *session;
+    rga_info_table_entry *rga_info;
+    int ver_bicubic_limit;
+
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
+
+    rga_info = &session->hardware_info;
+    ver_bicubic_limit = rga_info->scale_ver_bicubic_limit;
+
+    //init
+    memset(&rgaReg, 0, sizeof(struct rga_req));
+    if (session->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE)
+        rgaReg.feature.user_close_fence = true;
+
+    srcType = dstType = srcMmuFlag = dstMmuFlag = 0;
+    src1Type = src1MmuFlag = 0;
+    rotation = 0;
+    blend = 0;
+    yuvToRgbMode = 0;
+
+#if NORMAL_API_LOG_EN
+    /* print debug log by setting property vendor.rga.log as 1 */
+    is_debug_log();
+    if(is_out_log())
+        ALOGD("<<<<-------- print rgaLog -------->>>>");
+#endif
+
+    if (!src && !dst && !src1) {
+        ALOGE("src = %p, dst = %p, src1 = %p", src, dst, src1);
+        return -EINVAL;
+    }
+
+    if (!src && !dst) {
+        ALOGE("src = %p, dst = %p", src, dst);
+        return -EINVAL;
+    }
+
+    /*
+     * 1.if src exist, get some parameter from src, such as rotatiom.
+     * 2.if need to blend, need blend variable from src to decide how to blend.
+     * 3.get effective area from src, if the area is empty, choose to get parameter from handle.
+     * */
+    if (src) {
+        rotation = src->rotation;
+        blend = src->blend;
+        interp.horiz = src->scale_mode & 0xf;
+        interp.verti = (src->scale_mode >> 4) & 0xf;
+        memcpy(&relSrcRect, &src->rect, sizeof(rga_rect_t));
+    }
+
+    /* get effective area from dst and src1, if the area is empty, choose to get parameter from handle. */
+    if (dst)
+        memcpy(&relDstRect, &dst->rect, sizeof(rga_rect_t));
+    if (src1)
+        memcpy(&relSrc1Rect, &src1->rect, sizeof(rga_rect_t));
+
+    srcFd = dstFd = src1Fd = -1;
+
+#if NORMAL_API_LOG_EN
+    if (is_out_log()) {
+        ALOGD("src->hnd = 0x%lx , dst->hnd = 0x%lx , src1->hnd = 0x%lx\n",
+            (unsigned long)src->hnd, (unsigned long)dst->hnd, (unsigned long)(src1 ? src1->hnd : 0));
+        ALOGD("src: handle = %d, Fd = %.2d ,phyAddr = %p ,virAddr = %p\n", src->handle, src->fd, src->phyAddr, src->virAddr);
+        if (src1)
+            ALOGD("src1: handle = %d, Fd = %.2d , phyAddr = %p , virAddr = %p\n", src1->handle, src1->fd, src1->phyAddr, src1->virAddr);
+        ALOGD("dst: handle = %d, Fd = %.2d ,phyAddr = %p ,virAddr = %p\n", dst->handle, dst->fd, dst->phyAddr, dst->virAddr);
+    }
+#endif
+
+    if (src1) {
+        if (src->handle > 0 && dst->handle > 0 && src1->handle > 0) {
+            /* This will mark the use of handle */
+            rgaReg.handle_flag |= 1;
+        } else if ((src->handle > 0 || dst->handle > 0 || src1->handle > 0) &&
+                   (src->handle <= 0 || dst->handle <= 0 || src1->handle <= 0)) {
+            ALOGE("librga only supports the use of handles only or no handles, [src,src1,dst] = [%d, %d, %d]\n",
+                  src->handle, src1->handle, dst->handle);
+            return -EINVAL;
+        }
+    } else {
+        if (src->handle > 0 && dst->handle > 0) {
+            /* This will mark the use of handle */
+            rgaReg.handle_flag |= 1;
+        } else if ((src->handle > 0 || dst->handle > 0) &&
+                   (src->handle <= 0 || dst->handle <= 0)) {
+            ALOGE("librga only supports the use of handles only or no handles, [src,dst] = [%d, %d]\n",
+                  src->handle, dst->handle);
+            return -EINVAL;
+        }
+    }
+
+    /*********** get src addr *************/
+    if (src && src->handle) {
+        /* In order to minimize changes, the handle here will reuse the variable of Fd. */
+        srcFd = src->handle;
+    } else if (src && src->phyAddr) {
+        srcBuf = src->phyAddr;
+    } else if (src && src->fd > 0) {
+        srcFd = src->fd;
+        src->mmuFlag = 1;
+    } else if (src && src->virAddr) {
+        srcBuf = src->virAddr;
+        src->mmuFlag = 1;
+    }
+    /*
+     * After getting the fd or virtual address through the handle,
+     * set 'srcType' to 1, and at the end, and then judge
+     * the 'srcType' at the end whether to enable mmu.
+     */
+#ifdef ANDROID
+    else if (src && src->hnd) {
+#ifndef RK3188
+        /* RK3188 is special, cannot configure rga through fd. */
+        RkRgaGetHandleFd(src->hnd, &srcFd);
+#endif
+#ifndef ANDROID_8
+        if (srcFd < 0 || srcFd == 0) {
+            RkRgaGetHandleMapAddress(src->hnd, &srcBuf);
+        }
+#endif
+        if ((srcFd < 0 || srcFd == 0) && srcBuf == NULL) {
+            ALOGE("src handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &src->hnd);
+            printf("src handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &src->hnd);
+            return ret;
+        }
+        else {
+            srcType = 1;
+        }
+    }
+
+    if (!isRectValid(relSrcRect)) {
+        ret = NormalRgaGetRect(src->hnd, &tmpSrcRect);
+        if (ret) {
+            ALOGE("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &src->hnd);
+            printf("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &src->hnd);
+            return ret;
+        }
+        memcpy(&relSrcRect, &tmpSrcRect, sizeof(rga_rect_t));
+    }
+#endif
+    if (srcFd == -1 && !srcBuf) {
+        ALOGE("%d:src has not fd and address for render", __LINE__);
+        return ret;
+    }
+    if (srcFd == 0 && !srcBuf) {
+        ALOGE("srcFd is zero, now driver not support");
+        return -EINVAL;
+    }
+    /* Old rga driver cannot support fd as zero. */
+    if (srcFd == 0)
+        srcFd = -1;
+
+    /*********** get src1 addr *************/
+    if (src1) {
+        if (src1->handle) {
+            /* In order to minimize changes, the handle here will reuse the variable of Fd. */
+            src1Fd = src1->handle;
+        } else if (src1->phyAddr) {
+            src1Buf = src1->phyAddr;
+        } else if (src1->fd > 0) {
+            src1Fd = src1->fd;
+            src1->mmuFlag = 1;
+        } else if (src1->virAddr) {
+            src1Buf = src1->virAddr;
+            src1->mmuFlag = 1;
+        }
+        /*
+         * After getting the fd or virtual address through the handle,
+         * set 'src1Type' to 1, and at the end, and then judge
+         * the 'src1Type' at the end whether to enable mmu.
+         */
+#ifdef ANDROID
+        else if (src1->hnd) {
+#ifndef RK3188
+            /* RK3188 is special, cannot configure rga through fd. */
+        RkRgaGetHandleFd(src1->hnd, &src1Fd);
+#endif
+#ifndef ANDROID_8
+            if (src1Fd < 0 || src1Fd == 0) {
+                RkRgaGetHandleMapAddress(src1->hnd, &src1Buf);
+            }
+#endif
+            if ((src1Fd < 0 || src1Fd == 0) && src1Buf == NULL) {
+                ALOGE("src1 handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &src1->hnd);
+                printf("src1 handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &src1->hnd);
+                return ret;
+            }
+            else {
+                src1Type = 1;
+            }
+        }
+
+        if (!isRectValid(relSrc1Rect)) {
+            ret = NormalRgaGetRect(src1->hnd, &tmpSrc1Rect);
+            if (ret) {
+                ALOGE("src1 handleGetRect fail ,ret = %d,hnd=%p", ret, &src1->hnd);
+                printf("src1 handleGetRect fail ,ret = %d,hnd=%p", ret, &src1->hnd);
+                return ret;
+            }
+            memcpy(&relSrc1Rect, &tmpSrc1Rect, sizeof(rga_rect_t));
+        }
+#endif
+        if (src1Fd == -1 && !src1Buf) {
+            ALOGE("%d:src1 has not fd and address for render", __LINE__);
+            return ret;
+        }
+        if (src1Fd == 0 && !src1Buf) {
+            ALOGE("src1Fd is zero, now driver not support");
+            return -EINVAL;
+        }
+        /* Old rga driver cannot support fd as zero. */
+        if (src1Fd == 0)
+            src1Fd = -1;
+    }
+
+    /*********** get dst addr *************/
+    if (dst && dst->handle) {
+        /* In order to minimize changes, the handle here will reuse the variable of Fd. */
+        dstFd = dst->handle;
+    } else if (dst && dst->phyAddr) {
+        dstBuf = dst->phyAddr;
+    } else if (dst && dst->fd > 0) {
+        dstFd = dst->fd;
+        dst->mmuFlag = 1;
+    } else if (dst && dst->virAddr) {
+        dstBuf = dst->virAddr;
+        dst->mmuFlag = 1;
+    }
+    /*
+     * After getting the fd or virtual address through the handle,
+     * set 'dstType' to 1, and at the end, and then judge
+     * the 'dstType' at the end whether to enable mmu.
+     */
+#ifdef ANDROID
+    else if (dst && dst->hnd) {
+#ifndef RK3188
+        /* RK3188 is special, cannot configure rga through fd. */
+        RkRgaGetHandleFd(dst->hnd, &dstFd);
+#endif
+#ifndef ANDROID_8
+        if (dstFd < 0 || dstFd == 0) {
+            RkRgaGetHandleMapAddress(dst->hnd, &dstBuf);
+        }
+#endif
+        if ((dstFd < 0 || dstFd == 0) && dstBuf == NULL) {
+            ALOGE("dst handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &dst->hnd);
+            printf("dst handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &dst->hnd);
+            return ret;
+        }
+        else {
+            dstType = 1;
+        }
+    }
+
+    if (!isRectValid(relDstRect)) {
+        ret = NormalRgaGetRect(dst->hnd, &tmpDstRect);
+        if (ret) {
+            ALOGE("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &dst->hnd);
+            printf("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &dst->hnd);
+            return ret;
+        }
+        memcpy(&relDstRect, &tmpDstRect, sizeof(rga_rect_t));
+    }
+#endif
+
+    if (dstFd == -1 && !dstBuf) {
+        ALOGE("%d:dst has not fd and address for render", __LINE__);
+        return ret;
+    }
+    if (dstFd == 0 && !dstBuf) {
+        ALOGE("dstFd is zero, now driver not support");
+        return -EINVAL;
+    }
+    /* Old rga driver cannot support fd as zero. */
+    if (dstFd == 0)
+        dstFd = -1;
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("handle_flag: 0x%x\n", rgaReg.handle_flag);
+        ALOGD("src: Fd/handle = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", srcFd, srcBuf, src->mmuFlag, srcType);
+        if (src1)
+            ALOGD("src1: Fd/handle = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", src1Fd, src1Buf, src1->mmuFlag, src1Type);
+        ALOGD("dst: Fd/handle = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", dstFd, dstBuf, dst->mmuFlag, dstType);
+    }
+#endif
+
+    relSrcRect.format = RkRgaCompatibleFormat(relSrcRect.format);
+    relDstRect.format = RkRgaCompatibleFormat(relDstRect.format);
+    if (isRectValid(relSrc1Rect))
+        relSrc1Rect.format = RkRgaCompatibleFormat(relSrc1Rect.format);
+
+#ifdef RK3126C
+    if ( (relSrcRect.width == relDstRect.width) && (relSrcRect.height == relDstRect.height ) &&
+         (relSrcRect.width + 2*relSrcRect.xoffset == relSrcRect.wstride) &&
+         (relSrcRect.height + 2*relSrcRect.yoffset == relSrcRect.hstride) &&
+         (relSrcRect.format == HAL_PIXEL_FORMAT_YCrCb_NV12) && (relSrcRect.xoffset > 0 && relSrcRect.yoffset > 0)
+       ) {
+        relSrcRect.width += 4;
+        //relSrcRect.height += 4;
+        relSrcRect.xoffset = (relSrcRect.wstride - relSrcRect.width) / 2;
+    }
+#endif
+
+    /* determined by format, need pixel alpha or not. */
+    perpixelAlpha = NormalRgaFormatHasAlpha(RkRgaGetRgaFormat(relSrcRect.format));
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log())
+        ALOGE("blend = %x , perpixelAlpha = %d",blend,perpixelAlpha);
+#endif
+
+    if (blend & 0xfff) {
+        /* blend bit[16:23] is to set global alpha. */
+        fg_global_alpha = (blend >> 16) & 0xff;
+        bg_global_alpha = (blend >> 24) & 0xff;
+
+        /*
+         * In the legacy interface, the src-over mode supports globalAlpha
+         * configuration for the src channel, while the other modes do not
+         * support globalAlpha configuration.
+         */
+        switch (blend & 0xfff) {
+            case 0x405:
+                fg_global_alpha = (blend >> 16) & 0xff;
+                bg_global_alpha = 0xff;
+
+                blend = RGA_ALPHA_BLEND_SRC_OVER;
+                blend |= 0x1 << 12;
+                break;
+            case 0x504:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
+
+                blend = RGA_ALPHA_BLEND_DST_OVER;
+                blend |= 0x1 << 12;
+                break;
+            case 0x105:
+                fg_global_alpha = (blend >> 16) & 0xff;
+                bg_global_alpha = 0xff;
+
+                blend = RGA_ALPHA_BLEND_SRC_OVER;
+                break;
+            case 0x501:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
+
+                blend = RGA_ALPHA_BLEND_DST_OVER;
+                break;
+            case 0x100:
+                fg_global_alpha = 0xff;
+                bg_global_alpha = 0xff;
+
+                blend = RGA_ALPHA_BLEND_SRC;
+                break;
+        }
+
+        rgaReg.feature.global_alpha_en = true;
+        NormalRgaSetAlphaEnInfo(&rgaReg, 1, 1, fg_global_alpha, bg_global_alpha , 1, blend & 0xfff, 0);
+
+        /* need to pre-multiply. */
+        if ((blend >> 12) & 0x1)
+            rgaReg.alpha_rop_flag |= (1 << 9);
+    }
+
+    /* discripe a picture need high stride.If high stride not to be set, need use height as high stride. */
+    if (relSrcRect.hstride == 0)
+        relSrcRect.hstride = relSrcRect.height;
+
+    if (isRectValid(relSrc1Rect))
+        if (relSrc1Rect.hstride == 0)
+            relSrc1Rect.hstride = relSrc1Rect.height;
+
+    if (relDstRect.hstride == 0)
+        relDstRect.hstride = relDstRect.height;
+
+    /* do some check, check the area of src and dst whether is effective. */
+    if (src) {
+        ret = checkRectForRga(relSrcRect);
+        if (ret) {
+            printf("Error srcRect\n");
+            ALOGE("[%s,%d]Error srcRect \n", __func__, __LINE__);
+            return ret;
+        }
+    }
+
+    if (src1) {
+        ret = checkRectForRga(relSrc1Rect);
+        if (ret) {
+            printf("Error src1Rect\n");
+            ALOGE("[%s,%d]Error src1Rect \n", __func__, __LINE__);
+            return ret;
+        }
+    }
+
+    if (dst) {
+        ret = checkRectForRga(relDstRect);
+        if (ret) {
+            printf("Error dstRect\n");
+            ALOGE("[%s,%d]Error dstRect \n", __func__, __LINE__);
+            return ret;
+        }
+    }
+
+    /* check the scale magnification. */
+    if (src1 && src) {
+        hScale = (float)relSrcRect.width / relSrc1Rect.width;
+        vScale = (float)relSrcRect.height / relSrc1Rect.height;
+        if (rotation == HAL_TRANSFORM_ROT_90 || rotation == HAL_TRANSFORM_ROT_270) {
+            hScale = (float)relSrcRect.width / relSrc1Rect.height;
+            vScale = (float)relSrcRect.height / relSrc1Rect.width;
+        }
+    } else if (src && dst) {
+        hScale = (float)relSrcRect.width / relDstRect.width;
+        vScale = (float)relSrcRect.height / relDstRect.height;
+        if (rotation == HAL_TRANSFORM_ROT_90 || rotation == HAL_TRANSFORM_ROT_270) {
+            hScale = (float)relSrcRect.width / relDstRect.height;
+            vScale = (float)relSrcRect.height / relDstRect.width;
+        }
+    }
+    // check scale limit form low to high version, gradually strict, avoid invalid jugdement
+    if (session->driver_type == RGA_DRIVER_IOC_RGA1) {
+        if (session->core_version.version[0].minor <= 0 && (hScale < 1/2 || vScale < 1/2)) {
+            ALOGE("e scale[%f,%f] ver[%s]", hScale, vScale, session->core_version.version[0].str);
+            return -EINVAL;
+        }
+        if (session->core_version.version[0].major <= 2 && (hScale < 1/8 ||
+                                    hScale > 8 || vScale < 1/8 || vScale > 8)) {
+            ALOGE("Error scale[%f,%f] line %d", hScale, vScale, __LINE__);
+            return -EINVAL;
+        }
+    }
+    if (hScale < 1/16 || hScale > 16 || vScale < 1/16 || vScale > 16) {
+        ALOGE("Error scale[%f,%f] line %d", hScale, vScale, __LINE__);
+        return -EINVAL;
+    }
+
+
+    /* reselect the scale mode. */
+    stretch = (hScale != 1.0f) || (vScale != 1.0f);
+
+    if (interp.horiz == RGA_INTERP_DEFAULT) {
+        if (hScale > 1.0f)
+            interp.horiz = RGA_INTERP_AVERAGE;
+        else if (hScale < 1.0f)
+            interp.horiz = RGA_INTERP_BICUBIC;
+    }
+
+    if (interp.verti == RGA_INTERP_DEFAULT) {
+        if (vScale > 1.0f) {
+            interp.verti = RGA_INTERP_AVERAGE;
+        } else if (vScale < 1.0f) {
+            if (relSrcRect.width > ver_bicubic_limit ||
+                (relDstRect.width > ver_bicubic_limit && hScale > 1.0f))
+                interp.verti = RGA_INTERP_LINEAR;
+            else
+                interp.verti = RGA_INTERP_BICUBIC;
+        }
+    }
+
+    /* check interpoletion limit */
+    if (interp.verti == RGA_INTERP_BICUBIC && vScale < 1.0f) {
+        if (relSrcRect.width > ver_bicubic_limit ||
+            (relDstRect.width > ver_bicubic_limit && hScale > 1.0f)) {
+            ALOGE("when using bicubic scaling in the vertical direction, it does not support input width larger than %d.",
+                  ver_bicubic_limit);
+            return -EINVAL;
+        }
+    }
+
+    if (((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) ||
+         (hScale > 1.0f && interp.horiz == RGA_INTERP_LINEAR)) &&
+        (hScale < 1.0f || vScale < 1.0f)) {
+            ALOGE("when using bilinear scaling for downsizing, it does not support scaling up in other directions.");
+            return -EINVAL;
+    }
+
+    if ((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) &&
+        relDstRect.width > 4096) {
+        ALOGE("bi-linear scale-down only supports vertical direction smaller than 4096.");
+        return -EINVAL;
+    }
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log())
+        ALOGD("interp[horiz,verti] = [0x%x, 0x%x] , stretch = 0x%x",
+              interp.horiz, interp.verti, stretch);
+#endif
+
+    /*
+     * according to the rotation to set corresponding parameter.It's diffrient from the opengl.
+     * Following's config which use frequently
+     * */
+    switch (rotation & 0x0f) {
+        case HAL_TRANSFORM_FLIP_H:
+            orientation = 0;
+            rotateMode = 2;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.width;
+            src1ActH = relSrc1Rect.height;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.width;
+            dstActH = relDstRect.height;
+            break;
+        case HAL_TRANSFORM_FLIP_V:
+            orientation = 0;
+            rotateMode = 3;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.width;
+            src1ActH = relSrc1Rect.height;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.width;
+            dstActH = relDstRect.height;
+            break;
+        case HAL_TRANSFORM_FLIP_H_V:
+            orientation = 0;
+            rotateMode = 4;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.width;
+            src1ActH = relSrc1Rect.height;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.width;
+            dstActH = relDstRect.height;
+            break;
+        case HAL_TRANSFORM_ROT_90:
+            orientation = 90;
+            rotateMode = 1;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.height;
+            src1ActH = relSrc1Rect.width;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.height;
+            dstActH = relDstRect.width;
+            break;
+        case HAL_TRANSFORM_ROT_180:
+            orientation = 180;
+            rotateMode = 1;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.width;
+            src1ActH = relSrc1Rect.height;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.width;
+            dstActH = relDstRect.height;
+            break;
+        case HAL_TRANSFORM_ROT_270:
+            orientation = 270;
+            rotateMode = 1;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.height;
+            src1ActH = relSrc1Rect.width;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.height;
+            dstActH = relDstRect.width;
+            break;
+        default:
+            orientation = 0;
+            rotateMode = stretch;
+            srcVirW = relSrcRect.wstride;
+            srcVirH = relSrcRect.hstride;
+            srcXPos = relSrcRect.xoffset;
+            srcYPos = relSrcRect.yoffset;
+            srcActW = relSrcRect.width;
+            srcActH = relSrcRect.height;
+
+            src1VirW = relSrc1Rect.wstride;
+            src1VirH = relSrc1Rect.hstride;
+            src1XPos = relSrc1Rect.xoffset;
+            src1YPos = relSrc1Rect.yoffset;
+            src1ActW = relSrc1Rect.width;
+            src1ActH = relSrc1Rect.height;
+
+            dstVirW = relDstRect.wstride;
+            dstVirH = relDstRect.hstride;
+            dstXPos = relDstRect.xoffset;
+            dstYPos = relDstRect.yoffset;
+            dstActW = relDstRect.width;
+            dstActH = relDstRect.height;
+            break;
+    }
+
+    switch ((rotation & 0xF0) >> 4) {
+        case HAL_TRANSFORM_FLIP_H :
+            rotateMode |= (2 << 4);
+            break;
+        case HAL_TRANSFORM_FLIP_V :
+            rotateMode |= (3 << 4);
+            break;
+        case HAL_TRANSFORM_FLIP_H_V:
+            rotateMode |= (4 << 4);
+            break;
+    }
+
+    /* if pictual out of range should be cliped. */
+    clip.xmin = 0;
+    clip.xmax = dstVirW - 1;
+    clip.ymin = 0;
+    clip.ymax = dstVirH - 1;
+
+    if  (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+         (RkRgaGetRgaFormat(relSrcRect.format) != RK_FORMAT_RGB_565 ||
+         RkRgaGetRgaFormat(relSrcRect.format) != RK_FORMAT_BGR_565) &&
+         (RkRgaGetRgaFormat(relDstRect.format) == RK_FORMAT_RGB_565 ||
+         RkRgaGetRgaFormat(relDstRect.format) == RK_FORMAT_BGR_565))
+        ditherEn = 1;
+    else
+        ditherEn = 0;
+
+#if 0
+    /* YUV HDS or VDS enable */
+    if (NormalRgaIsYuvFormat(relDstRect.format)) {
+        rgaReg.uvhds_mode = 1;
+        if ((relDstRect.format == RK_FORMAT_YCbCr_420_SP ||
+             relDstRect.format == RK_FORMAT_YCrCb_420_SP) &&
+            rotation == 0 && hScale == 1.0f && vScale == 1.0f) {
+            /* YUV420SP only support vds when without rotation and scale. */
+            rgaReg.uvvds_mode = 1;
+        }
+    }
+#endif
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log())
+        ALOGE("ditherEn =%d ", ditherEn);
+#endif
+
+    /* only to configure the parameter by driver version, because rga driver has too many version. */
+    switch (session->driver_type) {
+        /* the version 1.005 is different to assign fd from version 2.0 and above */
+        case RGA_DRIVER_IOC_RGA1:
+            if (session->core_version.version[0].minor < 6) {
+                srcMmuFlag = dstMmuFlag = src1MmuFlag = 1;
+
+#if defined(__arm64__) || defined(__aarch64__)
+                NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned long)srcBuf,
+                                        (unsigned long)srcBuf + srcVirW * srcVirH,
+                                        (unsigned long)srcBuf + srcVirW * srcVirH * 5/4,
+                                        srcVirW, srcVirH,
+                                        RkRgaGetRgaFormat(relSrcRect.format),0);
+                /* src1 */
+                if (src1)
+                    NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned long)src1Buf,
+                                            (unsigned long)src1Buf + src1VirW * src1VirH,
+                                            (unsigned long)src1Buf + src1VirW * src1VirH * 5/4,
+                                            src1VirW, src1VirH, &clip,
+                                            RkRgaGetRgaFormat(relSrc1Rect.format),0);
+                /*dst*/
+                NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                        (unsigned long)dstBuf + dstVirW * dstVirH,
+                                        (unsigned long)dstBuf + dstVirW * dstVirH * 5/4,
+                                        dstVirW, dstVirH, &clip,
+                                        RkRgaGetRgaFormat(relDstRect.format),0);
+#else
+                NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned long)srcBuf,
+                                        (unsigned int)srcBuf + srcVirW * srcVirH,
+                                        (unsigned int)srcBuf + srcVirW * srcVirH * 5/4,
+                                        srcVirW, srcVirH,
+                                        RkRgaGetRgaFormat(relSrcRect.format),0);
+                /* src1 */
+                if (src1)
+                    NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned long)src1Buf,
+                                            (unsigned int)src1Buf + src1VirW * src1VirH,
+                                            (unsigned int)src1Buf + src1VirW * src1VirH * 5/4,
+                                            src1VirW, src1VirH, &clip,
+                                            RkRgaGetRgaFormat(relSrc1Rect.format),0);
+                /*dst*/
+                NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                        (unsigned int)dstBuf + dstVirW * dstVirH,
+                                        (unsigned int)dstBuf + dstVirW * dstVirH * 5/4,
+                                        dstVirW, dstVirH, &clip,
+                                        RkRgaGetRgaFormat(relDstRect.format),0);
+
+#endif
+            } else {
+                /*Src*/
+                if (srcFd != -1) {
+                    srcMmuFlag = srcType ? 1 : 0;
+                    if (src && srcFd == src->fd)
+                        srcMmuFlag = src->mmuFlag ? 1 : 0;
+                    NormalRgaSetSrcVirtualInfo(&rgaReg, 0, 0, 0, srcVirW, srcVirH,
+                                            RkRgaGetRgaFormat(relSrcRect.format),0);
+                    NormalRgaSetFdsOffsets(&rgaReg, srcFd, 0, 0, 0);
+                } else {
+                    if (src && src->hnd)
+                        srcMmuFlag = srcType ? 1 : 0;
+                    if (src && srcBuf == src->virAddr)
+                        srcMmuFlag = 1;
+                    if (src && srcBuf == src->phyAddr)
+                        srcMmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                    NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned long)srcBuf,
+                                            (unsigned long)srcBuf + srcVirW * srcVirH,
+                                            (unsigned long)srcBuf + srcVirW * srcVirH * 5/4,
+                                            srcVirW, srcVirH,
+                                            RkRgaGetRgaFormat(relSrcRect.format),0);
+#else
+                    NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned int)srcBuf,
+                                            (unsigned int)srcBuf + srcVirW * srcVirH,
+                                            (unsigned int)srcBuf + srcVirW * srcVirH * 5/4,
+                                            srcVirW, srcVirH,
+                                            RkRgaGetRgaFormat(relSrcRect.format),0);
+#endif
+                }
+                /* src1 */
+                if (src1) {
+                    if (src1Fd != -1) {
+                        src1MmuFlag = src1Type ? 1 : 0;
+                        if (src1Fd == src1->fd)
+                            src1MmuFlag = src1->mmuFlag ? 1 : 0;
+                        NormalRgaSetPatVirtualInfo(&rgaReg, 0, 0, 0, src1VirW, src1VirH, &clip,
+                                                RkRgaGetRgaFormat(relSrc1Rect.format),0);
+                        /*src dst fd*/
+                        NormalRgaSetFdsOffsets(&rgaReg, 0, src1Fd, 0, 0);
+                    } else {
+                        if (src1->hnd)
+                            src1MmuFlag = src1Type ? 1 : 0;
+                        if (src1Buf == src1->virAddr)
+                            src1MmuFlag = 1;
+                        if (src1Buf == src1->phyAddr)
+                            src1MmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                        NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned long)src1Buf,
+                                                (unsigned long)src1Buf + src1VirW * src1VirH,
+                                                (unsigned long)src1Buf + src1VirW * src1VirH * 5/4,
+                                                src1VirW, src1VirH, &clip,
+                                                RkRgaGetRgaFormat(relSrc1Rect.format),0);
+#else
+                        NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned int)src1Buf,
+                                                (unsigned int)src1Buf + src1VirW * src1VirH,
+                                                (unsigned int)src1Buf + src1VirW * src1VirH * 5/4,
+                                                src1VirW, src1VirH, &clip,
+                                                RkRgaGetRgaFormat(relSrc1Rect.format),0);
+#endif
+                    }
+                }
+                /*dst*/
+                if (dstFd != -1) {
+                    dstMmuFlag = dstType ? 1 : 0;
+                    if (dst && dstFd == dst->fd)
+                        dstMmuFlag = dst->mmuFlag ? 1 : 0;
+                    NormalRgaSetDstVirtualInfo(&rgaReg, 0, 0, 0, dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+                    /*src dst fd*/
+                    NormalRgaSetFdsOffsets(&rgaReg, 0, dstFd, 0, 0);
+                } else {
+                    if (dst && dst->hnd)
+                        dstMmuFlag = dstType ? 1 : 0;
+                    if (dst && dstBuf == dst->virAddr)
+                        dstMmuFlag = 1;
+                    if (dst && dstBuf == dst->phyAddr)
+                        dstMmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                    NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                            (unsigned long)dstBuf + dstVirW * dstVirH,
+                                            (unsigned long)dstBuf + dstVirW * dstVirH * 5/4,
+                                            dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+#else
+                    NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned int)dstBuf,
+                                            (unsigned int)dstBuf + dstVirW * dstVirH,
+                                            (unsigned int)dstBuf + dstVirW * dstVirH * 5/4,
+                                            dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+#endif
+                }
+            }
+
+            break;
+        case RGA_DRIVER_IOC_RGA2:
+        case RGA_DRIVER_IOC_MULTI_RGA:
+        default:
+            if (src && src->hnd)
+                srcMmuFlag = srcType ? 1 : 0;
+            if (src && srcBuf == src->virAddr)
+                srcMmuFlag = 1;
+            if (src && srcBuf == src->phyAddr)
+                srcMmuFlag = 0;
+            if (srcFd != -1)
+                srcMmuFlag = srcType ? 1 : 0;
+            if (src && srcFd == src->fd)
+                srcMmuFlag = src->mmuFlag ? 1 : 0;
+
+            if (src1) {
+                if (src1->hnd)
+                    src1MmuFlag = src1Type ? 1 : 0;
+                if (src1Buf == src1->virAddr)
+                    src1MmuFlag = 1;
+                if (src1Buf == src1->phyAddr)
+                    src1MmuFlag = 0;
+                if (src1Fd != -1)
+                    src1MmuFlag = src1Type ? 1 : 0;
+                if (src1Fd == src1->fd)
+                    src1MmuFlag = src1->mmuFlag ? 1 : 0;
+            }
+
+            if (dst && dst->hnd)
+                dstMmuFlag = dstType ? 1 : 0;
+            if (dst && dstBuf == dst->virAddr)
+                dstMmuFlag = 1;
+            if (dst && dstBuf == dst->phyAddr)
+                dstMmuFlag = 0;
+            if (dstFd != -1)
+                dstMmuFlag = dstType ? 1 : 0;
+            if (dst && dstFd == dst->fd)
+                dstMmuFlag = dst->mmuFlag ? 1 : 0;
+
+#if defined(__arm64__) || defined(__aarch64__)
+            NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
+                                    (unsigned long)srcBuf,
+                                    (unsigned long)srcBuf + srcVirW * srcVirH,
+                                    srcVirW, srcVirH,
+                                    RkRgaGetRgaFormat(relSrcRect.format),0);
+            /* src1 */
+            if (src1)
+                NormalRgaSetPatVirtualInfo(&rgaReg, src1Fd != -1 ? src1Fd : 0,
+                                        (unsigned long)src1Buf,
+                                        (unsigned long)src1Buf + src1VirW * src1VirH,
+                                        src1VirW, src1VirH, &clip,
+                                        RkRgaGetRgaFormat(relSrc1Rect.format),0);
+            /*dst*/
+            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
+                                    (unsigned long)dstBuf,
+                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    dstVirW, dstVirH, &clip,
+                                    RkRgaGetRgaFormat(relDstRect.format),0);
+
+#else
+            NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
+                                    (unsigned int)srcBuf,
+                                    (unsigned int)srcBuf + srcVirW * srcVirH,
+                                    srcVirW, srcVirH,
+                                    RkRgaGetRgaFormat(relSrcRect.format),0);
+            /* src1 */
+            if (src1)
+                NormalRgaSetPatVirtualInfo(&rgaReg, src1Fd != -1 ? src1Fd : 0,
+                                        (unsigned int)src1Buf,
+                                        (unsigned int)src1Buf + src1VirW * src1VirH,
+                                        src1VirW, src1VirH, &clip,
+                                        RkRgaGetRgaFormat(relSrc1Rect.format),0);
+            /*dst*/
+            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
+                                    (unsigned int)dstBuf,
+                                    (unsigned int)dstBuf + dstVirW * dstVirH,
+                                    dstVirW, dstVirH, &clip,
+                                    RkRgaGetRgaFormat(relDstRect.format),0);
+
+#endif
+
+            break;
+    }
+
+    /* set effective area of src and dst. */
+    NormalRgaSetSrcActiveInfo(&rgaReg, srcActW, srcActH, srcXPos, srcYPos);
+    NormalRgaSetDstActiveInfo(&rgaReg, dstActW, dstActH, dstXPos, dstYPos);
+    if (src1)
+        NormalRgaSetPatActiveInfo(&rgaReg, src1ActW, src1ActH, src1XPos, src1YPos);
+
+    if (dst->color_space_mode & full_csc_mask) {
+        ret = NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode);
+        if (ret < 0) {
+            ALOGE("Not support full csc mode [%x]\n", dst->color_space_mode);
+            return -EINVAL;
+        }
+
+        if (dst->color_space_mode == rgb2yuv_709_limit)
+            yuvToRgbMode |= 0x3 << 2;
+    } else {
+        if (src1) {
+            /* special config for yuv + rgb => rgb */
+            /* src0 y2r, src1 bupass, dst bupass */
+            if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
+                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relDstRect.format)))
+                yuvToRgbMode |= 0x1 << 0;
+
+            /* special config for yuv + rgba => yuv on src1 */
+            /* src0 y2r, src1 bupass, dst y2r */
+            if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
+                NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format))) {
+                yuvToRgbMode |= 0x1 << 0;        //src0
+                yuvToRgbMode |= 0x2 << 2;        //dst
+            }
+
+            /* special config for rgb + rgb => yuv on dst */
+            /* src0 bupass, src1 bupass, dst y2r */
+            if (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
+                NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format)))
+                yuvToRgbMode |= 0x2 << 2;
+        } else {
+            /* special config for yuv to rgb */
+            if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relDstRect.format)))
+                yuvToRgbMode |= 0x1 << 0;
+
+            /* special config for rgb to yuv */
+            if (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+                NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format)))
+                yuvToRgbMode |= 0x2 << 2;
+        }
+
+        if(dst->color_space_mode > 0)
+            yuvToRgbMode = dst->color_space_mode;
+    }
+
+    /* mode
+     * interp:set different algorithm to scale.
+     * rotateMode:rotation mode
+     * Orientation:rotation orientation
+     * ditherEn:enable or not.
+     * yuvToRgbMode:yuv to rgb, rgb to yuv , or others
+     * */
+    NormalRgaSetBitbltMode(&rgaReg, interp, rotateMode, orientation,
+                           ditherEn, 0, yuvToRgbMode);
+
+    NormalRgaNNQuantizeMode(&rgaReg, dst);
+
+    NormalRgaDitherMode(&rgaReg, dst, relDstRect.format);
+
+    if (srcMmuFlag || dstMmuFlag) {
+        NormalRgaMmuInfo(&rgaReg, 1, 0, 0, 0, 0, 2);
+        NormalRgaMmuFlag(&rgaReg, srcMmuFlag, dstMmuFlag);
+    }
+    if (src1) {
+        if (src1MmuFlag) {
+            rgaReg.mmu_info.mmu_flag |= (0x1 << 11);
+            rgaReg.mmu_info.mmu_flag |= (0x1 << 9);
+        }
+        /*enable src0 + src1 => dst*/
+        rgaReg.bsfilter_flag = 1;
+    }
+
+    /* ROP */
+    /* This special Interface can do some basic logical operations */
+    if(src->rop_code > 0)
+    {
+        rgaReg.rop_code = src->rop_code;
+        rgaReg.alpha_rop_flag = 0x3;
+        rgaReg.alpha_rop_mode = 0x1;
+    }
+
+    /*color key*/
+    /* if need this funtion, maybe should patch the rga driver. */
+    if(src->colorkey_en == 1) {
+        rgaReg.alpha_rop_flag |= (1 << 9);  //real color mode
+        switch (src->colorkey_mode) {
+            case 0 :
+                NormalRgaSetSrcTransModeInfo(&rgaReg, 0, 1, 1, 1, 1, src->colorkey_min, src->colorkey_max, 1);
+                break;
+            case 1 :
+                NormalRgaSetSrcTransModeInfo(&rgaReg, 1, 1, 1, 1, 1, src->colorkey_min, src->colorkey_max, 1);
+                break;
+        }
+    }
+
+    /* mosaic */
+    memcpy(&rgaReg.mosaic_info, &src->mosaic_info, sizeof(struct rga_mosaic_info));
+
+    /* gauss */
+    memcpy(&rgaReg.gauss_config, &src->gauss_config, sizeof(rgaReg.gauss_config));
+    if (rgaReg.gauss_config.size > 0) {
+        rgaReg.feature.global_alpha_en = true;
+        rgaReg.fg_global_alpha = (blend >> 16) & 0xff;
+    }
+
+    /* OSD */
+    memcpy(&rgaReg.osd_info, &src->osd_info, sizeof(struct rga_osd_info));
+
+    /* pre_intr */
+    memcpy(&rgaReg.pre_intr_info, &src->pre_intr, sizeof(src->pre_intr));
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("srcMmuFlag = %d , dstMmuFlag = %d , rotateMode = %d \n", srcMmuFlag, dstMmuFlag,rotateMode);
+        ALOGD("<<<<-------- rgaReg -------->>>>\n");
+        NormalRgaLogOutRgaReq(rgaReg);
+    }
+#endif
+
+    /* RGBA5551 alpha control */
+    if (src->rgba5551_flags == 1) {
+        rgaReg.rgba5551_alpha.flags = src->rgba5551_flags;
+        rgaReg.rgba5551_alpha.alpha0 = src->rgba5551_alpha0;
+        rgaReg.rgba5551_alpha.alpha1 = src->rgba5551_alpha1;
+    }
+
+    if(src->sync_mode == RGA_BLIT_ASYNC || dst->sync_mode == RGA_BLIT_ASYNC) {
+        sync_mode = RGA_BLIT_ASYNC;
+    }
+
+    /* rga3 rd_mode */
+    /* If rd_mode is not configured, raster mode is executed by default. */
+    rgaReg.src.rd_mode = src->rd_mode ? src->rd_mode : raster_mode;
+    rgaReg.dst.rd_mode = dst->rd_mode ? dst->rd_mode : raster_mode;
+    if (src1)
+        rgaReg.pat.rd_mode = src1->rd_mode ? src1->rd_mode : raster_mode;
+
+    rgaReg.in_fence_fd = dst->in_fence_fd;
+    rgaReg.core = dst->core;
+    rgaReg.priority = dst->priority;
+
+    memcpy(ioc_req, &rgaReg, sizeof(rgaReg));
+
+    return 0;
+}
+
+int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst) {
+    int dstVirW,dstVirH,dstActW,dstActH,dstXPos,dstYPos;
+    int dstType,dstMmuFlag;
+    int dstFd = -1;
+    int ret = 0;
+    unsigned int color = 0x00000000;
+    rga_rect_t relDstRect,tmpDstRect;
+    COLOR_FILL fillColor ;
+    void *dstBuf = NULL;
+    RECT clip;
+    static struct rga_req rgaReg;
+
+    int sync_mode = RGA_BLIT_SYNC;
+
+    rga_session_t *session;
+
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
+
+#if NORMAL_API_LOG_EN
+    /* print debug log by setting property vendor.rga.log as 1 */
+    is_debug_log();
+    if(is_out_log()) {
+        ALOGD("<<<<-------- print rgaLog -------->>>>");
+        ALOGD("dst->hnd = 0x%lx\n", (unsigned long)dst->hnd);
+        ALOGD("dst: handle = %d, Fd = %.2d ,phyAddr = %p ,virAddr = %p\n", dst->handle, dst->fd, dst->phyAddr, dst->virAddr);
+    }
+#endif
+
+    memset(&rgaReg, 0, sizeof(struct rga_req));
+    rgaReg.feature.user_close_fence = true;
+
+    dstType = dstMmuFlag = 0;
+
+    if (!dst) {
+        ALOGE("dst = %p", dst);
+        return -EINVAL;
+    }
+
+    color = dst->color;
+    memcpy(&relDstRect, &dst->rect, sizeof(rga_rect_t));
+
+    if (relDstRect.hstride == 0)
+        relDstRect.hstride = relDstRect.height;
+#ifdef ANDROID
+    if (dst->hnd) {
+        ret = RkRgaGetHandleFd(dst->hnd, &dstFd);
+        if (ret) {
+            ALOGE("dst handle get fd fail ret = %d,hnd=%p", ret, &dst->hnd);
+            printf("-dst handle get fd fail ret = %d,hnd=%p", ret, &dst->hnd);
+            return ret;
+        }
+        if (!isRectValid(relDstRect)) {
+            ret = NormalRgaGetRect(dst->hnd, &tmpDstRect);
+            if (ret)
+                return ret;
+            memcpy(&relDstRect, &tmpDstRect, sizeof(rga_rect_t));
+        }
+        NormalRgaGetMmuType(dst->hnd, &dstType);
+    }
+#endif
+
+    if (dst->handle > 0) {
+        dstFd = dst->handle;
+        /* This will mark the use of handle */
+        rgaReg.handle_flag |= 1;
+    } else {
+        dstFd = dst->fd;
+    }
+
+    if (dst->phyAddr)
+        dstBuf = dst->phyAddr;
+    else if (dst->virAddr)
+        dstBuf = dst->virAddr;
+#ifdef ANDROID
+    else if (dst->hnd)
+        ret = RkRgaGetHandleMapAddress(dst->hnd, &dstBuf);
+#endif
+
+    if (dstFd == -1 && !dstBuf) {
+        ALOGE("%d:dst has not fd and address for render", __LINE__);
+        return ret;
+    }
+
+    if (dstFd == 0 && !dstBuf) {
+        ALOGE("dstFd is zero, now driver not support");
+        return -EINVAL;
+    }
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("handle_flag: 0x%x\n", rgaReg.handle_flag);
+        ALOGD("dst: Fd/handle = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", dstFd, dstBuf, dst->mmuFlag, dstType);
+    }
+#endif
+
+    relDstRect.format = RkRgaCompatibleFormat(relDstRect.format);
+
+    if (dstFd == 0)
+        dstFd = -1;
+
+    if (relDstRect.hstride == 0)
+        relDstRect.hstride = relDstRect.height;
+
+    dstVirW = relDstRect.wstride;
+    dstVirH = relDstRect.hstride;
+    dstXPos = relDstRect.xoffset;
+    dstYPos = relDstRect.yoffset;
+    dstActW = relDstRect.width;
+    dstActH = relDstRect.height;
+
+    clip.xmin = 0;
+    clip.xmax = dstActW - 1;
+    clip.ymin = 0;
+    clip.ymax = dstActH - 1;
+
+    switch (session->driver_type) {
+        case RGA_DRIVER_IOC_RGA1:
+            if (session->core_version.version[0].minor < 6) {
+#if defined(__arm64__) || defined(__aarch64__)
+                /*dst*/
+                NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                        (unsigned long)dstBuf + dstVirW * dstVirH,
+                                        (unsigned long)dstBuf + dstVirW * dstVirH * 5/4,
+                                        dstVirW, dstVirH, &clip,
+                                        RkRgaGetRgaFormat(relDstRect.format),0);
+#else
+                /*dst*/
+                NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned int)dstBuf,
+                                        (unsigned int)dstBuf + dstVirW * dstVirH,
+                                        (unsigned int)dstBuf + dstVirW * dstVirH * 5/4,
+                                        dstVirW, dstVirH, &clip,
+                                        RkRgaGetRgaFormat(relDstRect.format),0);
+#endif
+            } else {
+                /*dst*/
+                if (dstFd != -1) {
+                    dstMmuFlag = dstType ? 1 : 0;
+                    if (dst && dstFd == dst->fd)
+                        dstMmuFlag = dst->mmuFlag ? 1 : 0;
+                    NormalRgaSetDstVirtualInfo(&rgaReg, 0, 0, 0, dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+                    /*src dst fd*/
+                    NormalRgaSetFdsOffsets(&rgaReg, 0, dstFd, 0, 0);
+                } else {
+                    if (dst && dst->hnd)
+                        dstMmuFlag = dstType ? 1 : 0;
+                    if (dst && dstBuf == dst->virAddr)
+                        dstMmuFlag = 1;
+                    if (dst && dstBuf == dst->phyAddr)
+                        dstMmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                    NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                            (unsigned long)dstBuf + dstVirW * dstVirH,
+                                            (unsigned long)dstBuf + dstVirW * dstVirH * 5/4,
+                                            dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+#else
+                    NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned int)dstBuf,
+                                            (unsigned int)dstBuf + dstVirW * dstVirH,
+                                            (unsigned int)dstBuf + dstVirW * dstVirH * 5/4,
+                                            dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+        #endif
+                }
+            }
+
+            break;
+        case RGA_DRIVER_IOC_RGA2:
+        case RGA_DRIVER_IOC_MULTI_RGA:
+        default:
+            if (dst && dst->hnd)
+                dstMmuFlag = dstType ? 1 : 0;
+            if (dst && dstBuf == dst->virAddr)
+                dstMmuFlag = 1;
+            if (dst && dstBuf == dst->phyAddr)
+                dstMmuFlag = 0;
+            if (dstFd != -1)
+                dstMmuFlag = dstType ? 1 : 0;
+            if (dst && dstFd == dst->fd)
+                dstMmuFlag = dst->mmuFlag ? 1 : 0;
+#if defined(__arm64__) || defined(__aarch64__)
+            /*dst*/
+            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
+                                    (unsigned long)dstBuf,
+                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    dstVirW, dstVirH, &clip,
+                                    RkRgaGetRgaFormat(relDstRect.format),0);
+#else
+            /*dst*/
+            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
+                                    (unsigned int)dstBuf,
+                                    (unsigned int)dstBuf + dstVirW * dstVirH,
+                                    dstVirW, dstVirH, &clip,
+                                    RkRgaGetRgaFormat(relDstRect.format),0);
+#endif
+
+            break;
+    }
+
+    if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format))) {
+        rgaReg.yuv2rgb_mode |= 0x2 << 2;
+    }
+
+    if(dst->color_space_mode > 0)
+        rgaReg.yuv2rgb_mode = dst->color_space_mode;
+
+    NormalRgaSetDstActiveInfo(&rgaReg, dstActW, dstActH, dstXPos, dstYPos);
+
+    memset(&fillColor, 0x0, sizeof(COLOR_FILL));
+
+    /*mode*/
+    NormalRgaSetColorFillMode(&rgaReg, &fillColor, 0, 0, color, 0, 0, 0, 0, 0);
+
+    if (dstMmuFlag) {
+        NormalRgaMmuInfo(&rgaReg, 1, 0, 0, 0, 0, 2);
+        NormalRgaMmuFlag(&rgaReg, dstMmuFlag, dstMmuFlag);
+    }
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("dstMmuFlag = %d\n", dstMmuFlag);
+        ALOGD("<<<<-------- rgaReg -------->>>>\n");
+        NormalRgaLogOutRgaReq(rgaReg);
+    }
+#endif
+
+    if(dst->sync_mode == RGA_BLIT_ASYNC) {
+        sync_mode = dst->sync_mode;
+    }
+
+    /* rga3 rd_mode */
+    /* If rd_mode is not configured, raster mode is executed by default. */
+    rgaReg.dst.rd_mode = dst->rd_mode ? dst->rd_mode : raster_mode;
+
+    rgaReg.in_fence_fd = dst->in_fence_fd;
+    rgaReg.core = dst->core;
+    rgaReg.priority = dst->priority;
+
+    memcpy(ioc_req, &rgaReg, sizeof(rgaReg));
+
+    return 0;
+}
+
+int generate_color_palette_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst, rga_info_t *lut) {
+    struct rga_req  Rga_Request;
+    struct rga_req  Rga_Request2;
+    int srcVirW ,srcVirH ,srcActW ,srcActH ,srcXPos ,srcYPos;
+    int dstVirW ,dstVirH ,dstActW ,dstActH ,dstXPos ,dstYPos;
+    int lutVirW ,lutVirH ,lutActW ,lutActH ,lutXPos ,lutYPos;
+    int srcType ,dstType ,lutType ,srcMmuFlag ,dstMmuFlag, lutMmuFlag;
+    int dstFd = -1;
+    int srcFd = -1;
+    int lutFd = -1;
+    int ret = 0;
+    rga_rect_t relSrcRect,tmpSrcRect,relDstRect,tmpDstRect, relLutRect, tmpLutRect;
+    struct rga_req rgaReg;
+    void *srcBuf = NULL;
+    void *dstBuf = NULL;
+    void *lutBuf = NULL;
+    RECT clip;
+
+    rga_session_t *session;
+
+    session = get_rga_session();
+    if (IS_ERR(session))
+        return (IM_STATUS)PTR_ERR(session);
+
+    //init
+    memset(&rgaReg, 0, sizeof(struct rga_req));
+    rgaReg.feature.user_close_fence = true;
+
+    srcType = dstType = lutType = srcMmuFlag = dstMmuFlag = lutMmuFlag = 0;
+
+#if NORMAL_API_LOG_EN
+    /* print debug log by setting property vendor.rga.log as 1 */
+    is_debug_log();
+    if(is_out_log())
+    ALOGD("<<<<-------- print rgaLog -------->>>>");
+#endif
+
+    if (!src && !dst) {
+        ALOGE("src = %p, dst = %p, lut = %p", src, dst, lut);
+        return -EINVAL;
+    }
+
+     /* get effective area from src、dst and lut, if the area is empty, choose to get parameter from handle. */
+    if (src)
+        memcpy(&relSrcRect, &src->rect, sizeof(rga_rect_t));
+    if (dst)
+        memcpy(&relDstRect, &dst->rect, sizeof(rga_rect_t));
+    if (lut)
+        memcpy(&relLutRect, &lut->rect, sizeof(rga_rect_t));
+
+    srcFd = dstFd = lutFd = -1;
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("src->hnd = 0x%lx , dst->hnd = 0x%lx, lut->hnd = 0x%lx \n",
+            (unsigned long)src->hnd, (unsigned long)dst->hnd, (unsigned long)lut->hnd);
+        ALOGD("src: Fd = %.2d , phyAddr = %p , virAddr = %p\n",src->fd,src->phyAddr,src->virAddr);
+        ALOGD("dst: Fd = %.2d , phyAddr = %p , virAddr = %p\n",dst->fd,dst->phyAddr,dst->virAddr);
+        ALOGD("lut: Fd = %.2d , phyAddr = %p , virAddr = %p\n",lut->fd,lut->phyAddr,lut->virAddr);
+    }
+#endif
+
+    if (lut) {
+        if (src->handle <= 0 || dst->handle <= 0 || lut->handle <= 0) {
+            ALOGE("librga only supports the use of handles only or no handles, [src,lut,dst] = [%d, %d, %d]\n",
+                    src->handle, lut->handle, dst->handle);
+            return -EINVAL;
+        }
+
+        /* This will mark the use of handle */
+        rgaReg.handle_flag |= 1;
+    } else if (src->handle > 0 && dst->handle > 0) {
+        /* This will mark the use of handle */
+        rgaReg.handle_flag |= 1;
+    } else {
+        ALOGE("librga only supports the use of handles only or no handles, [src,dst] = [%d, %d]\n",
+                  src->handle, dst->handle);
+        return -EINVAL;
+    }
+
+    /*********** get src addr *************/
+    if (src && src->handle) {
+        /* In order to minimize changes, the handle here will reuse the variable of Fd. */
+        srcFd = src->handle;
+    } else if (src && src->phyAddr) {
+        srcBuf = src->phyAddr;
+    } else if (src && src->fd > 0) {
+        srcFd = src->fd;
+        src->mmuFlag = 1;
+    } else if (src && src->virAddr) {
+        srcBuf = src->virAddr;
+        src->mmuFlag = 1;
+    }
+#ifdef ANDROID
+    else if (src && src->hnd) {
+#ifndef RK3188
+        /* RK3188 is special, cannot configure rga through fd. */
+        RkRgaGetHandleFd(src->hnd, &srcFd);
+#endif
+#ifndef ANDROID_8
+        if (srcFd < 0 || srcFd == 0) {
+            RkRgaGetHandleMapAddress(src->hnd, &srcBuf);
+        }
+#endif
+        if ((srcFd < 0 || srcFd == 0) && srcBuf == NULL) {
+            ALOGE("src handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &src->hnd);
+            printf("src handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &src->hnd);
+            return ret;
+        }
+        else {
+            srcType = 1;
+        }
+    }
+
+    if (!isRectValid(relSrcRect)) {
+        ret = NormalRgaGetRect(src->hnd, &tmpSrcRect);
+        if (ret) {
+            ALOGE("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &src->hnd);
+            printf("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &src->hnd);
+            return ret;
+        }
+        memcpy(&relSrcRect, &tmpSrcRect, sizeof(rga_rect_t));
+    }
+#endif
+
+    if (srcFd == -1 && !srcBuf) {
+        ALOGE("%d:src has not fd and address for render", __LINE__);
+        return ret;
+    }
+    if (srcFd == 0 && !srcBuf) {
+        ALOGE("srcFd is zero, now driver not support");
+        return -EINVAL;
+    }
+    /* Old rga driver cannot support fd as zero. */
+    if (srcFd == 0)
+        srcFd = -1;
+
+    /*********** get dst addr *************/
+    if (dst && dst->handle) {
+        /* In order to minimize changes, the handle here will reuse the variable of Fd. */
+        dstFd = dst->handle;
+    } else if (dst && dst->phyAddr) {
+        dstBuf = dst->phyAddr;
+    } else if (dst && dst->fd > 0) {
+        dstFd = dst->fd;
+        dst->mmuFlag = 1;
+    } else if (dst && dst->virAddr) {
+        dstBuf = dst->virAddr;
+        dst->mmuFlag = 1;
+    }
+#ifdef ANDROID
+    else if (dst && dst->hnd) {
+#ifndef RK3188
+        /* RK3188 is special, cannot configure rga through fd. */
+        RkRgaGetHandleFd(dst->hnd, &dstFd);
+#endif
+#ifndef ANDROID_8
+        if (dstFd < 0 || dstFd == 0) {
+            RkRgaGetHandleMapAddress(dst->hnd, &dstBuf);
+        }
+#endif
+        if ((dstFd < 0 || dstFd == 0) && dstBuf == NULL) {
+            ALOGE("dst handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &dst->hnd);
+            printf("dst handle get fd and vir_addr fail ret = %d,hnd=%p", ret, &dst->hnd);
+            return ret;
+        }
+        else {
+            dstType = 1;
+        }
+    }
+
+    if (!isRectValid(relDstRect)) {
+        ret = NormalRgaGetRect(dst->hnd, &tmpDstRect);
+        if (ret) {
+            ALOGE("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &dst->hnd);
+            printf("dst handleGetRect fail ,ret = %d,hnd=%p", ret, &dst->hnd);
+            return ret;
+        }
+        memcpy(&relDstRect, &tmpDstRect, sizeof(rga_rect_t));
+    }
+#endif
+
+    if (dstFd == -1 && !dstBuf) {
+        ALOGE("%d:dst has not fd and address for render", __LINE__);
+        return ret;
+    }
+    if (dstFd == 0 && !dstBuf) {
+        ALOGE("dstFd is zero, now driver not support");
+        return -EINVAL;
+    }
+    /* Old rga driver cannot support fd as zero. */
+    if (dstFd == 0)
+        dstFd = -1;
+
+    /*********** get lut addr *************/
+    if (lut && lut->handle) {
+        /* In order to minimize changes, the handle here will reuse the variable of Fd. */
+        lutFd = lut->handle;
+    } else if (lut && lut->phyAddr) {
+        lutBuf = lut->phyAddr;
+    } else if (lut && lut->fd > 0) {
+        lutFd = lut->fd;
+        lut->mmuFlag = 1;
+    } else if (lut && lut->virAddr) {
+        lutBuf = lut->virAddr;
+        lut->mmuFlag = 1;
+    }
+#ifdef ANDROID
+    else if (lut && lut->hnd) {
+#ifndef RK3188
+        /* RK3188 is special, cannot configure rga through fd. */
+        RkRgaGetHandleFd(lut->hnd, &lutFd);
+#endif
+#ifndef ANDROID_8
+        if (lutFd < 0 || lutFd == 0) {
+            RkRgaGetHandleMapAddress(lut->hnd, &lutBuf);
+        }
+#endif
+        if ((lutFd < 0 || lutFd == 0) && lutBuf == NULL) {
+            ALOGE("No lut address,not using update palette table mode.\n");
+            printf("No lut address,not using update palette table mode.\n");
+        }
+        else {
+            lutType = 1;
+        }
+
+        ALOGD("lut->mmuFlag = %d", lut->mmuFlag);
+    }
+
+    if (!isRectValid(relLutRect)) {
+        ret = NormalRgaGetRect(lut->hnd, &tmpLutRect);
+        if (ret) {
+            ALOGE("lut handleGetRect fail ,ret = %d,hnd=%p", ret, &lut->hnd);
+            printf("lut handleGetRect fail ,ret = %d,hnd=%p", ret, &lut->hnd);
+        }
+        memcpy(&relLutRect, &tmpLutRect, sizeof(rga_rect_t));
+    }
+#endif
+
+    /* Old rga driver cannot support fd as zero. */
+    if (lutFd == 0)
+        lutFd = -1;
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("src: Fd = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", srcFd, srcBuf, src->mmuFlag, srcType);
+        ALOGD("dst: Fd = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", dstFd, dstBuf, dst->mmuFlag, dstType);
+        ALOGD("lut: Fd = %.2d , buf = %p, mmuFlag = %d, mmuType = %d\n", lutFd, lutBuf, lut->mmuFlag, lutType);
+    }
+#endif
+
+    relSrcRect.format = RkRgaCompatibleFormat(relSrcRect.format);
+    relDstRect.format = RkRgaCompatibleFormat(relDstRect.format);
+    relLutRect.format = RkRgaCompatibleFormat(relLutRect.format);
+
+#ifdef RK3126C
+    if ( (relSrcRect.width == relDstRect.width) && (relSrcRect.height == relDstRect.height ) &&
+         (relSrcRect.width + 2*relSrcRect.xoffset == relSrcRect.wstride) &&
+         (relSrcRect.height + 2*relSrcRect.yoffset == relSrcRect.hstride) &&
+         (relSrcRect.format == HAL_PIXEL_FORMAT_YCrCb_NV12) && (relSrcRect.xoffset > 0 && relSrcRect.yoffset > 0)
+       ) {
+        relSrcRect.width += 4;
+        //relSrcRect.height += 4;
+        relSrcRect.xoffset = (relSrcRect.wstride - relSrcRect.width) / 2;
+    }
+#endif
+    /* discripe a picture need high stride.If high stride not to be set, need use height as high stride. */
+    if (relSrcRect.hstride == 0)
+        relSrcRect.hstride = relSrcRect.height;
+
+    if (relDstRect.hstride == 0)
+        relDstRect.hstride = relDstRect.height;
+
+    /* do some check, check the area of src and dst whether is effective. */
+    if (src) {
+        ret = checkRectForRga(relSrcRect);
+        if (ret) {
+            printf("Error srcRect\n");
+            ALOGE("[%s,%d]Error srcRect \n", __func__, __LINE__);
+            return ret;
+        }
+    }
+
+    if (dst) {
+        ret = checkRectForRga(relDstRect);
+        if (ret) {
+            printf("Error dstRect\n");
+            ALOGE("[%s,%d]Error dstRect \n", __func__, __LINE__);
+            return ret;
+        }
+    }
+
+    srcVirW = relSrcRect.wstride;
+    srcVirH = relSrcRect.hstride;
+    srcXPos = relSrcRect.xoffset;
+    srcYPos = relSrcRect.yoffset;
+    srcActW = relSrcRect.width;
+    srcActH = relSrcRect.height;
+
+    dstVirW = relDstRect.wstride;
+    dstVirH = relDstRect.hstride;
+    dstXPos = relDstRect.xoffset;
+    dstYPos = relDstRect.yoffset;
+    dstActW = relDstRect.width;
+    dstActH = relDstRect.height;
+
+    lutVirW = relLutRect.wstride;
+    lutVirH = relLutRect.hstride;
+    lutXPos = relLutRect.xoffset;
+    lutYPos = relLutRect.yoffset;
+    lutActW = relLutRect.width;
+    lutActH = relLutRect.height;
+
+    /* if pictual out of range should be cliped. */
+    clip.xmin = 0;
+    clip.xmax = dstVirW - 1;
+    clip.ymin = 0;
+    clip.ymax = dstVirH - 1;
+
+    switch (session->driver_type) {
+        case RGA_DRIVER_IOC_RGA1:
+            if (session->core_version.version[0].minor < 6) {
+                srcMmuFlag = dstMmuFlag = lutMmuFlag = 1;
+
+#if defined(__arm64__) || defined(__aarch64__)
+                NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned long)srcBuf,
+                                        (unsigned long)srcBuf + srcVirW * srcVirH,
+                                        (unsigned long)srcBuf + srcVirW * srcVirH * 5/4,
+                                        srcVirW, srcVirH,
+                                        RkRgaGetRgaFormat(relSrcRect.format),0);
+                /*dst*/
+                NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                        (unsigned long)dstBuf + dstVirW * dstVirH,
+                                        (unsigned long)dstBuf + dstVirW * dstVirH * 5/4,
+                                        dstVirW, dstVirH, &clip,
+                                        RkRgaGetRgaFormat(relDstRect.format),0);
+                /*lut*/
+                NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned long)lutBuf,
+                                        (unsigned long)lutBuf + lutVirW * lutVirH,
+                                        (unsigned long)lutBuf + lutVirW * lutVirH * 5/4,
+                                        lutVirW, lutVirH, &clip,
+                                        RkRgaGetRgaFormat(relLutRect.format),0);
+#else
+                NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned long)srcBuf,
+                                        (unsigned int)srcBuf + srcVirW * srcVirH,
+                                        (unsigned int)srcBuf + srcVirW * srcVirH * 5/4,
+                                        srcVirW, srcVirH,
+                                        RkRgaGetRgaFormat(relSrcRect.format),0);
+                /*dst*/
+                NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                        (unsigned int)dstBuf + dstVirW * dstVirH,
+                                        (unsigned int)dstBuf + dstVirW * dstVirH * 5/4,
+                                        dstVirW, dstVirH, &clip,
+                                        RkRgaGetRgaFormat(relDstRect.format),0);
+                /*lut*/
+                NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned long)lutBuf,
+                                        (unsigned int)lutBuf + lutVirW * lutVirH,
+                                        (unsigned int)lutBuf + lutVirW * lutVirH * 5/4,
+                                        lutVirW, lutVirH, &clip,
+                                        RkRgaGetRgaFormat(relLutRect.format),0);
+
+#endif
+            } else {
+                /*Src*/
+                if (srcFd != -1) {
+                    srcMmuFlag = srcType ? 1 : 0;
+                    if (src && srcFd == src->fd)
+                        srcMmuFlag = src->mmuFlag ? 1 : 0;
+                    NormalRgaSetSrcVirtualInfo(&rgaReg, 0, 0, 0, srcVirW, srcVirH,
+                                            RkRgaGetRgaFormat(relSrcRect.format),0);
+                    NormalRgaSetFdsOffsets(&rgaReg, srcFd, 0, 0, 0);
+                } else {
+                    if (src && src->hnd)
+                        srcMmuFlag = srcType ? 1 : 0;
+                    if (src && srcBuf == src->virAddr)
+                        srcMmuFlag = 1;
+                    if (src && srcBuf == src->phyAddr)
+                        srcMmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                    NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned long)srcBuf,
+                                            (unsigned long)srcBuf + srcVirW * srcVirH,
+                                            (unsigned long)srcBuf + srcVirW * srcVirH * 5/4,
+                                            srcVirW, srcVirH,
+                                            RkRgaGetRgaFormat(relSrcRect.format),0);
+#else
+                    NormalRgaSetSrcVirtualInfo(&rgaReg, (unsigned int)srcBuf,
+                                            (unsigned int)srcBuf + srcVirW * srcVirH,
+                                            (unsigned int)srcBuf + srcVirW * srcVirH * 5/4,
+                                            srcVirW, srcVirH,
+                                            RkRgaGetRgaFormat(relSrcRect.format),0);
+#endif
+                }
+                /*dst*/
+                if (dstFd != -1) {
+                    dstMmuFlag = dstType ? 1 : 0;
+                    if (dst && dstFd == dst->fd)
+                        dstMmuFlag = dst->mmuFlag ? 1 : 0;
+                    NormalRgaSetDstVirtualInfo(&rgaReg, 0, 0, 0, dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+                    /*src dst fd*/
+                    NormalRgaSetFdsOffsets(&rgaReg, 0, dstFd, 0, 0);
+                } else {
+                    if (dst && dst->hnd)
+                        dstMmuFlag = dstType ? 1 : 0;
+                    if (dst && dstBuf == dst->virAddr)
+                        dstMmuFlag = 1;
+                    if (dst && dstBuf == dst->phyAddr)
+                        dstMmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                    NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned long)dstBuf,
+                                            (unsigned long)dstBuf + dstVirW * dstVirH,
+                                            (unsigned long)dstBuf + dstVirW * dstVirH * 5/4,
+                                            dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+#else
+                    NormalRgaSetDstVirtualInfo(&rgaReg, (unsigned int)dstBuf,
+                                            (unsigned int)dstBuf + dstVirW * dstVirH,
+                                            (unsigned int)dstBuf + dstVirW * dstVirH * 5/4,
+                                            dstVirW, dstVirH, &clip,
+                                            RkRgaGetRgaFormat(relDstRect.format),0);
+#endif
+                }
+                /*lut*/
+                if (lutFd != -1) {
+                    lutMmuFlag = lutType ? 1 : 0;
+                    if (lut && lutFd == lut->fd)
+                        lutMmuFlag = lut->mmuFlag ? 1 : 0;
+                    NormalRgaSetPatVirtualInfo(&rgaReg, 0, 0, 0, lutVirW, lutVirH, &clip,
+                                            RkRgaGetRgaFormat(relLutRect.format),0);
+                    /*lut fd*/
+                    NormalRgaSetFdsOffsets(&rgaReg, 0, lutFd, 0, 0);
+                } else {
+                    if (lut && lut->hnd)
+                        lutMmuFlag = lutType ? 1 : 0;
+                    if (lut && lutBuf == lut->virAddr)
+                        lutMmuFlag = 1;
+                    if (lut && lutBuf == lut->phyAddr)
+                        lutMmuFlag = 0;
+#if defined(__arm64__) || defined(__aarch64__)
+                    NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned long)lutBuf,
+                                            (unsigned long)lutBuf + lutVirW * lutVirH,
+                                            (unsigned long)lutBuf + lutVirW * lutVirH * 5/4,
+                                            lutVirW, lutVirH, &clip,
+                                            RkRgaGetRgaFormat(relLutRect.format),0);
+#else
+                    NormalRgaSetPatVirtualInfo(&rgaReg, (unsigned int)lutBuf,
+                                            (unsigned int)lutBuf + lutVirW * lutVirH,
+                                            (unsigned int)lutBuf + lutVirW * lutVirH * 5/4,
+                                            lutVirW, lutVirH, &clip,
+                                            RkRgaGetRgaFormat(relLutRect.format),0);
+#endif
+                }
+            }
+
+            break;
+        case RGA_DRIVER_IOC_RGA2:
+        case RGA_DRIVER_IOC_MULTI_RGA:
+        default:
+            if (src && src->hnd)
+                srcMmuFlag = srcType ? 1 : 0;
+            if (src && srcBuf == src->virAddr)
+                srcMmuFlag = 1;
+            if (src && srcBuf == src->phyAddr)
+                srcMmuFlag = 0;
+            if (srcFd != -1)
+                srcMmuFlag = srcType ? 1 : 0;
+            if (src && srcFd == src->fd)
+                srcMmuFlag = src->mmuFlag ? 1 : 0;
+
+            if (dst && dst->hnd)
+                dstMmuFlag = dstType ? 1 : 0;
+            if (dst && dstBuf == dst->virAddr)
+                dstMmuFlag = 1;
+            if (dst && dstBuf == dst->phyAddr)
+                dstMmuFlag = 0;
+            if (dstFd != -1)
+                dstMmuFlag = dstType ? 1 : 0;
+            if (dst && dstFd == dst->fd)
+                dstMmuFlag = dst->mmuFlag ? 1 : 0;
+
+            if (lut && lut->hnd)
+                lutMmuFlag = lutType ? 1 : 0;
+            if (lut && lutBuf == lut->virAddr)
+                lutMmuFlag = 1;
+            if (lut && lutBuf == lut->phyAddr)
+                lutMmuFlag = 0;
+            if (lutFd != -1)
+                lutMmuFlag = lutType ? 1 : 0;
+            if (lut && lutFd == lut->fd)
+                lutMmuFlag = lut->mmuFlag ? 1 : 0;
+
+    #if defined(__arm64__) || defined(__aarch64__)
+            NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
+                                    (unsigned long)srcBuf,
+                                    (unsigned long)srcBuf + srcVirW * srcVirH,
+                                    srcVirW, srcVirH,
+                                    RkRgaGetRgaFormat(relSrcRect.format),0);
+            /*dst*/
+            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
+                                    (unsigned long)dstBuf,
+                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    dstVirW, dstVirH, &clip,
+                                    RkRgaGetRgaFormat(relDstRect.format),0);
+
+            /*lut*/
+            NormalRgaSetPatVirtualInfo(&rgaReg, lutFd != -1 ? lutFd : 0,
+                                    (unsigned long)lutBuf,
+                                    (unsigned long)lutBuf + lutVirW * lutVirH,
+                                    lutVirW, lutVirH, &clip,
+                                    RkRgaGetRgaFormat(relLutRect.format),0);
+    #else
+            NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
+                                    (unsigned int)srcBuf,
+                                    (unsigned int)srcBuf + srcVirW * srcVirH,
+                                    srcVirW, srcVirH,
+                                    RkRgaGetRgaFormat(relSrcRect.format),0);
+            /*dst*/
+            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
+                                    (unsigned int)dstBuf,
+                                    (unsigned int)dstBuf + dstVirW * dstVirH,
+                                    dstVirW, dstVirH, &clip,
+                                    RkRgaGetRgaFormat(relDstRect.format),0);
+            /*lut*/
+            NormalRgaSetPatVirtualInfo(&rgaReg, lutFd != -1 ? lutFd : 0,
+                                    (unsigned int)lutBuf,
+                                    (unsigned int)lutBuf + lutVirW * lutVirH,
+                                    lutVirW, lutVirH, &clip,
+                                    RkRgaGetRgaFormat(relLutRect.format),0);
+
+    #endif
+            break;
+    }
+
+    /* set effective area of src and dst. */
+    NormalRgaSetSrcActiveInfo(&rgaReg, srcActW, srcActH, srcXPos, srcYPos);
+    NormalRgaSetDstActiveInfo(&rgaReg, dstActW, dstActH, dstXPos, dstYPos);
+    NormalRgaSetPatActiveInfo(&rgaReg, lutActW, lutActH, lutXPos, lutYPos);
+
+    if (srcMmuFlag || dstMmuFlag || lutMmuFlag) {
+        NormalRgaMmuInfo(&rgaReg, 1, 0, 0, 0, 0, 2);
+        NormalRgaMmuFlag(&rgaReg, srcMmuFlag, dstMmuFlag);
+        /*set lut mmu_flag*/
+        if (lutMmuFlag) {
+            rgaReg.mmu_info.mmu_flag |= (0x1 << 11);
+            rgaReg.mmu_info.mmu_flag |= (0x1 << 9);
+        }
+
+    }
+
+#if NORMAL_API_LOG_EN
+    if(is_out_log()) {
+        ALOGD("srcMmuFlag = %d , dstMmuFlag = %d , lutMmuFlag = %d\n", srcMmuFlag, dstMmuFlag, lutMmuFlag);
+        ALOGD("<<<<-------- rgaReg -------->>>>\n");
+        NormalRgaLogOutRgaReq(rgaReg);
+    }
+#endif
+
+    switch (RkRgaGetRgaFormat(relSrcRect.format)) {
+        case RK_FORMAT_BPP1 :
+            rgaReg.palette_mode = 0;
+            break;
+        case RK_FORMAT_BPP2 :
+            rgaReg.palette_mode = 1;
+            break;
+        case RK_FORMAT_BPP4 :
+            rgaReg.palette_mode = 2;
+            break;
+        case RK_FORMAT_BPP8 :
+            rgaReg.palette_mode = 3;
+            break;
+    }
+
+    /* rga3 rd_mode */
+    /* If rd_mode is not configured, raster mode is executed by default. */
+    rgaReg.src.rd_mode = src->rd_mode ? src->rd_mode : raster_mode;
+    rgaReg.dst.rd_mode = dst->rd_mode ? dst->rd_mode : raster_mode;
+    if (lut)
+        rgaReg.pat.rd_mode = lut->rd_mode ? lut->rd_mode : raster_mode;
+
+    rgaReg.in_fence_fd = dst->in_fence_fd;
+    rgaReg.core = dst->core;
+    rgaReg.priority = dst->priority;
+
+    if (!(lutFd == -1 && lutBuf == NULL)) {
+        rgaReg.fading.g = 0xff;
+        rgaReg.render_mode = update_palette_table_mode;
+
+        if(ioctl(session->rga_dev_fd, RGA_BLIT_SYNC, &rgaReg) != 0) {
+            printf("update palette table mode ioctl err\n");
+            return -1;
+        }
+    }
+
+    rgaReg.render_mode = color_palette_mode;
+    rgaReg.endian_mode = 1;
+
+    memcpy(ioc_req, &rgaReg, sizeof(rgaReg));
+
+    return 0;
+}
+

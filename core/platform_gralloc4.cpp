@@ -398,6 +398,29 @@ int get_share_fd(buffer_handle_t handle, int* share_fd)
     return err;
 }
 
+uint32_t get_fourcc_format(buffer_handle_t handle)
+{
+    auto &mapper = get_service();
+    uint32_t fourcc;
+
+    int err = get_metadata(mapper, handle, MetadataType_PixelFormatFourCC, decodePixelFormatFourCC, &fourcc);
+    assert(err == android::NO_ERROR);
+
+    return fourcc;
+}
+
+uint64_t get_format_modifier(buffer_handle_t handle)
+{
+
+  auto &mapper = get_service();
+  uint64_t modifier;
+
+  int err = get_metadata(mapper, handle, MetadataType_PixelFormatModifier, decodePixelFormatModifier, &modifier);
+  assert(err == android::NO_ERROR);
+
+  return modifier;
+}
+
 status_t importBuffer(buffer_handle_t rawHandle, buffer_handle_t* outHandle)
 {
     auto &mapper = get_service();

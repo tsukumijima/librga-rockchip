@@ -39,6 +39,10 @@ set(IM2D_RGA_SLT_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/sources/rga_im2d_slt.cpp
 )
 
+if(RGA_SOURCE_CODE_TYPE STREQUAL c)
+    set_source_files_properties(${IM2D_RGA_SLT_SRCS} PROPERTIES LANGUAGE C COMPILE_FLAGS "-x c")
+endif()
+
 if (NOT DEFINED RGA_SAMPLES_UTILS_COMPILED)
     include(${CMAKE_CURRENT_SOURCE_DIR}/../utils/CMakeLists.txt)
 endif()

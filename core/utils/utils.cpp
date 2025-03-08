@@ -19,6 +19,116 @@
 #include "rga.h"
 #include "utils.h"
 
+bool is_bpp_format(int format) {
+    bool ret = false;
+
+    switch (format) {
+        case RK_FORMAT_BPP1:
+        case RK_FORMAT_BPP2:
+        case RK_FORMAT_BPP4:
+        case RK_FORMAT_BPP8:
+            ret = true;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
+bool is_yuv_format(int format) {
+    bool ret = false;
+
+    switch (format) {
+        case RK_FORMAT_YCbCr_422_SP:
+        case RK_FORMAT_YCbCr_422_P:
+        case RK_FORMAT_YCbCr_420_SP:
+        case RK_FORMAT_YCbCr_420_P:
+        case RK_FORMAT_YCrCb_422_SP:
+        case RK_FORMAT_YCrCb_422_P:
+        case RK_FORMAT_YCrCb_420_SP:
+        case RK_FORMAT_YCrCb_420_P:
+        case RK_FORMAT_YVYU_422:
+        case RK_FORMAT_YVYU_420:
+        case RK_FORMAT_VYUY_422:
+        case RK_FORMAT_VYUY_420:
+        case RK_FORMAT_YUYV_422:
+        case RK_FORMAT_YUYV_420:
+        case RK_FORMAT_UYVY_422:
+        case RK_FORMAT_UYVY_420:
+        case RK_FORMAT_Y4:
+        case RK_FORMAT_YCbCr_400:
+        case RK_FORMAT_YCbCr_420_SP_10B:
+        case RK_FORMAT_YCrCb_420_SP_10B:
+        case RK_FORMAT_YCrCb_422_10b_SP:
+        case RK_FORMAT_YCbCr_422_10b_SP:
+            ret = true;
+            break;
+    }
+
+    return ret;
+}
+
+bool is_rgb_format(int format) {
+    bool ret = false;
+
+    switch (format) {
+        case RK_FORMAT_RGBA_8888:
+        case RK_FORMAT_RGBX_8888:
+        case RK_FORMAT_RGBA_5551:
+        case RK_FORMAT_RGBA_4444:
+        case RK_FORMAT_RGB_888:
+        case RK_FORMAT_RGB_565:
+        case RK_FORMAT_BGRA_8888:
+        case RK_FORMAT_BGRX_8888:
+        case RK_FORMAT_BGRA_5551:
+        case RK_FORMAT_BGRA_4444:
+        case RK_FORMAT_BGR_888:
+        case RK_FORMAT_BGR_565:
+        /*ARGB*/
+        case RK_FORMAT_ARGB_8888:
+        case RK_FORMAT_XRGB_8888:
+        case RK_FORMAT_ARGB_5551:
+        case RK_FORMAT_ARGB_4444:
+        case RK_FORMAT_ABGR_8888:
+        case RK_FORMAT_XBGR_8888:
+        case RK_FORMAT_ABGR_5551:
+        case RK_FORMAT_ABGR_4444:
+            ret = true;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
+bool is_alpha_format(int format) {
+    bool ret = false;
+
+    switch (format) {
+        case RK_FORMAT_RGBA_8888:
+        case RK_FORMAT_RGBA_5551:
+        case RK_FORMAT_RGBA_4444:
+        case RK_FORMAT_BGRA_8888:
+        case RK_FORMAT_BGRA_5551:
+        case RK_FORMAT_BGRA_4444:
+        case RK_FORMAT_ARGB_8888:
+        case RK_FORMAT_ARGB_5551:
+        case RK_FORMAT_ARGB_4444:
+        case RK_FORMAT_ABGR_8888:
+        case RK_FORMAT_ABGR_5551:
+        case RK_FORMAT_ABGR_4444:
+        case RK_FORMAT_RGBA2BPP:
+            ret = true;
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
 static int get_compatible_format(int format) {
 #if LINUX
     if (format == 0)

@@ -20,6 +20,7 @@
 #define _IM2D_SLT_CRC_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "slt_config.h"
 

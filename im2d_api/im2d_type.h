@@ -91,6 +91,7 @@ typedef enum {
     IM_OSD                      = 1 << 28,
     IM_PRE_INTR                 = 1 << 29,
     IM_ALPHA_BIT_MAP            = 1 << 30,
+    IM_GAUSS                    = 1 << 31,
 } IM_USAGE;
 
 typedef enum {
@@ -271,16 +272,28 @@ typedef enum {
     RGA_ALL,
 } IM_INFORMATION;
 
+typedef enum {
+    IM_ERROR_FAILED = 0,
+    IM_ERROR_NOT_SUPPORTED,
+    IM_ERROR_OUT_OF_MEMORY,
+    IM_ERROR_INVALID_PARAM,
+    IM_ERROR_ILLEGAL_PARAM,
+    IM_ERROR_ERROR_VERSION,
+    IM_ERROR_NO_SESSION,
+    IM_ERROR_MAX,
+} IM_ERROR_INDEX;
+
 /* Status codes, returned by any blit function */
 typedef enum {
     IM_STATUS_NOERROR           =  2,
     IM_STATUS_SUCCESS           =  1,
-    IM_STATUS_NOT_SUPPORTED     = -1,
-    IM_STATUS_OUT_OF_MEMORY     = -2,
-    IM_STATUS_INVALID_PARAM     = -3,
-    IM_STATUS_ILLEGAL_PARAM     = -4,
-    IM_STATUS_ERROR_VERSION     = -5,
-    IM_STATUS_FAILED            =  0,
+    IM_STATUS_NOT_SUPPORTED     = -IM_ERROR_NOT_SUPPORTED,
+    IM_STATUS_OUT_OF_MEMORY     = -IM_ERROR_OUT_OF_MEMORY,
+    IM_STATUS_INVALID_PARAM     = -IM_ERROR_INVALID_PARAM,
+    IM_STATUS_ILLEGAL_PARAM     = -IM_ERROR_ILLEGAL_PARAM,
+    IM_STATUS_ERROR_VERSION     = -IM_ERROR_ERROR_VERSION,
+    IM_STATUS_NO_SESSION        = -IM_ERROR_NO_SESSION,
+    IM_STATUS_FAILED            = -IM_ERROR_FAILED,
 } IM_STATUS;
 
 /* Rectangle definition */
@@ -438,6 +451,20 @@ typedef struct im_intr_config {
     int write_step;
 } im_intr_config_t;
 
+typedef struct im_size {
+    int width;
+    int height;
+} im_size_t;
+
+typedef struct im_gauss {
+    im_size_t ksize;
+
+    double sigma_x;
+    double sigma_y;
+
+    double *matrix;
+} im_gauss_t;
+
 typedef struct im_opt {
     im_api_version_t version DEFAULT_INITIALIZER(RGA_CURRENT_API_HEADER_VERSION);
 
@@ -457,7 +484,9 @@ typedef struct im_opt {
 
     int interp;
 
-    char reserve[124];
+    im_gauss_t gauss_config;
+
+    char reserve[92];
 } im_opt_t;
 
 typedef struct im_handle_param {

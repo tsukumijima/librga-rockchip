@@ -13,8 +13,18 @@ rm -rf $BUILD_DIR
 mkdir -p $BUILD_DIR
 pushd $BUILD_DIR
 
+if [ ${1} == 'c' ]
+then
+	echo "compile with C"
+		BUILD_SOURCE_TYPE=c
+	else
+		echo "compile with C++"
+		BUILD_SOURCE_TYPE=cpp
+fi
+
 cmake ../.. \
 	-DLIBRGA_FILE_LIB=${LIBRGA_PATH} \
+	-DRGA_SOURCE_CODE_TYPE=${BUILD_SOURCE_TYPE} \
 	-DBUILD_TOOLCHAINS_PATH=${TOOLCHAIN_PATH} \
 	-DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
 	-DCMAKE_INSTALL_PREFIX=install \

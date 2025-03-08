@@ -2,9 +2,9 @@
 
 文件标识：RK-PC-YF-404
 
-发布版本：V1.1.2
+发布版本：V1.1.3
 
-日期：2023-06-28
+日期：2025-01-22
 
 文件密级：□绝密   □秘密   □内部资料   ■公开
 
@@ -55,6 +55,7 @@ Rockchip Electronics Co., Ltd.
 | 2022/12/21 | 1.1.0    | 余乔伟   | 增加针对multi_rga驱动的异常案例 |
 | 2023/02/09 | 1.1.1    | 余乔伟   | 更正文档格式                    |
 | 2023/06/28 | 1.1.2    | 余乔伟   | 补充Q&A                         |
+| 2025/01/22 | 1.1.3    | 余乔伟   | 补充Q&A                         |
 
 ---
 
@@ -1368,7 +1369,7 @@ E rockchiprga: This output the user parameters when rga call blit fail		//报错
 
 **A4.1**：该报错通常为使用虚拟地址调用RGA时，虚拟地址的实际内存小于实际需要的内存大小（即根据图像参数计算出当前通道的图像需要多大的内存），只需检查buffer的大小即可，在一些申请和调用不是在同一处的场景下，可以在调用RGA前执行一遍memset对应图像的大小，确认是否为内存大小不足导致的问题。
 
-​			改报错后，通常便随着 “rga2 map src0 memory failed” 可以确认是哪一个通道的内存出现问题，如该例中所示，src通道由于实际申请的buffer大小仅为图像所需大小的一半，所以触发了这个报错。
+​			在该报错日志后面，通常便随着 “rga2 map src0 memory failed” 可以确认是哪一个通道的内存出现问题，如该例中所示，src通道由于实际申请的buffer大小仅为图像所需大小的一半，所以触发了这个报错。
 
 
 
@@ -1465,6 +1466,27 @@ Failed to call RockChipRga interface, please use 'dmesg' command to view driver 
 
 例如：
 
+开启驱动运行日志，关于运行日志详细说明见**《驱动调试节点》**章节：
+
+```bash
+/# echo msg > /sys/kerne/debug/rkrga/debug
+/# dmesg						//For logs opened through nodes, the printing level is KERNEL_DEBUG. You need to run the dmesg command to view the corresponding logs on the serial port or adb.
+[ 4802.344683] rga2: open rga2 reg!
+```
+
+可以通过查看调试节点运行日志开关状态，确认对应MSG日志开关是否已经开启：
+
+```shell
+/# cat /sys/kerne/debug/rkrga/debug
+REG [DIS]
+MSG [EN]
+TIME [DIS]
+INT [DIS]
+MM [DIS]
+```
+
+执行问题场景，可以根据运行日志看到对应任务在核心匹配阶段具体的匹配失败原因：
+
 ```
 rga_policy: start policy on core = 4
 rga_policy: RGA2 only support under 4G memory!     //标识当前搭载的RGA2核心仅支持4G以内的内存。
@@ -1511,7 +1533,9 @@ rga_job: job assign failed
 
 ​			5). 部分芯片RGA被超频到一个较高的频率，此时RGA频率上升但是电压没有提升，会导致RGA整体性能显著下降，导致无法在规定阈值内完成工作，从而驱动异常返回并打印报错。该场景建议开发者将RGA频率修改至正常频率，超频对整体芯片的稳定性与使用寿命均有影响，强烈不建议该种行为。
 
-​			6). 以上场景均没有发现问题，可以尝试在RGA超时报错返回后，将目标内存中的数据写到文件中，查看RGA是否有写入部分数据，如有写入部分数据，请重新确认1-5场景，该现象明显为RGA性能表现不足导致；如果目标内存没有被RGA写入数据，收集对应的日志信息以及相关实验过程，联系维护RGA模块的工程师。
+​			6). 源数据是非FBC数据时，误把对应通道配置为FBC模式，导致FBC解码数据失败，也会导致硬件超时，当存在FBC配置时出现硬件超时的现象，可以尝试关闭FBC来对比验证。
+
+​			7). 以上场景均没有发现问题，可以尝试在RGA超时报错返回后，将目标内存中的数据写到文件中，查看RGA是否有写入部分数据，如有写入部分数据，请重新确认1-5场景，该现象明显为RGA性能表现不足导致；如果目标内存没有被RGA写入数据，收集对应的日志信息以及相关实验过程，联系维护RGA模块的工程师。
 
 
 
@@ -1523,7 +1547,31 @@ rga_job: job assign failed
 
 
 
+**Q4.10**：进程正常、异常退出时，会有以下报错是什么原因？
 
+> rga_mm: [tgid:500] Decrement the reference of handle[622] when the user exits
+>
+> rga_mm: [tgid:500] Decrement the reference of handle[623] when the user exits
+
+**A4.10**：当出现该日志则说明ID为500的进程存在RGA buffer_handle（对应handle值622、623）泄漏，常见的原因有以下几种：
+
+​			1). 调用了importbuffer_xx() API后，没有即时调用releasebuffer_handle()，导致RGA buffer_handle没有即时释放。
+
+​			2). 针对同一块内存多次import但是只调用一次release，从而导致RGA buffer_handle泄漏。
+
+​			3). 应用程序异常退出，此时由于进程中断，没有进行相应的后处理，原理上依旧是没有调用对import过的RGA buffer_handle执行release行为。
+
+​			针对此类问题，核心的原因便是importbuffer_xx()和releasebuffer_handle()没有成对使用导致RGA buffer_handle仍然在对应进程退出时保有实例，驱动出于内存保护的角度，对这类buffer_handle进行销毁，进而打印相应日志提醒该异常行为需要被注意。
+
+
+
+**Q4.11**：当出现以下内存相关报错是什么原因？
+
+>  rga: 12491  12491 : ID[58447384]: Only get buffer 1382400 byte from handle[555], but current required 3686400 byte
+
+**A4.11**：该报错说明当前配置的图像参数要求的buffer size为 3686400 byte，而配置的RGA buffer_handle的buffer size只有1382400 byte，因此当前配置的buffer无法满足图像参数配置的要求。
+
+​			该类问题常见于使用importbuffer_xx() API时配置的size和实际图像处理时的size不一致，例如该问题中报错便是importbuffer时配置的size是 1280 * 720 * 1.5（NV12）= 1382400 byte，但实际使用该buffer_handle配置的图像参数却是1280 * 720 RGBA8888（预计要求buffer size为 1280 * 720 * 4 = 3686400 byte），从而导致buffer size不满足要求而报错返回。
 
 
 

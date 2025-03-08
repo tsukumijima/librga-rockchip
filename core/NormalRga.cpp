@@ -35,7 +35,6 @@ pthread_mutex_t mMutex = PTHREAD_MUTEX_INITIALIZER;
 
 volatile int32_t refCount = 0;
 struct rgaContext *rgaCtx = NULL;
-extern struct im2d_job_manager g_im2d_job_manager;
 
 void is_debug_log(void) {
     struct rgaContext *ctx = rgaCtx;
@@ -132,8 +131,6 @@ int NormalRgaOpen(void **context) {
         }
 
         rga_set_driver_feature(ctx);
-
-        NormalRgaInitTables();
 
         rgaCtx = ctx;
     } else {
@@ -402,6 +399,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
     void *src1Buf = NULL;
     RECT clip;
     int sync_mode = RGA_BLIT_SYNC;
+    void *ioc_req = NULL;
 
     //init context
     if (!ctx) {
@@ -877,12 +875,6 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
         (hScale < 1.0f || vScale < 1.0f)) {
             ALOGE("when using bilinear scaling for downsizing, it does not support scaling up in other directions.");
             return -EINVAL;
-    }
-
-    if ((vScale > 1.0f && interp.verti == RGA_INTERP_LINEAR) &&
-        relDstRect.width > 4096) {
-        ALOGE("bi-linear scale-down only supports vertical direction smaller than 4096.");
-        return -EINVAL;
     }
 
     if(is_out_log())
@@ -1465,58 +1457,39 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
     rgaReg.core = dst->core;
     rgaReg.priority = dst->priority;
 
-    if (dst->job_handle > 0) {
-        im_rga_job_t *job = NULL;
+    switch (ctx->driver) {
+        case RGA_DRIVER_IOC_RGA2:
+            rga2_req compat_req;
 
-        g_im2d_job_manager.mutex.lock();
+            memset(&compat_req, 0x0, sizeof(compat_req));
+            NormalRgaCompatModeConvertRga2(&compat_req, &rgaReg);
 
-        job = g_im2d_job_manager.job_map[dst->job_handle];
-        if (job->task_count >= RGA_TASK_NUM_MAX) {
-            printf("job[%d] add task failed! too many tasks, count = %d\n", dst->job_handle, job->task_count);
+            ioc_req = &compat_req;
+            break;
 
-            g_im2d_job_manager.mutex.unlock();
+        case RGA_DRIVER_IOC_MULTI_RGA:
+            ioc_req = &rgaReg;
+            break;
+
+        default:
+            printf("unknow driver[0x%x]\n", ctx->driver);
             return -errno;
-        }
-
-        job->req[job->task_count] = rgaReg;
-        job->task_count++;
-
-        g_im2d_job_manager.mutex.unlock();
-
-        return 0;
-    } else {
-        void *ioc_req = NULL;
-
-        switch (ctx->driver) {
-            case RGA_DRIVER_IOC_RGA2:
-                rga2_req compat_req;
-
-                memset(&compat_req, 0x0, sizeof(compat_req));
-                NormalRgaCompatModeConvertRga2(&compat_req, &rgaReg);
-
-                ioc_req = &compat_req;
-                break;
-
-            case RGA_DRIVER_IOC_MULTI_RGA:
-                ioc_req = &rgaReg;
-                break;
-
-            default:
-                printf("unknow driver[0x%x]\n", ctx->driver);
-                return -errno;
-        }
-
-        do {
-            ret = ioctl(ctx->rgaFd, sync_mode, ioc_req);
-        } while (ret == -1 && (errno == EINTR || errno == 512));   /* ERESTARTSYS is 512. */
-        if(ret) {
-            printf(" %s(%d) RGA_BLIT fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
-            ALOGE(" %s(%d) RGA_BLIT fail: %s",__FUNCTION__, __LINE__,strerror(errno));
-            return -errno;
-        }
     }
 
-    dst->out_fence_fd = rgaReg.out_fence_fd;
+    do {
+        ret = ioctl(ctx->rgaFd, sync_mode, ioc_req);
+    } while (ret == -1 && (errno == EINTR || errno == 512));   /* ERESTARTSYS is 512. */
+    if(ret) {
+        printf(" %s(%d) RGA_BLIT fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
+        ALOGE(" %s(%d) RGA_BLIT fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        return -errno;
+    }
+
+    if (ctx->driver == RGA_DRIVER_IOC_MULTI_RGA)
+        dst->out_fence_fd = rgaReg.out_fence_fd;
+    else
+        /* release_fence fd set to -1 when driver do not support fence */
+        dst->out_fence_fd = -1;
 
     if (rgaCtx->driver_feature & RGA_DRIVER_FEATURE_USER_CLOSE_FENCE &&
         dst->in_fence_fd > 0 &&
@@ -1557,6 +1530,7 @@ int RgaCollorFill(rga_info *dst) {
     COLOR_FILL fillColor ;
     void *dstBuf = NULL;
     RECT clip;
+    void *ioc_req = NULL;
 
     int sync_mode = RGA_BLIT_SYNC;
 
@@ -1770,56 +1744,32 @@ int RgaCollorFill(rga_info *dst) {
     rgaReg.core = dst->core;
     rgaReg.priority = dst->priority;
 
-    if (dst->job_handle > 0)
-    {
-        im_rga_job_t *job = NULL;
+    switch (ctx->driver) {
+        case RGA_DRIVER_IOC_RGA2:
+            rga2_req compat_req;
 
-        g_im2d_job_manager.mutex.lock();
+            memset(&compat_req, 0x0, sizeof(compat_req));
+            NormalRgaCompatModeConvertRga2(&compat_req, &rgaReg);
 
-        job = g_im2d_job_manager.job_map[dst->job_handle];
-        if (job->task_count >= RGA_TASK_NUM_MAX) {
-            printf("job[%d] add task failed! too many tasks, count = %d\n", dst->job_handle, job->task_count);
+            ioc_req = &compat_req;
+            break;
 
-            g_im2d_job_manager.mutex.unlock();
+        case RGA_DRIVER_IOC_MULTI_RGA:
+            ioc_req = &rgaReg;
+            break;
+
+        default:
+            printf("unknow driver[0x%x]\n", ctx->driver);
             return -errno;
-        }
+    }
 
-        job->req[job->task_count] = rgaReg;
-        job->task_count++;
-
-        g_im2d_job_manager.mutex.unlock();
-
-        return 0;
-    } else {
-        void *ioc_req = NULL;
-
-        switch (ctx->driver) {
-            case RGA_DRIVER_IOC_RGA2:
-                rga2_req compat_req;
-
-                memset(&compat_req, 0x0, sizeof(compat_req));
-                NormalRgaCompatModeConvertRga2(&compat_req, &rgaReg);
-
-                ioc_req = &compat_req;
-                break;
-
-            case RGA_DRIVER_IOC_MULTI_RGA:
-                ioc_req = &rgaReg;
-                break;
-
-            default:
-                printf("unknow driver[0x%x]\n", ctx->driver);
-                return -errno;
-        }
-
-        do {
-            ret = ioctl(ctx->rgaFd, sync_mode, ioc_req);
-        } while (ret == -1 && (errno == EINTR || errno == 512));   /* ERESTARTSYS is 512. */
-        if(ret) {
-            printf(" %s(%d) RGA_COLORFILL fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
-            ALOGE(" %s(%d) RGA_COLORFILL fail: %s",__FUNCTION__, __LINE__,strerror(errno));
-            return -errno;
-        }
+    do {
+        ret = ioctl(ctx->rgaFd, sync_mode, ioc_req);
+    } while (ret == -1 && (errno == EINTR || errno == 512));   /* ERESTARTSYS is 512. */
+    if(ret) {
+        printf(" %s(%d) RGA_COLORFILL fail: %s\n",__FUNCTION__, __LINE__,strerror(errno));
+        ALOGE(" %s(%d) RGA_COLORFILL fail: %s",__FUNCTION__, __LINE__,strerror(errno));
+        return -errno;
     }
 
     dst->out_fence_fd = rgaReg.out_fence_fd;

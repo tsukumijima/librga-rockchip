@@ -16,13 +16,28 @@
  * limitations under the License.
  */
 
-#include <unordered_map>
-#include <stdint.h>
+#include "drm_utils/drm_utils.h"
+#include "rga.h"
+#include "im2d_type.h"
+
+#ifndef RGA_UTILS_DRM_DISABLE
+
 #include "drm_fourcc.h"
 
-#include "rga.h"
+#ifdef __cplusplus
+#include <unordered_map>
 
-const static std::unordered_map<uint32_t, uint32_t> drm_fourcc_table = {
+typedef std::unordered_map<uint32_t, uint32_t> rga_drm_fourcc_map_t;
+#else
+struct drm_fourcc_format {
+    uint32_t drm_format;
+    uint32_t rga_format;
+};
+
+typedef struct drm_fourcc_format rga_drm_fourcc_map_t[];
+#endif /* #ifdef __cplusplus */
+
+const static rga_drm_fourcc_map_t drm_fourcc_table = {
     { DRM_FORMAT_RGBA8888, RK_FORMAT_ABGR_8888 },
     { DRM_FORMAT_BGRA8888, RK_FORMAT_ARGB_8888 },
     { DRM_FORMAT_ARGB8888, RK_FORMAT_BGRA_8888 },
@@ -80,9 +95,47 @@ const static std::unordered_map<uint32_t, uint32_t> drm_fourcc_table = {
 };
 
 uint32_t get_format_from_drm_fourcc(uint32_t drm_fourcc) {
+#ifdef __cplusplus
     auto entry = drm_fourcc_table.find(drm_fourcc);
     if (entry == drm_fourcc_table.end())
         return RK_FORMAT_UNKNOWN;
 
     return entry->second;
+#else
+    int i;
+
+    for (i = 0; i < sizeof(drm_fourcc_table) / sizeof(drm_fourcc_table[0]); i++) {
+        if (drm_fourcc_table[i].drm_format == drm_fourcc)
+            return drm_fourcc_table[i].rga_format;
+    }
+
+    return RK_FORMAT_UNKNOWN;
+#endif /* #ifdef __cplusplus */
 }
+
+int get_mode_from_drm_modifier(uint64_t modifier) {
+    if ((fourcc_mod_is_vendor(modifier, ARM)) &&
+        (((modifier >> 52) & 0xf) == DRM_FORMAT_MOD_ARM_TYPE_AFBC)) {
+        if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_16x16)
+            return IM_AFBC16x16_MODE;
+        if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8 &&
+            modifier & AFBC_FORMAT_MOD_SPLIT)
+            return IM_AFBC32x8_MODE;
+    } else if (fourcc_mod_is_vendor(modifier, ROCKCHIP)) {
+        if (IS_ROCKCHIP_RFBC_MOD(modifier)) {
+            if ((modifier & ROCKCHIP_RFBC_BLOCK_SIZE_64x4) == ROCKCHIP_RFBC_BLOCK_SIZE_64x4)
+                return IM_RKFBC64x4_MODE;
+        } else if (IS_ROCKCHIP_TILED_MOD(modifier)) {
+            switch (modifier & ROCKCHIP_TILED_BLOCK_SIZE_MASK) {
+                case ROCKCHIP_TILED_BLOCK_SIZE_4x4_MODE0:
+                    return IM_TILE4x4_MODE;
+                case ROCKCHIP_TILED_BLOCK_SIZE_8x8:
+                    return IM_TILE8x8_MODE;
+            }
+        }
+    }
+
+    return IM_RASTER_MODE;
+}
+
+#endif /* #ifndef RGA_UTILS_DRM_DISABLE */

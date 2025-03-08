@@ -40,9 +40,22 @@ static int rga_log_property_get(void);
 static int rga_log_level_property_get(void);
 
 __thread char g_rga_err_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
+
+#ifdef __cplusplus
 static atomic_int g_log_en = ATOMIC_VAR_INIT(rga_log_property_get());
 static atomic_int g_log_level = ATOMIC_VAR_INIT(rga_log_level_property_get());
 static size_t g_start_time = rga_get_current_time_ms();
+#else
+static atomic_int g_log_en = 0;
+static atomic_int g_log_level = 0;
+static size_t g_start_time = 0;
+
+__attribute__((constructor)) static void rga_set_start_time_ms() {
+    g_log_en = ATOMIC_VAR_INIT(rga_log_property_get());
+    g_log_level = ATOMIC_VAR_INIT(rga_log_level_property_get());
+    g_start_time = rga_get_current_time_ms();
+}
+#endif
 
 const char *rga_get_error_type_str(int type) {
     switch (type & IM_LOG_LEVEL_MASK) {
@@ -78,7 +91,7 @@ static int inline rga_log_property_get(void) {
     __system_property_get("vendor.rga.log" ,level);
 #else
     char *level = getenv("ROCKCHIP_RGA_LOG");
-    if (level == nullptr)
+    if (level == NULL)
         level = (char *)"0";
 #endif
 
@@ -91,7 +104,7 @@ static int inline rga_log_level_property_get(void) {
     __system_property_get("vendor.rga.log_level" ,level);
 #else
     char *level = getenv("ROCKCHIP_RGA_LOG_LEVEL");
-    if (level == nullptr)
+    if (level == NULL)
         level = (char *)"0";
 #endif
 

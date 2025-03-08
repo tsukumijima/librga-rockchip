@@ -28,12 +28,16 @@
 #include <memory.h>
 #include <pthread.h>
 
+#ifdef __cplusplus
 #include "im2d.hpp"
+#else
+#include "im2d.h"
+#endif
+
 #include "RgaUtils.h"
 
 #include "utils.h"
 #include "dma_alloc.h"
-#include "drm_alloc.h"
 
 #include "slt_config.h"
 #include "crc.h"
@@ -80,15 +84,16 @@ enum ERR_NUM {
 struct rga_image_info {
     rga_buffer_t img;
     char *buf;
+    int fd;
     int buf_size;
 };
 
-typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info &, struct rga_image_info &, struct rga_image_info &);
+typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info, struct rga_image_info, struct rga_image_info);
 
 int rga_raster_test(private_data_t *data, int time,
-                    struct rga_image_info &src_img,
-                    struct rga_image_info &tmp_img,
-                    struct rga_image_info &dst_img) {
+                    struct rga_image_info src_img,
+                    struct rga_image_info tmp_img,
+                    struct rga_image_info dst_img) {
     int ret;
     int case_index;
     int usage = 0;
@@ -131,9 +136,12 @@ int rga_raster_test(private_data_t *data, int time,
 
         ret = imcvtcolor(src, dst, RK_FORMAT_YCbCr_420_SP, dst.format);
         if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s copy %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+            printf("ID[%d]: %s bypass + src-CSC %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
         }
+
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
@@ -143,6 +151,7 @@ int rga_raster_test(private_data_t *data, int time,
                 goto CHECK_ERROR;
         }
 
+#if !(IM2d_SLT_TEST_DISABLE_ALPHA)
         /* case: 3-channel blend + rotate-180 + H_V mirror + scale-up + dst-CSC */
         case_index++;
 
@@ -163,9 +172,12 @@ int rga_raster_test(private_data_t *data, int time,
 
         ret = improcess(src, dst, tmp, src_rect, dst_rect, dst_rect, usage);
         if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s process %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+            printf("ID[%d]: %s 3-channel blend + rotate-180 + H_V mirror + scale-up + dst-CSC %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
         }
+
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
@@ -174,6 +186,7 @@ int rga_raster_test(private_data_t *data, int time,
             if (!crc_check(case_index, result_crc, crc_golden_table))
                 goto CHECK_ERROR;
         }
+#endif
 
         dst.format = ori_format;
 
@@ -187,11 +200,15 @@ int rga_raster_test(private_data_t *data, int time,
 
         usage = IM_SYNC | IM_HAL_TRANSFORM_ROT_90 | IM_HAL_TRANSFORM_FLIP_H_V;
 
-        ret = improcess(src, dst, {}, {}, dst_rect, {}, usage);
+        ret = improcess(src, dst, (rga_buffer_t){}, (im_rect){}, dst_rect, (im_rect){}, usage);
         if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s process %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+            printf("ID[%d]: %s rotate-90 + H_V mirror + scale-down %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
         }
+
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
+
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
@@ -216,6 +233,9 @@ int rga_raster_test(private_data_t *data, int time,
                 printf("ID[%d]: %s fill %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
                 return slt_rga_error;
             }
+
+            if (dst_img.fd)
+                dma_sync_device_to_cpu(dst_img.fd);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(IM2D_SLT_GENERATE_CRC) {
@@ -243,9 +263,9 @@ CHECK_ERROR:
 }
 
 int rga_special_test(private_data_t *data, int time,
-                     struct rga_image_info &src_img,
-                     struct rga_image_info &tmp_img,
-                     struct rga_image_info &dst_img) {
+                     struct rga_image_info src_img,
+                     struct rga_image_info tmp_img,
+                     struct rga_image_info dst_img) {
     int ret;
     int case_index;
     unsigned int result_crc = 0;
@@ -290,6 +310,9 @@ int rga_special_test(private_data_t *data, int time,
             return slt_rga_error;
         }
 
+        if (dst_img.fd)
+            dma_sync_device_to_cpu(dst_img.fd);
+
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(IM2D_SLT_GENERATE_CRC) {
             save_crcdata_to_file(result_crc, data->name, case_index);
@@ -308,6 +331,9 @@ int rga_special_test(private_data_t *data, int time,
                 printf("ID[%d]: %s output %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
                 return slt_rga_error;
             }
+
+            if (dst_img.fd)
+                dma_sync_device_to_cpu(dst_img.fd);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(IM2D_SLT_GENERATE_CRC) {
@@ -335,9 +361,9 @@ CHECK_ERROR:
 }
 
 int rga_perf_test(private_data_t *data, int time,
-                  struct rga_image_info &src_img,
-                  struct rga_image_info &tmp_img,
-                  struct rga_image_info &dst_img) {
+                  struct rga_image_info src_img,
+                  struct rga_image_info tmp_img,
+                  struct rga_image_info dst_img) {
     int ret;
 
     rga_buffer_t src, dst, tmp;
@@ -386,6 +412,7 @@ static int rga_run(void *args, rga_slt_case running_case) {
     char *src_buf = NULL, *dst_buf = NULL, *tmp_buf = NULL;
     int src_dma_fd = -1, dst_dma_fd = -1, tmp_dma_fd = -1;
     rga_buffer_handle_t src_handle = 0, dst_handle = 0, tmp_handle = 0;
+    im_handle_param_t src_param, dst_param;
 
     rga_buffer_t src;
     rga_buffer_t tmp;
@@ -425,9 +452,15 @@ static int rga_run(void *args, rga_slt_case running_case) {
 
     src_buf_size = src_width * src_height * get_bpp_from_format(src_format);
     dst_buf_size = dst_width * dst_height * get_bpp_from_format(dst_format);
+
+    src_param = (im_handle_param_t){(uint32_t)src_width, (uint32_t)src_height, (uint32_t)src_format};
+    dst_param = (im_handle_param_t){(uint32_t)dst_width, (uint32_t)dst_height, (uint32_t)dst_format};
     if (fbc_en) {
         src_buf_size = src_buf_size * 1.5;
         dst_buf_size = dst_buf_size * 1.5;
+
+        src_param = (im_handle_param_t){(uint32_t)src_width, (uint32_t)(int)(src_height * 1.5), (uint32_t)src_format};
+        dst_param = (im_handle_param_t){(uint32_t)dst_width, (uint32_t)(int)(dst_height * 1.5), (uint32_t)dst_format};
     }
     tmp_buf_size = src_buf_size;
 
@@ -451,21 +484,24 @@ static int rga_run(void *args, rga_slt_case running_case) {
             goto RELEASE_BUFFER;
         }
 
-        src_handle = importbuffer_fd(src_dma_fd, src_buf_size);
+        src_handle = importbuffer_fd(src_dma_fd, &src_param);
         if (src_handle <= 0) {
             printf("ID[%d] %s import src dma_buf failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
-        tmp_handle = importbuffer_fd(tmp_dma_fd, tmp_buf_size);
+        tmp_handle = importbuffer_fd(tmp_dma_fd, &src_param);
         if (tmp_handle <= 0) {
             printf("ID[%d] %s import tmp dma_buf failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
-        dst_handle = importbuffer_fd(dst_dma_fd, dst_buf_size);
+        dst_handle = importbuffer_fd(dst_dma_fd, &dst_param);
         if (dst_handle <= 0) {
             printf("ID[%d] %s import dst dma_buf failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
     } else {
@@ -474,27 +510,35 @@ static int rga_run(void *args, rga_slt_case running_case) {
         dst_buf = (char *)malloc(dst_buf_size);
         if (src_buf == NULL || tmp_buf == NULL || dst_buf == NULL) {
             printf("malloc fault!\n");
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
-        src_handle = importbuffer_virtualaddr(src_buf, src_buf_size);
+        src_handle = importbuffer_virtualaddr(src_buf, &src_param);
         if (src_handle <= 0) {
             printf("ID[%d] %s import src virt_addr failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
-        tmp_handle = importbuffer_virtualaddr(tmp_buf, tmp_buf_size);
+        tmp_handle = importbuffer_virtualaddr(tmp_buf, &src_param);
         if (tmp_handle <= 0) {
             printf("ID[%d] %s import tmp virt_addr failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
 
-        dst_handle = importbuffer_virtualaddr(dst_buf, dst_buf_size);
+        dst_handle = importbuffer_virtualaddr(dst_buf, &dst_param);
         if (dst_handle <= 0) {
             printf("ID[%d] %s import dst virt_addr failed!\n", data->id, data->name);
+            ret = slt_error;
             goto RELEASE_BUFFER;
         }
     }
+
+    dma_sync_device_to_cpu(src_dma_fd);
+    dma_sync_device_to_cpu(tmp_dma_fd);
+    dma_sync_device_to_cpu(dst_dma_fd);
 
     if (fbc_en) {
         ret = read_image_from_fbc_file(src_buf, IM2D_SLT_DEFAULT_INPUT_PATH,
@@ -510,11 +554,16 @@ static int rga_run(void *args, rga_slt_case running_case) {
     memset(tmp_buf, 0x22, tmp_buf_size);
     memset(dst_buf, 0x33, dst_buf_size);
 
+    dma_sync_cpu_to_device(src_dma_fd);
+    dma_sync_cpu_to_device(tmp_dma_fd);
+    dma_sync_cpu_to_device(dst_dma_fd);
+
     src = wrapbuffer_handle(src_handle, src_width, src_height, src_format);
     tmp = wrapbuffer_handle(tmp_handle, src_width, src_height, src_format);
     dst = wrapbuffer_handle(dst_handle, dst_width, dst_height, dst_format);
     if (src.width == 0 || tmp.width == 0 || dst.width == 0) {
         printf("warpbuffer failed, %s\n", imStrError());
+        ret = slt_error;
         goto RELEASE_BUFFER;
     }
 
@@ -527,14 +576,17 @@ static int rga_run(void *args, rga_slt_case running_case) {
 
     src_img.img = src;
     src_img.buf = src_buf;
+    src_img.fd = src_dma_fd;
     src_img.buf_size = src_buf_size;
 
     tmp_img.img = tmp;
     tmp_img.buf = tmp_buf;
+    tmp_img.fd = tmp_dma_fd;
     tmp_img.buf_size = tmp_buf_size;
 
     dst_img.img = dst;
     dst_img.buf = dst_buf;
+    dst_img.fd = dst_dma_fd;
     dst_img.buf_size = dst_buf_size;
 
     do {
@@ -562,6 +614,11 @@ RUNNING_FAILED:
     printf("src: %#x %#x %#x %#x\n", (int)src_buf[0], (int)src_buf[1], (int)src_buf[2], (int)src_buf[3]);
     printf("tmp: %#x %#x %#x %#x\n", (int)tmp_buf[0], (int)tmp_buf[1], (int)tmp_buf[2], (int)tmp_buf[3]);
     printf("dst: %#x %#x %#x %#x\n", (int)dst_buf[0], (int)dst_buf[1], (int)dst_buf[2], (int)dst_buf[3]);
+
+    dma_sync_device_to_cpu(src_dma_fd);
+    dma_sync_device_to_cpu(tmp_dma_fd);
+    dma_sync_device_to_cpu(dst_dma_fd);
+
     if (fbc_en) {
         write_image_to_fbc_file(src_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
                                 src.wstride, src.hstride, src.format, data->id * 10 + 1);
@@ -577,6 +634,10 @@ RUNNING_FAILED:
         write_image_to_file(dst_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
                             dst.wstride, dst.hstride, dst.format, data->id * 10 + 3);
     }
+
+    dma_sync_cpu_to_device(src_dma_fd);
+    dma_sync_cpu_to_device(tmp_dma_fd);
+    dma_sync_cpu_to_device(dst_dma_fd);
 
 RELEASE_BUFFER:
     if (src_handle)
@@ -594,14 +655,12 @@ RELEASE_BUFFER:
         if (dst_dma_fd > 0 && dst_buf != NULL)
             dma_buf_free(dst_buf_size, &dst_dma_fd, (void *)dst_buf);
     } else {
-        printf("yqw, --debug, ID[%d], start free\n", data->id);
         if (src_buf != NULL)
             free(src_buf);
         if (tmp_buf != NULL)
             free(tmp_buf);
         if (dst_buf != NULL)
             free(dst_buf);
-        printf("yqw, --debug, ID[%d], end free\n", data->id);
     }
 
     return ret;
