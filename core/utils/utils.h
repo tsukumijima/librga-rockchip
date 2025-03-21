@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+#ifndef _RGA_UTILS_H_
+#define _RGA_UTILS_H_
+
 #include <stdbool.h>
 
 #include "android_utils/android_utils.h"
@@ -41,3 +44,5 @@ bool is_rgb_format(int format);
 bool is_alpha_format(int format);
 
 int convert_to_rga_format(int ex_format);
+
+#endif /* #ifndef _RGA_UTILS_H_ */

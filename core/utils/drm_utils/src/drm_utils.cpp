@@ -137,5 +137,14 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
 
     return IM_RASTER_MODE;
 }
+#else
+uint32_t get_format_from_drm_fourcc(uint32_t drm_fourcc) {
+    return RK_FORMAT_UNKNOWN;
+}
+
+int get_mode_from_drm_modifier(uint64_t modifier) {
+    return IM_RASTER_MODE;
+}
+
 
 #endif /* #ifndef RGA_UTILS_DRM_DISABLE */
