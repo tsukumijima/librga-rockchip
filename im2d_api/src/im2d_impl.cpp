@@ -618,6 +618,22 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
+        } else if (version->version[i].major == 4 &&
+                   version->version[i].minor == 0x1) {
+            switch (version->version[i].revision) {
+                case 0x34669:
+                    // RV1126B
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+
+                    merge_table.output_format &= ~(IM_RGA_SUPPORT_FORMAT_Y4 | IM_RGA_SUPPORT_FORMAT_Y8);
+                    merge_table.feature &= ~(IM_RGA_SUPPORT_FEATURE_MOSAIC | IM_RGA_SUPPORT_FEATURE_ROP |
+                                             IM_RGA_SUPPORT_FEATURE_QUANTIZE | IM_RGA_SUPPORT_FEATURE_MOSAIC);
+
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
         } else if (version->version[i].major == 3 &&
                    version->version[i].minor == 0xf) {
             switch (version->version[i].revision) {
