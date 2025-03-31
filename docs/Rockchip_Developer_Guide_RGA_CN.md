@@ -554,7 +554,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
         <td>
 RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B
         </td>
-        <td>width stride须16对齐，x_offset、y_offset、width、height、height stride均须2对齐</td>
+        <td>width stride须16对齐，x_offset、y_offset均须64对齐，width、height、height stride均须2对齐</td>
     </tr>
 	<tr>
 		<td rowspan="8">RGA3</td>
@@ -592,7 +592,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
         <td>
 RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B
         </td>
-        <td>width stride须64对齐，x_offset、y_offset、width、height、height stride均须2对齐</td>
+        <td>width stride须64对齐，x_offset、y_offset须4对齐，width、height、height stride均须2对齐</td>
     </tr>
     <tr>
         <td>FBC mode</td>

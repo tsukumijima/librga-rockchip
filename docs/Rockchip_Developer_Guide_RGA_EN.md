@@ -546,7 +546,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
         <td>
 RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B
         </td>
-        <td>width stride must be 16-aligned，x_offset、y_offset、width、height、height stride must be 2-aligned</td>
+        <td>width stride must be 16-aligned，x_offset、y_offset must be 64-aligned，width、height、height stride must be 2-aligned</td>
     </tr>
 	<tr>
 		<td rowspan="8">RGA3</td>
@@ -584,7 +584,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
         <td>
 RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B
         </td>
-        <td>width stride must be 64-aligned，x_offset、y_offset、width、height、height stride must be 2-aligned</td>
+        <td>width stride must be 64-aligned，x_offset、y_offset must be 4-aligned，width、height、height stride must be 2-aligned</td>
     </tr>
     <tr>
         <td>FBC mode</td>
