@@ -1918,7 +1918,13 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
             is_yuv_format(src.format) &&
             is_rgb_format(pat.format) &&
             is_yuv_format(dst.format)) {
-            dstinfo.color_space_mode = dst.color_space_mode;
+            /* When configured as 709_limit, full_csc of RGA2 is preferred. */
+            if (((dst.color_space_mode & IM_RGB_TO_YUV_MASK) == IM_RGB_TO_YUV_BT709_LIMIT) &&
+                (session->hardware_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)) {
+                dstinfo.color_space_mode = (dst.color_space_mode & IM_YUV_TO_RGB_MASK) | rgb2yuv_709_limit;
+            } else {
+                dstinfo.color_space_mode = dst.color_space_mode;
+            }
         } else {
             IM_LOGW("Not yuv + rgb -> yuv does not need for color_sapce_mode R2Y & Y2R, please fix, "
                     "src_fromat = 0x%x(%s), src1_format = 0x%x(%s), dst_format = 0x%x(%s)",
@@ -1952,7 +1958,13 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
             dstinfo.color_space_mode = dst.color_space_mode;
         } else if (is_rgb_format(src.format) &&
                    is_yuv_format(dst.format)) {
-            dstinfo.color_space_mode = dst.color_space_mode;
+            /* When configured as 709_limit, full_csc of RGA2 is preferred. */
+            if (((dst.color_space_mode & IM_RGB_TO_YUV_MASK) == IM_RGB_TO_YUV_BT709_LIMIT) &&
+                (session->hardware_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)) {
+                dstinfo.color_space_mode = rgb2yuv_709_limit;
+            } else {
+                dstinfo.color_space_mode = dst.color_space_mode;
+            }
         } else {
             IM_LOGW("Not rgb to yuv does not need for color_sapce_mode, please fix, "
                     "src_fromat = 0x%x(%s), src1_format = 0x%x(%s), dst_format = 0x%x(%s)",
@@ -1990,7 +2002,11 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
                         dstinfo.color_space_mode = IM_RGB_TO_YUV_BT601_FULL;
                         break;
                     case IM_YUV_BT709_LIMIT_RANGE:
-                        dstinfo.color_space_mode = rgb2yuv_709_limit;
+                        if (session->hardware_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)
+                            dstinfo.color_space_mode = rgb2yuv_709_limit;
+                        else
+                            dstinfo.color_space_mode = IM_RGB_TO_YUV_BT709_LIMIT;
+
                         break;
                     case IM_YUV_BT709_FULL_RANGE:
                         dstinfo.color_space_mode = rgb2yuv_709_full;
