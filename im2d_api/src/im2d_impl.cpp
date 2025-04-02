@@ -2515,6 +2515,7 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
     rga_rect_t relSrc1Rect,tmpSrc1Rect;
     unsigned int blend;
     unsigned int yuvToRgbMode;
+    unsigned int r2y_mode = 0, y2r_mode = 0;
     bool perpixelAlpha = 0;
     void *srcBuf = NULL;
     void *dstBuf = NULL;
@@ -3465,54 +3466,59 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
     if (src1)
         NormalRgaSetPatActiveInfo(&rgaReg, src1ActW, src1ActH, src1XPos, src1YPos);
 
+    /* generate default csc mode */
+    if (src1) {
+        /* special config for yuv + rgb => rgb */
+        /* src0 y2r, src1 bupass, dst bupass */
+        if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+            NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
+            NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relDstRect.format)))
+            y2r_mode = IM_YUV_TO_RGB_BT601_LIMIT;
+
+        /* special config for yuv + rgba => yuv on src1 */
+        /* src0 y2r, src1 bupass, dst y2r */
+        if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+            NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
+            NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format))) {
+            y2r_mode = IM_YUV_TO_RGB_BT601_LIMIT;
+            r2y_mode = IM_RGB_TO_YUV_BT601_LIMIT;
+        }
+
+        /* special config for rgb + rgb => yuv on dst */
+        /* src0 bupass, src1 bupass, dst y2r */
+        if (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+            NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
+            NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format)))
+            r2y_mode = IM_RGB_TO_YUV_BT601_LIMIT;
+    } else {
+        /* special config for yuv to rgb */
+        if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+            NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relDstRect.format)))
+            y2r_mode = IM_YUV_TO_RGB_BT601_LIMIT;
+
+        /* special config for rgb to yuv */
+        if (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
+            NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format)))
+            r2y_mode = IM_RGB_TO_YUV_BT601_LIMIT;
+    }
+
+    if (dst->color_space_mode & IM_YUV_TO_RGB_MASK)
+        y2r_mode = dst->color_space_mode & IM_YUV_TO_RGB_MASK;
+    if (dst->color_space_mode & IM_RGB_TO_YUV_MASK)
+        r2y_mode = dst->color_space_mode & IM_RGB_TO_YUV_MASK;
+
     if (dst->color_space_mode & full_csc_mask) {
-        ret = NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode);
+        ret = NormalRgaFullColorSpaceConvert(&rgaReg, dst->color_space_mode & full_csc_mask);
         if (ret < 0) {
-            ALOGE("Not support full csc mode [%x]\n", dst->color_space_mode);
+            ALOGE("Not support full csc mode [%x]\n", dst->color_space_mode & full_csc_mask);
             return -EINVAL;
         }
 
-        if (dst->color_space_mode == rgb2yuv_709_limit)
-            yuvToRgbMode |= 0x3 << 2;
-    } else {
-        if (src1) {
-            /* special config for yuv + rgb => rgb */
-            /* src0 y2r, src1 bupass, dst bupass */
-            if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
-                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
-                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relDstRect.format)))
-                yuvToRgbMode |= 0x1 << 0;
-
-            /* special config for yuv + rgba => yuv on src1 */
-            /* src0 y2r, src1 bupass, dst y2r */
-            if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
-                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
-                NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format))) {
-                yuvToRgbMode |= 0x1 << 0;        //src0
-                yuvToRgbMode |= 0x2 << 2;        //dst
-            }
-
-            /* special config for rgb + rgb => yuv on dst */
-            /* src0 bupass, src1 bupass, dst y2r */
-            if (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
-                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrc1Rect.format)) &&
-                NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format)))
-                yuvToRgbMode |= 0x2 << 2;
-        } else {
-            /* special config for yuv to rgb */
-            if (NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
-                NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relDstRect.format)))
-                yuvToRgbMode |= 0x1 << 0;
-
-            /* special config for rgb to yuv */
-            if (NormalRgaIsRgbFormat(RkRgaGetRgaFormat(relSrcRect.format)) &&
-                NormalRgaIsYuvFormat(RkRgaGetRgaFormat(relDstRect.format)))
-                yuvToRgbMode |= 0x2 << 2;
-        }
-
-        if(dst->color_space_mode > 0)
-            yuvToRgbMode = dst->color_space_mode;
+        if ((dst->color_space_mode & full_csc_mask) == rgb2yuv_709_limit)
+            r2y_mode = IM_RGB_TO_YUV_BT709_LIMIT;
     }
+
+    yuvToRgbMode = r2y_mode | y2r_mode;
 
     /* mode
      * interp:set different algorithm to scale.
