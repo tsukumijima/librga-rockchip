@@ -1525,7 +1525,7 @@ void generate_gaussian_kernel(double sigma_x, double sigma_y, im_size_t ksize, d
     }
 }
 
-int get_gaussian_special_points(int rows, int cols, double *gauss_kernel, uint32_t *special_points, int factor, int center_factor) {
+static int rga_get_gaussian_special_points(int rows, int cols, double *gauss_kernel, uint32_t *special_points, int factor, int center_factor) {
     int i;
     int index = 0;
     int center_rows = rows / 2;
@@ -1547,7 +1547,7 @@ int get_gaussian_special_points(int rows, int cols, double *gauss_kernel, uint32
     return index;
 }
 
-IM_STATUS generate_gauss_coe(im_gauss_t *gauss, struct rga_gauss_config *config) {
+static IM_STATUS rga_generate_gauss_coe(im_gauss_t *gauss, struct rga_gauss_config *config) {
     double *kernel;
     uint32_t *coe;
     int factor, center_factor;
@@ -1585,8 +1585,8 @@ IM_STATUS generate_gauss_coe(im_gauss_t *gauss, struct rga_gauss_config *config)
 
     config->size = (gauss->ksize.width + gauss->ksize.height) / 2;
     coe = (uint32_t *)malloc(config->size * sizeof(uint32_t));
-    get_gaussian_special_points(gauss->ksize.width, gauss->ksize.height,
-                                kernel, coe, factor, center_factor);
+    rga_get_gaussian_special_points(gauss->ksize.width, gauss->ksize.height,
+                                    kernel, coe, factor, center_factor);
     config->coe_ptr = ptr_to_u64(coe);
 
     if (gauss->matrix == NULL)
@@ -2169,7 +2169,7 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
             return IM_STATUS_INVALID_PARAM;
         }
 
-        ret = generate_gauss_coe(&opt.gauss_config, &srcinfo.gauss_config);
+        ret = rga_generate_gauss_coe(&opt.gauss_config, &srcinfo.gauss_config);
         if (ret != IM_STATUS_SUCCESS)
             return (IM_STATUS)ret;
 
