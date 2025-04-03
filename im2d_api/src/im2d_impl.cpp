@@ -1595,6 +1595,163 @@ static IM_STATUS rga_generate_gauss_coe(im_gauss_t *gauss, struct rga_gauss_conf
     return IM_STATUS_SUCCESS;
 }
 
+static int rga_get_default_csc_mode(int format)
+{
+    if  (is_rgb_format(format)) {
+        return IM_RGB_FULL;
+    } else if (is_yuv_format(format)) {
+        return IM_YUV_BT601_LIMIT_RANGE;
+    }
+
+    return 0;
+}
+
+static int rga_get_csc_mode(rga_info_table_entry *entry, int in, int out)
+{
+    int mode = 0;
+
+    switch (in) {
+        case IM_RGB_FULL:
+            switch (out) {
+                case IM_YUV_BT601_LIMIT_RANGE:
+                    mode = IM_RGB_TO_YUV_BT601_LIMIT;
+                    break;
+                case IM_YUV_BT601_FULL_RANGE:
+                    mode = IM_RGB_TO_YUV_BT601_FULL;
+                    break;
+                case IM_YUV_BT709_LIMIT_RANGE:
+                    if (entry->feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)
+                        mode = rgb2yuv_709_limit;
+                    else
+                        mode = IM_RGB_TO_YUV_BT709_LIMIT;
+
+                    break;
+                case IM_YUV_BT709_FULL_RANGE:
+                    mode = rgb2yuv_709_full;
+                    break;
+                case IM_RGB_FULL:
+                    break;
+                case IM_RGB_CLIP:
+                default:
+                    IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
+                            string_color_space(in), in,
+                            string_color_space(out), out);
+                    return IM_STATUS_NOT_SUPPORTED;
+            }
+
+            break;
+
+        case IM_YUV_BT601_LIMIT_RANGE:
+            switch (out) {
+                case IM_RGB_FULL:
+                    mode = IM_YUV_TO_RGB_BT601_LIMIT;
+                    break;
+                case IM_YUV_BT601_FULL_RANGE:
+                    mode = yuv2yuv_601_limit_2_601_full;
+                    break;
+                case IM_YUV_BT709_LIMIT_RANGE:
+                    mode = yuv2yuv_601_limit_2_709_limit;
+                    break;
+                case IM_YUV_BT709_FULL_RANGE:
+                    mode = yuv2yuv_601_limit_2_709_full;
+                    break;
+                case IM_YUV_BT601_LIMIT_RANGE:
+                    break;
+                case IM_RGB_CLIP:
+                default:
+                    IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
+                            string_color_space(in), in,
+                            string_color_space(out), out);
+                    return IM_STATUS_NOT_SUPPORTED;
+            }
+            break;
+
+        case IM_YUV_BT601_FULL_RANGE:
+            switch (out) {
+                case IM_RGB_FULL:
+                    mode = IM_YUV_TO_RGB_BT601_FULL;
+                    break;
+                case IM_YUV_BT601_LIMIT_RANGE:
+                    mode = yuv2yuv_601_full_2_601_limit;
+                    break;
+                case IM_YUV_BT709_LIMIT_RANGE:
+                    mode = yuv2yuv_601_full_2_709_limit;
+                    break;
+                case IM_YUV_BT709_FULL_RANGE:
+                    mode = yuv2yuv_601_full_2_709_full;
+                    break;
+                case IM_YUV_BT601_FULL_RANGE:
+                    break;
+                case IM_RGB_CLIP:
+                default:
+                    IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
+                            string_color_space(in), in,
+                            string_color_space(out), out);
+                    return IM_STATUS_NOT_SUPPORTED;
+            }
+            break;
+
+        case IM_YUV_BT709_LIMIT_RANGE:
+            switch (out) {
+                case IM_RGB_FULL:
+                    mode = IM_YUV_TO_RGB_BT709_LIMIT;
+                    break;
+                case IM_YUV_BT601_LIMIT_RANGE:
+                    mode = yuv2yuv_709_limit_2_601_limit;
+                    break;
+                case IM_YUV_BT601_FULL_RANGE:
+                    mode = yuv2yuv_709_limit_2_601_full;
+                    break;
+                case IM_YUV_BT709_FULL_RANGE:
+                    mode = yuv2yuv_709_limit_2_709_full;
+                    break;
+                case IM_YUV_BT709_LIMIT_RANGE:
+                    break;
+                case IM_RGB_CLIP:
+                default:
+                    IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
+                            string_color_space(in), in,
+                            string_color_space(out), out);
+                    return IM_STATUS_NOT_SUPPORTED;
+            }
+            break;
+
+        case IM_YUV_BT709_FULL_RANGE:
+            switch (out) {
+                case IM_RGB_FULL:
+                    mode = yuv2rgb_709_full;
+                    break;
+                case IM_YUV_BT601_LIMIT_RANGE:
+                    mode = yuv2yuv_709_full_2_601_limit;
+                    break;
+                case IM_YUV_BT601_FULL_RANGE:
+                    mode = yuv2yuv_709_full_2_601_full;
+                    break;
+                case IM_YUV_BT709_LIMIT_RANGE:
+                    mode = yuv2yuv_709_full_2_709_limit;
+                    break;
+                case IM_YUV_BT709_FULL_RANGE:
+                    break;
+                case IM_RGB_CLIP:
+                default:
+                    IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
+                            string_color_space(in), in,
+                            string_color_space(out), out);
+                    return IM_STATUS_NOT_SUPPORTED;
+            }
+            break;
+
+        case IM_RGB_CLIP:
+        default:
+            IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
+                    string_color_space(in), in,
+                    string_color_space(out), out);
+            return IM_STATUS_NOT_SUPPORTED;
+    }
+
+    return mode;
+}
+
 IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
                           im_rect srect, im_rect drect, im_rect prect,
                           int acquire_fence_fd, int *release_fence_fd,
@@ -1974,160 +2131,35 @@ IM_STATUS rga_task_submit(im_job_handle_t job_handle, rga_buffer_t src, rga_buff
             return IM_STATUS_ILLEGAL_PARAM;
         }
     } else if (src.color_space_mode & IM_FULL_CSC_MASK ||
+               pat.color_space_mode & IM_FULL_CSC_MASK ||
                dst.color_space_mode & IM_FULL_CSC_MASK) {
-        /* Get default color space */
-        if (src.color_space_mode == IM_COLOR_SPACE_DEFAULT) {
-            if  (is_rgb_format(src.format)) {
-                src.color_space_mode = IM_RGB_FULL;
-            } else if (is_yuv_format(src.format)) {
-                src.color_space_mode = IM_YUV_BT601_LIMIT_RANGE;
+        if (src.color_space_mode == IM_COLOR_SPACE_DEFAULT)
+            src.color_space_mode = rga_get_default_csc_mode(src.format);
+        if (pat.color_space_mode == IM_COLOR_SPACE_DEFAULT)
+            pat.color_space_mode = rga_get_default_csc_mode(pat.format);
+        if (dst.color_space_mode == IM_COLOR_SPACE_DEFAULT)
+            dst.color_space_mode = rga_get_default_csc_mode(dst.format);
+
+        if (rga_is_buffer_valid(pat)) {
+            if (!is_rgb_format(pat.format)) {
+                IM_LOGW("src1/pat channel only support RGBA/RGB format, please fix, "
+                        "src_fromat = 0x%x(%s), src1_format = 0x%x(%s), dst_format = 0x%x(%s)",
+                        src.format, translate_format_str(src.format),
+                        pat.format, rga_is_buffer_valid(pat) ? translate_format_str(pat.format) : "none",
+                        dst.format, translate_format_str(dst.format));
+                return IM_STATUS_ILLEGAL_PARAM;
             }
-        }
 
-        if (dst.color_space_mode == IM_COLOR_SPACE_DEFAULT) {
-            if  (is_rgb_format(dst.format)) {
-                dst.color_space_mode = IM_RGB_FULL;
-            } else if (is_yuv_format(dst.format)) {
-                dst.color_space_mode = IM_YUV_BT601_LIMIT_RANGE;
-            }
-        }
-
-        switch (src.color_space_mode) {
-            case IM_RGB_FULL:
-                switch (dst.color_space_mode) {
-                    case IM_YUV_BT601_LIMIT_RANGE:
-                        dstinfo.color_space_mode = IM_RGB_TO_YUV_BT601_LIMIT;
-                        break;
-                    case IM_YUV_BT601_FULL_RANGE:
-                        dstinfo.color_space_mode = IM_RGB_TO_YUV_BT601_FULL;
-                        break;
-                    case IM_YUV_BT709_LIMIT_RANGE:
-                        if (session->hardware_info.feature & IM_RGA_SUPPORT_FEATURE_DST_FULL_CSC)
-                            dstinfo.color_space_mode = rgb2yuv_709_limit;
-                        else
-                            dstinfo.color_space_mode = IM_RGB_TO_YUV_BT709_LIMIT;
-
-                        break;
-                    case IM_YUV_BT709_FULL_RANGE:
-                        dstinfo.color_space_mode = rgb2yuv_709_full;
-                        break;
-                    case IM_RGB_FULL:
-                        break;
-                    case IM_RGB_CLIP:
-                    default:
-                        IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                string_color_space(src.color_space_mode), src.color_space_mode,
-                                string_color_space(dst.color_space_mode), dst.color_space_mode);
-                        return IM_STATUS_NOT_SUPPORTED;
-                }
-                break;
-
-            case IM_YUV_BT601_LIMIT_RANGE:
-                switch (dst.color_space_mode) {
-                    case IM_RGB_FULL:
-                        dstinfo.color_space_mode = IM_YUV_TO_RGB_BT601_LIMIT;
-                        break;
-                    case IM_YUV_BT601_FULL_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_601_limit_2_601_full;
-                        break;
-                    case IM_YUV_BT709_LIMIT_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_601_limit_2_709_limit;
-                        break;
-                    case IM_YUV_BT709_FULL_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_601_limit_2_709_full;
-                        break;
-                    case IM_YUV_BT601_LIMIT_RANGE:
-                        break;
-                    case IM_RGB_CLIP:
-                    default:
-                        IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                string_color_space(src.color_space_mode), src.color_space_mode,
-                                string_color_space(dst.color_space_mode), dst.color_space_mode);
-                        return IM_STATUS_NOT_SUPPORTED;
-                }
-                break;
-
-            case IM_YUV_BT601_FULL_RANGE:
-                switch (dst.color_space_mode) {
-                    case IM_RGB_FULL:
-                        dstinfo.color_space_mode = IM_YUV_TO_RGB_BT601_FULL;
-                        break;
-                    case IM_YUV_BT601_LIMIT_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_601_full_2_601_limit;
-                        break;
-                    case IM_YUV_BT709_LIMIT_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_601_full_2_709_limit;
-                        break;
-                    case IM_YUV_BT709_FULL_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_601_full_2_709_full;
-                        break;
-                    case IM_YUV_BT601_FULL_RANGE:
-                        break;
-                    case IM_RGB_CLIP:
-                    default:
-                        IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                string_color_space(src.color_space_mode), src.color_space_mode,
-                                string_color_space(dst.color_space_mode), dst.color_space_mode);
-                        return IM_STATUS_NOT_SUPPORTED;
-                }
-                break;
-
-            case IM_YUV_BT709_LIMIT_RANGE:
-                switch (dst.color_space_mode) {
-                    case IM_RGB_FULL:
-                        dstinfo.color_space_mode = IM_YUV_TO_RGB_BT709_LIMIT;
-                        break;
-                    case IM_YUV_BT601_LIMIT_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_709_limit_2_601_limit;
-                        break;
-                    case IM_YUV_BT601_FULL_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_709_limit_2_601_full;
-                        break;
-                    case IM_YUV_BT709_FULL_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_709_limit_2_709_full;
-                        break;
-                    case IM_YUV_BT709_LIMIT_RANGE:
-                        break;
-                    case IM_RGB_CLIP:
-                    default:
-                        IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                string_color_space(src.color_space_mode), src.color_space_mode,
-                                string_color_space(dst.color_space_mode), dst.color_space_mode);
-                        return IM_STATUS_NOT_SUPPORTED;
-                }
-                break;
-
-            case IM_YUV_BT709_FULL_RANGE:
-                switch (dst.color_space_mode) {
-                    case IM_RGB_FULL:
-                        dstinfo.color_space_mode = yuv2rgb_709_full;
-                        break;
-                    case IM_YUV_BT601_LIMIT_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_709_full_2_601_limit;
-                        break;
-                    case IM_YUV_BT601_FULL_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_709_full_2_601_full;
-                        break;
-                    case IM_YUV_BT709_LIMIT_RANGE:
-                        dstinfo.color_space_mode = yuv2yuv_709_full_2_709_limit;
-                        break;
-                    case IM_YUV_BT709_FULL_RANGE:
-                        break;
-                    case IM_RGB_CLIP:
-                    default:
-                        IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                                string_color_space(src.color_space_mode), src.color_space_mode,
-                                string_color_space(dst.color_space_mode), dst.color_space_mode);
-                        return IM_STATUS_NOT_SUPPORTED;
-                }
-                break;
-
-            case IM_RGB_CLIP:
-            default:
-                IM_LOGW("Unsupported full CSC mode! src %s(0x%x), dst %s(0x%x)",
-                        string_color_space(src.color_space_mode), src.color_space_mode,
-                        string_color_space(dst.color_space_mode), dst.color_space_mode);
-                return IM_STATUS_NOT_SUPPORTED;
+            dstinfo.color_space_mode =
+                rga_get_csc_mode(&session->hardware_info,
+                                 src.color_space_mode, pat.color_space_mode);
+            dstinfo.color_space_mode |=
+                rga_get_csc_mode(&session->hardware_info,
+                                 pat.color_space_mode, dst.color_space_mode);
+        } else {
+            dstinfo.color_space_mode =
+                rga_get_csc_mode(&session->hardware_info,
+                                 src.color_space_mode, dst.color_space_mode);
         }
     }
 
