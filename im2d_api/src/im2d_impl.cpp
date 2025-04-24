@@ -590,9 +590,9 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                     rga_version = IM_RGA_HW_VERSION_RGA_2_ENHANCE_INDEX;
                     memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
                     merge_table.input_resolution.width = 1280;
-                    merge_table.input_resolution.height = 1280;
+                    merge_table.input_resolution.height = 8192;
                     merge_table.output_resolution.width = 1280;
-                    merge_table.output_resolution.height = 1280;
+                    merge_table.output_resolution.height = 4096;
 
                     merge_table.input_format |= IM_RGA_SUPPORT_FORMAT_YUYV_422 |
                                                 IM_RGA_SUPPORT_FORMAT_YUV_400 |
