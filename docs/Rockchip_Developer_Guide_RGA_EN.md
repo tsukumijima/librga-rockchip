@@ -2,9 +2,9 @@
 
 ID: RK-KF-YF-403
 
-Release Version: V2.2.6
+Release Version: V2.2.7
 
-Release Date: 2025-03-27
+Release Date: 2025-04-30
 
 Security Level: □Top-Secret   □Secret   □Internal   ■Public
 
@@ -57,6 +57,7 @@ This document (this guide) is mainly intended for:
 | 2024/08/22 | 2.2.4 | Yu Qiaowei | Add chip RK3506、RV1103B introduction |
 | 2024/11/18 | 2.2.5 | Yu Qiaowei | Add the support status of APIs in different environments. |
 | 2025/03/27 | 2.2.6 | Yu Qiaowei | Add chip RV1126B introduction |
+| 2025/04/30 | 2.2.7 | Yu Qiaowei | Fixed over-constraints on actual_height in the description of RK3506/RV1103B |
 
 ---
 
@@ -186,9 +187,9 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td>Libra</td>
       <td>RK3506</td>
       <td rowspan="1">2x2</td>
-      <td rowspan="1">1280x1280</td>
+      <td rowspan="1">1280x8192</td>
       <td rowspan="1">2x2</td>
-      <td rowspan="1">1280x1280</td>
+      <td rowspan="1">1280x4096</td>
       <td rowspan="1">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>Guassion blur<br/>alpha-8bit</td>
       <td rowspan="1">2</td>
    </tr>
@@ -197,9 +198,9 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td>Pather</td>
       <td>RK1103B</td>
       <td rowspan="1">2x2</td>
-      <td rowspan="1">2880x1620</td>
+      <td rowspan="1">2880x8192</td>
       <td rowspan="1">2x2</td>
-      <td rowspan="1">2880x1620</td>
+      <td rowspan="1">2880x8192</td>
       <td rowspan="1">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear)<br/>scale-down(bi-linear/average)<br/>Color fill</td>
       <td rowspan="1">2</td>
    </tr>
@@ -269,8 +270,6 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
       <td rowspan="1">3 (by pass)<br/>2 (scale)</td>
    </tr>
 </table>
-
-
 
 > Note:
 >
