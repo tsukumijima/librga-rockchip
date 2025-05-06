@@ -23,6 +23,7 @@
 #include <stdbool.h>
 
 #include "slt_config.h"
+#include "rga_slt_parser.h"
 
 unsigned int crc_table[256];
 unsigned int *golden_crc_table = NULL;
@@ -59,19 +60,19 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
     char file_name[100];
 
     sprintf(file_name,"%s/%s_%s.txt",
-            IM2D_SLT_DEFAULT_GOLDEN_PATH,
-            IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX,
+            g_golden_path,
+            g_golden_prefix,
             prefix_name);
     if(case_index == 0) {
         crc_file = fopen(file_name, "wb+");
         if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail",__FUNCTION__,__LINE__,file_name);
+            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
             exit(0);
         }
     }else {
         crc_file = fopen(file_name, "a+");
         if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail",__FUNCTION__,__LINE__,file_name);
+            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
             exit(0);
         }
     }
@@ -89,19 +90,19 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
 
     /* golden */
     sprintf(file_name,"%s/%s_%s.bin",
-            IM2D_SLT_DEFAULT_GOLDEN_PATH,
-            IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX,
+            g_golden_path,
+            g_golden_prefix,
             prefix_name);
     if(case_index == 0) {
         crc_file = fopen(file_name, "wb+");
         if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail",__FUNCTION__,__LINE__,file_name);
+            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
             exit(0);
         }
     }else {
         crc_file = fopen(file_name, "a+");
         if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail",__FUNCTION__,__LINE__,file_name);
+            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
             exit(0);
         }
     }
@@ -120,8 +121,8 @@ unsigned int * read_crcdata_from_file(const char *prefix_name) {
     char file_name[100];
 
     sprintf(file_name,"%s/%s_%s.bin",
-            IM2D_SLT_DEFAULT_GOLDEN_PATH,
-            IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX,
+            g_golden_path,
+            g_golden_prefix,
             prefix_name);
     golden_file = fopen(file_name,"rb");
     if (golden_file) {

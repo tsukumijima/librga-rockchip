@@ -37,6 +37,7 @@ set(RGA_INCLUDE
 )
 set(IM2D_RGA_SLT_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/sources/rga_im2d_slt.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sources/rga_slt_parser.cpp
 )
 
 if(RGA_SOURCE_CODE_TYPE STREQUAL c)

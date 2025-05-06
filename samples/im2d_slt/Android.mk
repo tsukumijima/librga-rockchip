@@ -55,6 +55,7 @@ endif
 include $(LOCAL_PATH)/../utils/utils.mk
 
 LOCAL_SRC_FILES += \
+    sources/rga_slt_parser.cpp \
     sources/rga_im2d_slt.cpp
 
 LOCAL_MODULE:= im2d_slt

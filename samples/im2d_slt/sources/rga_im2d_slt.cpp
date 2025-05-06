@@ -39,6 +39,7 @@
 #include "utils.h"
 #include "dma_alloc.h"
 
+#include "rga_slt_parser.h"
 #include "slt_config.h"
 #include "crc.h"
 
@@ -122,7 +123,7 @@ int rga_raster_test(private_data_t *data, int time,
     dst_buf = dst_img.buf;
     dst_buf_size = dst_img.buf_size;
 
-    if (!IM2D_SLT_GENERATE_CRC) {
+    if (!g_golden_generate_crc) {
         crc_golden_table = read_crcdata_from_file(data->name);
         if (crc_golden_table == NULL) {
             printf("cannot read crc golden table!\n");
@@ -144,7 +145,7 @@ int rga_raster_test(private_data_t *data, int time,
             dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-        if(IM2D_SLT_GENERATE_CRC) {
+        if(g_golden_generate_crc) {
             save_crcdata_to_file(result_crc, data->name, case_index);
         } else {
             if (!crc_check(case_index, result_crc, crc_golden_table))
@@ -180,7 +181,7 @@ int rga_raster_test(private_data_t *data, int time,
             dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-        if(IM2D_SLT_GENERATE_CRC) {
+        if(g_golden_generate_crc) {
             save_crcdata_to_file(result_crc, data->name, case_index);
         } else {
             if (!crc_check(case_index, result_crc, crc_golden_table))
@@ -211,7 +212,7 @@ int rga_raster_test(private_data_t *data, int time,
 
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-        if(IM2D_SLT_GENERATE_CRC) {
+        if(g_golden_generate_crc) {
             save_crcdata_to_file(result_crc, data->name, case_index);
         } else {
             if (!crc_check(case_index, result_crc, crc_golden_table))
@@ -238,7 +239,7 @@ int rga_raster_test(private_data_t *data, int time,
                 dma_sync_device_to_cpu(dst_img.fd);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-            if(IM2D_SLT_GENERATE_CRC) {
+            if(g_golden_generate_crc) {
                 save_crcdata_to_file(result_crc, data->name, case_index);
             } else {
                 if (!crc_check(case_index, result_crc, crc_golden_table))
@@ -247,10 +248,10 @@ int rga_raster_test(private_data_t *data, int time,
         }
     }
 
-    if (IM2D_SLT_GENERATE_CRC)
+    if (g_golden_generate_crc)
         printf("ID[%d]: %s genrate CRC golden %s/%s_%s.txt\n",
                data->id, data->name,
-               IM2D_SLT_DEFAULT_GOLDEN_PATH, IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX, data->name);
+               g_golden_path, g_golden_prefix, data->name);
 
     return 0;
 
@@ -292,7 +293,7 @@ int rga_special_test(private_data_t *data, int time,
     dst_buf = dst_img.buf;
     dst_buf_size = dst_img.buf_size;
 
-    if (!IM2D_SLT_GENERATE_CRC) {
+    if (!g_golden_generate_crc) {
         crc_golden_table = read_crcdata_from_file(data->name);
         if (crc_golden_table == NULL) {
             printf("cannot read crc golden table!\n");
@@ -314,7 +315,7 @@ int rga_special_test(private_data_t *data, int time,
             dma_sync_device_to_cpu(dst_img.fd);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-        if(IM2D_SLT_GENERATE_CRC) {
+        if(g_golden_generate_crc) {
             save_crcdata_to_file(result_crc, data->name, case_index);
         } else {
             if (!crc_check(case_index, result_crc, crc_golden_table))
@@ -336,7 +337,7 @@ int rga_special_test(private_data_t *data, int time,
                 dma_sync_device_to_cpu(dst_img.fd);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-            if(IM2D_SLT_GENERATE_CRC) {
+            if(g_golden_generate_crc) {
                 save_crcdata_to_file(result_crc, data->name, case_index);
             } else {
                 if (!crc_check(case_index, result_crc, crc_golden_table))
@@ -345,10 +346,10 @@ int rga_special_test(private_data_t *data, int time,
         }
     }
 
-    if (IM2D_SLT_GENERATE_CRC)
+    if (g_golden_generate_crc)
         printf("ID[%d]: %s genrate CRC golden %s/%s_%s.txt\n",
                data->id, data->name,
-               IM2D_SLT_DEFAULT_GOLDEN_PATH, IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX, data->name);
+               g_golden_path, g_golden_prefix, data->name);
 
     return 0;
 
@@ -541,12 +542,12 @@ static int rga_run(void *args, rga_slt_case running_case) {
     dma_sync_device_to_cpu(dst_dma_fd);
 
     if (fbc_en) {
-        ret = read_image_from_fbc_file(src_buf, IM2D_SLT_DEFAULT_INPUT_PATH,
+        ret = read_image_from_fbc_file(src_buf, g_input_path,
                                        src_width, src_height, src_format, 0);
         if (ret < 0)
             goto RELEASE_BUFFER;
     } else {
-        ret = read_image_from_file(src_buf, IM2D_SLT_DEFAULT_INPUT_PATH,
+        ret = read_image_from_file(src_buf, g_input_path,
                                    src_width, src_height, src_format, 0);
         if (ret < 0)
             goto RELEASE_BUFFER;
@@ -620,18 +621,18 @@ RUNNING_FAILED:
     dma_sync_device_to_cpu(dst_dma_fd);
 
     if (fbc_en) {
-        write_image_to_fbc_file(src_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
+        write_image_to_fbc_file(src_buf, g_output_path,
                                 src.wstride, src.hstride, src.format, data->id * 10 + 1);
-        write_image_to_file(tmp_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
+        write_image_to_file(tmp_buf, g_output_path,
                             tmp.wstride, tmp.hstride, tmp.format, data->id * 10 + 2);
-        write_image_to_fbc_file(dst_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
+        write_image_to_fbc_file(dst_buf, g_output_path,
                                 dst.wstride, dst.hstride, dst.format, data->id * 10 + 3);
     } else {
-        write_image_to_file(src_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
+        write_image_to_file(src_buf, g_output_path,
                             src.wstride, src.hstride, src.format, data->id * 10 + 1);
-        write_image_to_file(tmp_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
+        write_image_to_file(tmp_buf, g_output_path,
                             tmp.wstride, tmp.hstride, tmp.format, data->id * 10 + 2);
-        write_image_to_file(dst_buf, IM2D_SLT_DEFAULT_OUTPUT_PATH,
+        write_image_to_file(dst_buf, g_output_path,
                             dst.wstride, dst.hstride, dst.format, data->id * 10 + 3);
     }
 
@@ -732,9 +733,13 @@ static int run_test(int pthread_num, private_data_t *data, void *(*test_func)(vo
     return 0;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     int pthread_num = 0;
     private_data_t data[IM2D_SLT_THREAD_MAX];
+
+    if (rga_slt_parse_argv(argc, argv) < 0) {
+        return 0;
+    }
 
     memset(&data, 0x0, sizeof(private_data_t) * IM2D_SLT_THREAD_MAX);
     printf("-------------------------------------------------\n");
