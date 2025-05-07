@@ -21,6 +21,7 @@
 #define LOG_TAG "rga_im2d_slt"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <getopt.h>
 
@@ -29,6 +30,8 @@
 
 /* slt parser */
 #define MODE_HELP_CHAR          'h'
+#define MODE_CHIP_CHAR          'c'
+#define MODE_PERF_CHAR          'f'
 #define MODE_INPUT_CHAR         'i'
 #define MODE_OUTPUT_CHAR        'o'
 #define MODE_GOLDEN_CHAR        'g'
@@ -40,14 +43,22 @@ char g_output_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_OUTPUT_PATH;
 char g_golden_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_GOLDEN_PATH;
 char g_golden_prefix[RGA_SLT_STRING_MAX] = IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX;
 bool g_golden_generate_crc = false;
+struct im2d_slt_config g_chip_config = common_rga2_config;
 
 static void help_function(bool all) {
     printf("\n====================================================================================================\n");
-    printf( "   usage: im2d_slt  [--help/-h] [--input/-i] [--output/-o] [--golden/-g] [--prefix/-p] [--crc/r]\n\n");
+    printf( "   usage: im2d_slt  [--help/-h] [--chip/-c] [--perf/-f] [--input/-i] [--output/-o] [--golden/-g] \n"
+            "                    [--prefix/-p] [--crc/r]\n\n");
 
     if (all) {
         printf(
             "---------------------------------------- Config ----------------------------------------------------\n"
+            "\t --chip/-c     Set chip\n"
+            "\t                 <options>: \n"
+            "\t                   <chip>        chip ready for testing, e.g. \"--chip=rk3588\".\n"
+            "\t --perf/-f     Set perf mode\n"
+            "\t                 <options>: \n"
+            "\t                   <num>         set loop num, e.g. \"--perf=50\".\n"
             "\t --input/-i    Set input image file path.\n"
             "\t                 <options>: \n"
             "\t                   <path>        input image file path, e.g. \"--input=/data\".\n"
@@ -76,9 +87,11 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
     int ret;
     int opt = 0, option_index = 0;
 
-    char strings[] = "h::i:o:g:p:r";
+    char strings[] = "h::c:f::i:o:g:p:r";
     static struct option mode_options[] = {
         {   "help", optional_argument, NULL, MODE_HELP_CHAR     },
+        {   "chip", required_argument, NULL, MODE_CHIP_CHAR     },
+        {   "perf", optional_argument, NULL, MODE_PERF_CHAR     },
         {  "input", required_argument, NULL, MODE_INPUT_CHAR    },
         { "output", required_argument, NULL, MODE_OUTPUT_CHAR   },
         { "golden", required_argument, NULL, MODE_GOLDEN_CHAR   },
@@ -102,6 +115,37 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
 
                 return -1;
 
+            /* required_argument */
+            case MODE_CHIP_CHAR:
+                if (optarg == NULL) {
+                    printf("[%s, %d], Invalid parameter: chip = %s\n", __FUNCTION__, __LINE__, optarg);
+                    return -1;
+                }
+
+                if (strcmp(optarg, "rk3588") == 0) {
+                    g_chip_config = rk3588_config;
+                } else if (strcmp(optarg, "rk3576") == 0) {
+                    g_chip_config = rk3576_config;
+                } else if ((strcmp(optarg, "rk3528") == 0) ||
+                           (strcmp(optarg, "rk3562") == 0) ||
+                           (strcmp(optarg, "rv1126b") == 0) ||
+                           (strcmp(optarg, "rv1106") == 0)) {
+                    g_chip_config = common_rga2_config;
+                } else if (strcmp(optarg, "rv1103b") == 0) {
+                    g_chip_config = rv1103b_config;
+                } else if (strcmp(optarg, "rk3506") == 0) {
+                    g_chip_config = rk3506_config;
+                } else {
+                    g_chip_config = common_rga2_config;
+                    printf("set chip [common_RGA2]\n");
+
+                    break;
+                }
+
+                printf("set chip[%s]\n", optarg);
+
+                break;
+
             default:
                 break;
         }
@@ -115,6 +159,25 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
             continue;
 
         switch (opt) {
+            /* optional_argument */
+            case MODE_PERF_CHAR:
+                g_chip_config.perf_case_en = true;
+
+                if (optarg != NULL) {
+                    g_chip_config.while_num = atoi(optarg);
+                    if (g_chip_config.while_num <= 0) {
+                        printf("[%s, %d], Invalid parameter: perf = %s\n", __FUNCTION__, __LINE__, optarg);
+                        return -1;
+                    }
+
+                } else {
+                    g_chip_config.while_num = IM2D_SLT_WHILE_NUM;
+                }
+
+                printf("set perf[%d]\n", g_chip_config.while_num);
+
+                break;
+
             /* required_argument */
             case MODE_INPUT_CHAR:
                 memset(g_input_path, 0x0, sizeof(g_input_path));

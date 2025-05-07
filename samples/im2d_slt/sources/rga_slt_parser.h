@@ -26,6 +26,7 @@
  extern char g_golden_path[RGA_SLT_STRING_MAX];
  extern char g_golden_prefix[RGA_SLT_STRING_MAX];
  extern bool g_golden_generate_crc;
+ extern struct im2d_slt_config g_chip_config;
 
  int rga_slt_parse_argv(int argc, char *argv[]);
 
