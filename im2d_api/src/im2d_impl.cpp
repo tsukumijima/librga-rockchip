@@ -68,7 +68,7 @@ using namespace android;
 #endif
 #endif
 
-__thread im_context_t g_im2d_context;
+RGA_THREAD_LOCAL im_context_t g_im2d_context;
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
     if (dst_table == NULL || merge_table == NULL) {

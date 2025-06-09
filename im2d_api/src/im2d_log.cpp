@@ -34,12 +34,13 @@ using namespace std;
 #include <sys/system_properties.h>
 #endif
 
+#include "im2d_context.h"
 #include "im2d_log.h"
 
 static int rga_log_property_get(void);
 static int rga_log_level_property_get(void);
 
-__thread char g_rga_err_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
+RGA_THREAD_LOCAL char g_rga_err_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
 
 #ifdef __cplusplus
 static atomic_int g_log_en = ATOMIC_VAR_INIT(rga_log_property_get());

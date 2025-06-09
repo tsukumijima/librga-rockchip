@@ -29,6 +29,12 @@
 #include "rt-thread/rtt_adapter.h"
 #endif
 
+#ifdef __riscv
+#define RGA_THREAD_LOCAL
+#else
+#define RGA_THREAD_LOCAL __thread
+#endif
+
 #define RGA_DEVICE_NODE_PATH "/dev/rga"
 
 typedef enum {

@@ -72,8 +72,8 @@ using namespace std;
 #undef imgaussianBlur
 #endif /* #ifdef __cplusplus */
 
-extern __thread im_context_t g_im2d_context;
-extern __thread char g_rga_err_str[IM_ERR_MSG_LEN];
+extern RGA_THREAD_LOCAL im_context_t g_im2d_context;
+extern RGA_THREAD_LOCAL char g_rga_err_str[IM_ERR_MSG_LEN];
 
 IM_API const char* imStrError_t(IM_STATUS status) {
     const char *error_type[] = {
@@ -85,7 +85,7 @@ IM_API const char* imStrError_t(IM_STATUS status) {
         "Version verification failed",
         "No session",
     };
-    static __thread char error_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
+    static RGA_THREAD_LOCAL char error_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
     const char *ptr = NULL;
 
     switch(status) {
