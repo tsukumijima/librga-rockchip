@@ -80,7 +80,7 @@ size_t rga_get_start_time_ms(void);
         if ((rga_log_enable_get() > 0 && LOG_LEVEL_CHECK(level)) || \
             GET_LOG_LEVEL(level) == IM_LOG_ERROR || \
             (level) & IM_LOG_FORCE) \
-            rt_kprintf("%lu %1s %8s: " _str "\n", \
+            fprintf(stdout, "%lu %1s %8s: " _str "\n", \
                 (unsigned long)(rga_get_current_time_ms()-rga_get_start_time_ms()), \
                 rga_get_error_type_str(level), LOG_TAG, \
                 ## __VA_ARGS__); \
