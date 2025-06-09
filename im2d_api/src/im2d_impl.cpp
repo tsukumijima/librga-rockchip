@@ -631,6 +631,14 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                                              IM_RGA_SUPPORT_FEATURE_QUANTIZE | IM_RGA_SUPPORT_FEATURE_MOSAIC);
 
                     break;
+                case 0x33689:
+                    // RK1820
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+
+                    merge_table.output_format &= ~(IM_RGA_SUPPORT_FORMAT_Y4 | IM_RGA_SUPPORT_FORMAT_Y8);
+                    merge_table.feature &= ~IM_RGA_SUPPORT_FEATURE_MOSAIC;
+                    break;
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
