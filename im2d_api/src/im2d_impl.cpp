@@ -3663,7 +3663,7 @@ int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst) {
     COLOR_FILL fillColor ;
     void *dstBuf = NULL;
     RECT clip;
-    static struct rga_req rgaReg;
+    struct rga_req rgaReg;
 
     int sync_mode = RGA_BLIT_SYNC;
 
