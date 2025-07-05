@@ -64,6 +64,8 @@ struct im2d_slt_config {
     int func_flags;
 
     const char *heap_path;
+
+    const rga_slt_crc_table *crc_data;
 };
 
 static struct im2d_slt_config rk3588_config = {

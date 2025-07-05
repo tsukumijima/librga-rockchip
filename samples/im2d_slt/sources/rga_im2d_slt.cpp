@@ -100,7 +100,7 @@ int rga_raster_test(private_data_t *data, int time,
     int usage = 0;
     int ori_format;
     unsigned int result_crc = 0;
-    unsigned int *crc_golden_table = NULL;
+    const rga_slt_crc_table *crc_golden_table;
 
     rga_buffer_t src, dst, tmp;
     char *src_buf, *dst_buf, *tmp_buf;
@@ -124,7 +124,7 @@ int rga_raster_test(private_data_t *data, int time,
     dst_buf_size = dst_img.buf_size;
 
     if (!g_golden_generate_crc) {
-        crc_golden_table = read_crcdata_from_file(data->name);
+        crc_golden_table = get_crcdata_table(g_chip_config.crc_data, data->name);
         if (crc_golden_table == NULL) {
             printf("cannot read crc golden table!\n");
             return slt_error;
@@ -146,12 +146,11 @@ int rga_raster_test(private_data_t *data, int time,
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(g_golden_generate_crc) {
-            save_crcdata_to_file(result_crc, data->name, case_index);
+            save_crcdata(result_crc, data->name, data->id, case_index);
         } else {
-            if (!crc_check(case_index, result_crc, crc_golden_table))
+            if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
                 goto CHECK_ERROR;
         }
-
 
         if (!(g_chip_config.func_flags & RGA_SLT_FUNC_DIS_ALPHA)) {
             /* case: 3-channel blend + rotate-180 + H_V mirror + scale-up + dst-CSC */
@@ -183,9 +182,9 @@ int rga_raster_test(private_data_t *data, int time,
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(g_golden_generate_crc) {
-                save_crcdata_to_file(result_crc, data->name, case_index);
+                save_crcdata(result_crc, data->name, data->id, case_index);
             } else {
-                if (!crc_check(case_index, result_crc, crc_golden_table))
+                if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
                     goto CHECK_ERROR;
             }
 
@@ -214,9 +213,9 @@ int rga_raster_test(private_data_t *data, int time,
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(g_golden_generate_crc) {
-            save_crcdata_to_file(result_crc, data->name, case_index);
+            save_crcdata(result_crc, data->name, data->id, case_index);
         } else {
-            if (!crc_check(case_index, result_crc, crc_golden_table))
+            if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
                 goto CHECK_ERROR;
         }
 
@@ -241,9 +240,9 @@ int rga_raster_test(private_data_t *data, int time,
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(g_golden_generate_crc) {
-                save_crcdata_to_file(result_crc, data->name, case_index);
+                save_crcdata(result_crc, data->name, data->id, case_index);
             } else {
-                if (!crc_check(case_index, result_crc, crc_golden_table))
+                if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
                     goto CHECK_ERROR;
             }
         }
@@ -271,7 +270,7 @@ int rga_special_test(private_data_t *data, int time,
     int ret;
     int case_index;
     unsigned int result_crc = 0;
-    unsigned int *crc_golden_table = NULL;
+    const rga_slt_crc_table *crc_golden_table = NULL;
 
     rga_buffer_t src, dst, tmp;
     char *src_buf, *dst_buf, *tmp_buf;
@@ -295,7 +294,7 @@ int rga_special_test(private_data_t *data, int time,
     dst_buf_size = dst_img.buf_size;
 
     if (!g_golden_generate_crc) {
-        crc_golden_table = read_crcdata_from_file(data->name);
+        crc_golden_table = get_crcdata_table(g_chip_config.crc_data, data->name);
         if (crc_golden_table == NULL) {
             printf("cannot read crc golden table!\n");
             return slt_error;
@@ -317,9 +316,9 @@ int rga_special_test(private_data_t *data, int time,
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(g_golden_generate_crc) {
-            save_crcdata_to_file(result_crc, data->name, case_index);
+            save_crcdata(result_crc, data->name, data->id, case_index);
         } else {
-            if (!crc_check(case_index, result_crc, crc_golden_table))
+            if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
                 goto CHECK_ERROR;
         }
 
@@ -339,9 +338,9 @@ int rga_special_test(private_data_t *data, int time,
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(g_golden_generate_crc) {
-                save_crcdata_to_file(result_crc, data->name, case_index);
+                save_crcdata(result_crc, data->name, data->id, case_index);
             } else {
-                if (!crc_check(case_index, result_crc, crc_golden_table))
+                if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
                     goto CHECK_ERROR;
             }
         }
@@ -989,6 +988,11 @@ int main(int argc, char *argv[]) {
     }
 
     printf("-------------------------------------------------\n");
+
+    if (g_golden_generate_crc) {
+        printf("RGA slt generate CRC golden data success!\n");
+        rga_slt_dump_generate_crc();
+    }
 
     return 0;
 }
