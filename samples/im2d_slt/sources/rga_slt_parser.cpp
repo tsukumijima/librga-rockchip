@@ -43,6 +43,7 @@ char g_output_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_OUTPUT_PATH;
 char g_golden_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_GOLDEN_PATH;
 char g_golden_prefix[RGA_SLT_STRING_MAX] = IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX;
 bool g_golden_generate_crc = false;
+bool g_golden_input = false;
 struct im2d_slt_config g_chip_config = common_rga2_config;
 
 static void help_function(bool all) {
@@ -105,6 +106,7 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
     strcpy(g_golden_path, IM2D_SLT_DEFAULT_GOLDEN_PATH);
     strcpy(g_golden_prefix, IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX);
     g_golden_generate_crc = false;
+    g_golden_input = false;
 
     while ((opt = getopt_long(argc, argv, strings, mode_options, &option_index))!= -1) {
         switch (opt) {
@@ -220,6 +222,7 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
                     printf("[%s, %d], Invalid parameter: level = %s\n", __FUNCTION__, __LINE__, optarg);
                     return -1;
                 }
+                g_golden_input = true;
 
                 printf("set golden_path[%s]\n", g_golden_path);
 
@@ -249,6 +252,9 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
                 break;
         }
     }
+
+    if (g_golden_input && !g_golden_generate_crc)
+        g_read_golden_data = read_crc_table_from_file(g_golden_prefix);
 
     return 0;
 }

@@ -31,6 +31,7 @@
 
 unsigned int crc_table[256];
 rga_slt_crc_table g_generated_golden_data = {0};
+const rga_slt_crc_table *g_read_golden_data = NULL;
 
 void init_crc_table(void)
 {
@@ -87,8 +88,7 @@ void rga_slt_dump_generate_crc(void)
     printf("====================================================================================================\n");
 }
 
-void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int case_index)
-{
+int save_crc_table_to_file(const char *prefix_name) {
     int len;
     FILE* crc_file = NULL;
     char file_name[RGA_SLT_STRING_MAX];
@@ -99,70 +99,58 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
             prefix_name);
     if (len >= RGA_SLT_STRING_MAX) {
         printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
-        exit(0);
+        return -1;
     }
 
-    if(case_index == 0) {
-        crc_file = fopen(file_name, "wb+");
-        if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
-            exit(0);
-        }
-    }else {
-        crc_file = fopen(file_name, "a+");
-        if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
-            exit(0);
+    crc_file = fopen(file_name, "wb+");
+    if(crc_file == NULL){
+        printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
+        return -1;
+    }
+
+    for (int thread_id = 0; thread_id < RGA_SLT_THREAD_MAX; thread_id++) {
+        for (int i = 0; i < RGA_SLT_CASE_MAX; i++) {
+            fprintf(crc_file, "0x%X,", g_generated_golden_data[thread_id][i]);
         }
     }
 
-    if(case_index % 8 == 0 && case_index != 0) {
-        fprintf(crc_file, "\r\n0x%X,", crc_data);
-    }else {
-        fprintf(crc_file, "0x%X,", crc_data);
-    }
+    fclose(crc_file);
 
-    if (crc_file) {
-        fclose(crc_file);
-        crc_file = NULL;
-    }
+    printf("Save CRC golden data to file: %s\n", file_name);
 
-    /* golden */
+    /* golden.bin */
     len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.bin",
             g_golden_path,
             g_golden_prefix,
             prefix_name);
     if (len >= RGA_SLT_STRING_MAX) {
         printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
-        exit(0);
+        return -1;
     }
 
-    if(case_index == 0) {
-        crc_file = fopen(file_name, "wb+");
-        if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
-            exit(0);
-        }
-    }else {
-        crc_file = fopen(file_name, "a+");
-        if(crc_file == NULL){
-            printf("%s,%d:openFile %s fail\n",__FUNCTION__,__LINE__,file_name);
-            exit(0);
+    crc_file = fopen(file_name, "wb+");
+    if(crc_file == NULL){
+        printf("%s,%d:openFile %s fail\n", __FUNCTION__, __LINE__, file_name);
+        return -1;
+    }
+
+    for (int thread_id = 0; thread_id < RGA_SLT_THREAD_MAX; thread_id++) {
+        for (int i = 0; i < RGA_SLT_CASE_MAX; i++) {
+            fwrite(&g_generated_golden_data[thread_id][i], sizeof(unsigned int), 1, crc_file);
         }
     }
 
-    fwrite((void *)(&crc_data), sizeof(crc_data), 1, crc_file);
-    if (crc_file) {
-        fclose(crc_file);
-        crc_file = NULL;
-    }
+    fclose(crc_file);
+
+    printf("Save CRC golden data to file: %s\n", file_name);
+
+    return 0;
 }
 
-const rga_slt_crc_table *read_crcdata_from_file(const char *prefix_name) {
+const rga_slt_crc_table *read_crc_table_from_file(const char *prefix_name) {
     int len;
     int size;
-    FILE *golden_file = NULL;
-    rga_slt_crc_table *golden_table = NULL;
+    FILE *crc_file = NULL;
     char file_name[RGA_SLT_STRING_MAX];
 
     len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.bin",
@@ -171,53 +159,46 @@ const rga_slt_crc_table *read_crcdata_from_file(const char *prefix_name) {
             prefix_name);
     if (len >= RGA_SLT_STRING_MAX) {
         printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
-        exit(0);
+        return NULL;
     }
 
-    golden_file = fopen(file_name,"rb");
-    if (golden_file) {
-        fseek(golden_file, 0, SEEK_END);
-        size = ftell(golden_file);
-        golden_table = (rga_slt_crc_table *)malloc(size);
-        if (golden_table == NULL) {
-            printf("malloc golden_table fault!\n");
-            fclose(golden_file);
+    crc_file = fopen(file_name, "rb");
+    if (crc_file) {
+        fseek(crc_file, 0, SEEK_END);
+        size = ftell(crc_file);
+
+        if (size != sizeof(g_generated_golden_data)) {
+            printf("File size mismatch: expected %zu, got %d\n",
+                  sizeof(g_generated_golden_data), size);
+            fclose(crc_file);
             return NULL;
         }
 
-        fseek (golden_file, 0, SEEK_SET);
-        fread((void*)golden_table, size, 1, golden_file);
-        fclose(golden_file);
+        fseek(crc_file, 0, SEEK_SET);
+        fread((void*)&g_generated_golden_data, size, 1, crc_file);
+        fclose(crc_file);
 
-        return golden_table;
+        printf("Read CRC golden data from file: %s\n", file_name);
+        return &g_generated_golden_data;
     } else {
-        printf("Could not open file : %s \n",file_name);
+        printf("Could not open file: %s\n", file_name);
     }
 
     return NULL;
 }
 
-void save_crcdata(unsigned int crc_data, const char *prefix_name, int thread_id, int case_index)
+void save_crcdata(unsigned int crc_data, int thread_id, int case_index)
 {
     g_generated_golden_data[thread_id][case_index] = crc_data;
-
-#ifndef __RT_THREAD__
-    if (prefix_name != NULL)
-        save_crcdata_to_file(crc_data, prefix_name, case_index);
-#endif
 }
 
-const rga_slt_crc_table *get_crcdata_table(const rga_slt_crc_table *table, const char *prefix_name)
-{
-#ifndef __RT_THREAD__
-    if (table == NULL && prefix_name != NULL)
-        return read_crcdata_from_file(prefix_name);
-#else
-    if (table != NULL)
-        return table;
-#endif
-
-    return NULL;
+const rga_slt_crc_table *get_crcdata_table(void) {
+    if (g_read_golden_data != NULL)
+        return g_read_golden_data;
+    else if (g_chip_config.crc_data != NULL)
+        return g_chip_config.crc_data;
+    else
+        return NULL;
 }
 
 rga_slt_crc_table common_golden_data = {
