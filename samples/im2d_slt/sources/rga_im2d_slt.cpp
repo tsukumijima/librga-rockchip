@@ -762,7 +762,7 @@ THREAD_FUNC_RETURN_TYPE pthread_rga_perf_func(void *args) {
 #endif /* #if IM2D_SLT_THREAD_EN */
 }
 
-static int run_test(int pthread_num, private_data_t *data, thread_func_t test_func) {
+static int run_test(int start, int end, private_data_t *data, thread_func_t test_func) {
 #if IM2D_SLT_THREAD_EN
 #ifdef __RT_THREAD__
     rt_thread_t tid[IM2D_SLT_THREAD_MAX];
@@ -774,7 +774,7 @@ static int run_test(int pthread_num, private_data_t *data, thread_func_t test_fu
         return -1;
     }
 
-    for (int i = 1; i <= pthread_num; i++) {
+    for (int i = start; i < end; i++) {
         data[i].sem = all_done_sem;
         tid[i] = rt_thread_create(data[i].name, test_func, (void *)(&data[i]), 163840, 16, 10);
         if (tid[i]) {
@@ -785,10 +785,10 @@ static int run_test(int pthread_num, private_data_t *data, thread_func_t test_fu
         }
     }
 
-    for (int i = 1; i <= pthread_num; i++) {
+    for (int i = start; i < end; i++) {
         rt_err_t result = rt_sem_take(all_done_sem, RT_WAITING_FOREVER);
         if (result != RT_EOK) {
-            rt_kprintf("rt_sem_take failed (%d/%d).\n", i, pthread_num);
+            rt_kprintf("rt_sem_take failed (%d/%d).\n", i, end);
             return -1;
         }
 
@@ -802,12 +802,12 @@ static int run_test(int pthread_num, private_data_t *data, thread_func_t test_fu
 #else
     pthread_t tdSyncID[IM2D_SLT_THREAD_MAX];
 
-    for (int i = 1; i <= pthread_num; i++) {
+    for (int i = start; i < end; i++) {
         pthread_create(&tdSyncID[i], NULL, test_func, (void *)(&data[i]));
         printf("creat Sync pthread[0x%lx] = %d, id = %d\n", tdSyncID[i], i, data[i].id);
     }
 
-    for (int i = 1; i <= pthread_num; i++) {
+    for (int i = start; i < end; i++) {
         pthread_join(tdSyncID[i], NULL);
         if (data[i].result < 0) {
             printf("ID[%d] case '%s' is faile!\n", data[i].id, data[i].name);
@@ -816,7 +816,7 @@ static int run_test(int pthread_num, private_data_t *data, thread_func_t test_fu
     }
 #endif /* #ifdef __RT_THREAD__ */
 #else
-    for (int i = 1; i <= pthread_num; i++) {
+    for (int i = start; i < end; i++) {
         test_func((void *)(&data[i]));
         printf("ID[%d] %s run end!\n", data[i].id, data[i].name);
         if (data[i].result < 0) {
@@ -838,6 +838,7 @@ int rga_slt(int argc, char *argv[])
 int main(int argc, char *argv[])
 #endif
 {
+    int start_id = 0;
     int pthread_num = 0;
     private_data_t data[IM2D_SLT_THREAD_MAX];
 
@@ -850,8 +851,9 @@ int main(int argc, char *argv[])
     memset(&data, 0x0, sizeof(private_data_t) * IM2D_SLT_THREAD_MAX);
     printf("-------------------------------------------------\n");
 
+    start_id = pthread_num;
+
     if (g_chip_config.core_mask & IM_SCHEDULER_RGA3_CORE0) {
-        pthread_num++;
         data[pthread_num].id = pthread_num;
         data[pthread_num].name = "RGA3_core0";
         data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -863,10 +865,10 @@ int main(int argc, char *argv[])
         data[pthread_num].rd_mode = IM_RASTER_MODE;
         data[pthread_num].core = IM_SCHEDULER_RGA3_CORE0;
         data[pthread_num].priority = 1;
+        pthread_num++;
     }
 
     if (g_chip_config.core_mask & IM_SCHEDULER_RGA3_CORE0) {
-        pthread_num++;
         data[pthread_num].id = pthread_num;
         data[pthread_num].name = "RGA3_core1";
         data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -878,10 +880,10 @@ int main(int argc, char *argv[])
         data[pthread_num].rd_mode = IM_RASTER_MODE;
         data[pthread_num].core = IM_SCHEDULER_RGA3_CORE1;
         data[pthread_num].priority = 1;
+        pthread_num++;
     }
 
     if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE0) {
-        pthread_num++;
         data[pthread_num].id = pthread_num;
         data[pthread_num].name = "RGA2_core0";
         data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -893,10 +895,10 @@ int main(int argc, char *argv[])
         data[pthread_num].rd_mode = IM_RASTER_MODE;
         data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
         data[pthread_num].priority = 1;
+        pthread_num++;
     }
 
     if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE1) {
-        pthread_num++;
         data[pthread_num].id = pthread_num;
         data[pthread_num].name = "RGA2_core1";
         data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -908,9 +910,10 @@ int main(int argc, char *argv[])
         data[pthread_num].rd_mode = IM_RASTER_MODE;
         data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
         data[pthread_num].priority = 1;
+        pthread_num++;
     }
 
-    if (run_test(pthread_num, data, pthread_rga_raster_func) < 0) {
+    if (run_test(start_id, pthread_num, data, pthread_rga_raster_func) < 0) {
         printf("-------------------------------------------------\n");
         printf("RGA raster-test fail!\n");
         return -1;
@@ -923,11 +926,10 @@ int main(int argc, char *argv[])
         memset(&data, 0x0, sizeof(private_data_t) * IM2D_SLT_THREAD_MAX);
         printf("-------------------------------------------------\n");
 
-        pthread_num = 0;
+        start_id = pthread_num;
 
         if (g_chip_config.special_mask & IM_AFBC16x16_MODE) {
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA3_CORE0) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA3_core0_fbc";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -939,10 +941,10 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_AFBC16x16_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA3_CORE0;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
 
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA3_CORE1) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA3_core1_fbc";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -954,12 +956,12 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_AFBC16x16_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA3_CORE1;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
         }
 
         if (g_chip_config.special_mask & IM_AFBC32x8_MODE) {
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE0) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA2_core0_afbc32x8";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -971,10 +973,10 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_AFBC32x8_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
 
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE1) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA2_core1_afbc32x8";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -986,12 +988,12 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_AFBC32x8_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
         }
 
         if (g_chip_config.special_mask & IM_RKFBC64x4_MODE) {
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE0) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA2_core0_rkfbc64x4";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -1003,10 +1005,10 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_RKFBC64x4_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
 
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE1) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA2_core1_rkfbc64x4";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -1018,12 +1020,12 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_RKFBC64x4_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
         }
 
         if (g_chip_config.special_mask & IM_TILE4x4_MODE) {
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE0) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA2_core0_tile4x4";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -1035,10 +1037,10 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_TILE4x4_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
 
             if (g_chip_config.core_mask & IM_SCHEDULER_RGA2_CORE1) {
-                pthread_num++;
                 data[pthread_num].id = pthread_num;
                 data[pthread_num].name = "RGA2_core1_tile4x4";
                 data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -1050,10 +1052,11 @@ int main(int argc, char *argv[])
                 data[pthread_num].rd_mode = IM_TILE4x4_MODE;
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
                 data[pthread_num].priority = 1;
+                pthread_num++;
             }
         }
 
-        if (run_test(pthread_num, data, pthread_rga_special_func) < 0) {
+        if (run_test(start_id, pthread_num, data, pthread_rga_special_func) < 0) {
             printf("-------------------------------------------------\n");
             printf("RGA special-test fail!\n");
             return -1;
@@ -1067,9 +1070,9 @@ int main(int argc, char *argv[])
         memset(&data, 0x0, sizeof(private_data_t) * IM2D_SLT_THREAD_MAX);
         printf("-------------------------------------------------\n");
 
-        pthread_num = 0;
+        start_id = pthread_num;
 
-        for (pthread_num = 1; pthread_num < IM2D_SLT_THREAD_MAX; pthread_num++) {
+        for (pthread_num = start_id; pthread_num < start_id + IM2D_SLT_THREAD_MAX; pthread_num++) {
             data[pthread_num].id = pthread_num;
             data[pthread_num].name = "perf_test";
             data[pthread_num].dma_heap_name = g_chip_config.heap_path;
@@ -1083,7 +1086,7 @@ int main(int argc, char *argv[])
             data[pthread_num].priority = 1;
         }
 
-        if (run_test(pthread_num - 1, data, pthread_rga_perf_func) < 0) {
+        if (run_test(start_id, pthread_num, data, pthread_rga_perf_func) < 0) {
             printf("-------------------------------------------------\n");
             printf("RGA perf-test fail!\n");
             return -1;
