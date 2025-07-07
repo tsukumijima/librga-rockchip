@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
- #ifndef _RGA_SLT_PARSER_H_
- #define _RGA_SLT_PARSER_H_
+#ifndef _RGA_SLT_PARSER_H_
+#define _RGA_SLT_PARSER_H_
+
+#include <stdbool.h>
 
 #define RGA_SLT_STRING_MAX  256
 

@@ -99,6 +99,13 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
         {    "crc",       no_argument, NULL, MODE_GOLDEN_GENERATE_CRC_CHAR  },
     };
 
+    /* init config */
+    strcpy(g_input_path, IM2D_SLT_DEFAULT_INPUT_PATH);
+    strcpy(g_output_path, IM2D_SLT_DEFAULT_OUTPUT_PATH);
+    strcpy(g_golden_path, IM2D_SLT_DEFAULT_GOLDEN_PATH);
+    strcpy(g_golden_prefix, IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX);
+    g_golden_generate_crc = false;
+
     while ((opt = getopt_long(argc, argv, strings, mode_options, &option_index))!= -1) {
         switch (opt) {
             /* optional_argument */

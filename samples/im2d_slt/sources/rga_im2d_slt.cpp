@@ -28,24 +28,48 @@
 #include <memory.h>
 #include <pthread.h>
 
+#ifdef __RT_THREAD__
+#include <rtdevice.h>
+#include <rtthread.h>
+#include <rthw.h>
+#else
+#include "dma_alloc.h"
+#endif
+
+#include "utils.h"
+
+#include "RgaUtils.h"
 #ifdef __cplusplus
 #include "im2d.hpp"
 #else
 #include "im2d.h"
 #endif
 
-#include "RgaUtils.h"
-
-#include "utils.h"
-#include "dma_alloc.h"
-
-#include "rga_slt_parser.h"
 #include "slt_config.h"
-#include "crc.h"
+#include "rga_slt_parser.h"
+#include "rga_slt_crc.h"
 
 enum {
     FILL_BUFF  = 0,
     EMPTY_BUFF = 1
+};
+
+enum {
+    INVALID_CACHE,
+    FLUSH_CACHE,
+};
+
+enum ERR_NUM {
+    slt_error           = -1,
+    slt_check_error     = -2,
+    slt_rga_error       = -3,
+};
+
+struct rga_image_info {
+    rga_buffer_t img;
+    char *buf;
+    int fd;
+    int buf_size;
 };
 
 typedef struct private_data {
@@ -64,7 +88,12 @@ typedef struct private_data {
     int priority;
 
     int result;
+#ifdef __RT_THREAD__
+    rt_sem_t sem;
+#endif
 } private_data_t;
+
+typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info, struct rga_image_info, struct rga_image_info);
 
 static int file_exists(const char* file_name) {
     FILE* file = fopen(file_name, "r");
@@ -76,20 +105,33 @@ static int file_exists(const char* file_name) {
     return false;
 }
 
-enum ERR_NUM {
-    slt_error           = -1,
-    slt_check_error     = -2,
-    slt_rga_error       = -3,
-};
+static void rga_sync_cache(struct rga_image_info *img, int ops) {
+    switch (ops) {
+        case INVALID_CACHE:
+#ifdef __RT_THREAD__
+            if (img->buf)
+                rt_hw_cpu_dcache_ops(RT_HW_CACHE_INVALIDATE, (void *)img->buf, img->buf_size);
+#else
+            if (img->fd)
+                dma_sync_device_to_cpu(img->fd);
+#endif
+            break;
 
-struct rga_image_info {
-    rga_buffer_t img;
-    char *buf;
-    int fd;
-    int buf_size;
-};
+        case FLUSH_CACHE:
+#ifdef __RT_THREAD__
+            if (img->buf)
+                rt_hw_cpu_dcache_ops(RT_HW_CACHE_FLUSH, (void *)img->buf, img->buf_size);
+#else
+            if (img->fd)
+                dma_sync_cpu_to_device(img->fd);
+#endif
+            break;
 
-typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info, struct rga_image_info, struct rga_image_info);
+        default:
+            printf("Invalid cache operation: %d\n", ops);
+            return;
+    }
+}
 
 int rga_raster_test(private_data_t *data, int time,
                     struct rga_image_info src_img,
@@ -141,8 +183,7 @@ int rga_raster_test(private_data_t *data, int time,
             return slt_rga_error;
         }
 
-        if (dst_img.fd)
-            dma_sync_device_to_cpu(dst_img.fd);
+        rga_sync_cache(&dst_img, INVALID_CACHE);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(g_golden_generate_crc) {
@@ -177,8 +218,7 @@ int rga_raster_test(private_data_t *data, int time,
                 return slt_rga_error;
             }
 
-            if (dst_img.fd)
-                dma_sync_device_to_cpu(dst_img.fd);
+            rga_sync_cache(&dst_img, INVALID_CACHE);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(g_golden_generate_crc) {
@@ -207,9 +247,7 @@ int rga_raster_test(private_data_t *data, int time,
             return slt_rga_error;
         }
 
-        if (dst_img.fd)
-            dma_sync_device_to_cpu(dst_img.fd);
-
+        rga_sync_cache(&dst_img, INVALID_CACHE);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(g_golden_generate_crc) {
@@ -235,8 +273,7 @@ int rga_raster_test(private_data_t *data, int time,
                 return slt_rga_error;
             }
 
-            if (dst_img.fd)
-                dma_sync_device_to_cpu(dst_img.fd);
+            rga_sync_cache(&dst_img, INVALID_CACHE);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(g_golden_generate_crc) {
@@ -311,8 +348,7 @@ int rga_special_test(private_data_t *data, int time,
             return slt_rga_error;
         }
 
-        if (dst_img.fd)
-            dma_sync_device_to_cpu(dst_img.fd);
+        rga_sync_cache(&dst_img, INVALID_CACHE);
 
         result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
         if(g_golden_generate_crc) {
@@ -333,8 +369,7 @@ int rga_special_test(private_data_t *data, int time,
                 return slt_rga_error;
             }
 
-            if (dst_img.fd)
-                dma_sync_device_to_cpu(dst_img.fd);
+            rga_sync_cache(&dst_img, INVALID_CACHE);
 
             result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
             if(g_golden_generate_crc) {
@@ -465,6 +500,24 @@ static int rga_run(void *args, rga_slt_case running_case) {
     }
     tmp_buf_size = src_buf_size;
 
+#ifdef __RT_THREAD__
+    src_buf = (char *)rt_malloc(src_buf_size);
+    tmp_buf = (char *)rt_malloc(tmp_buf_size);
+    dst_buf = (char *)rt_malloc(dst_buf_size);
+    if (src_buf == NULL || tmp_buf == NULL || dst_buf == NULL) {
+        printf("malloc fault!\n");
+        ret = slt_error;
+        goto RELEASE_BUFFER;
+    }
+    src = wrapbuffer_physicaladdr(src_buf, src_width, src_height, src_format);
+    tmp = wrapbuffer_physicaladdr(tmp_buf, src_width, src_height, src_format);
+    dst = wrapbuffer_physicaladdr(dst_buf, dst_width, dst_height, dst_format);
+    if (src.width == 0 || tmp.width == 0 || dst.width == 0) {
+        printf("warpbuffer failed, %s\n", imStrError());
+        ret = slt_error;
+        goto RELEASE_BUFFER;
+    }
+#else
     use_dma_heap = (data->dma_heap_name != NULL) && file_exists(data->dma_heap_name);
     if (use_dma_heap) {
         ret = dma_buf_alloc(data->dma_heap_name, src_buf_size, &src_dma_fd, (void **)&src_buf);
@@ -537,28 +590,6 @@ static int rga_run(void *args, rga_slt_case running_case) {
         }
     }
 
-    dma_sync_device_to_cpu(src_dma_fd);
-    dma_sync_device_to_cpu(tmp_dma_fd);
-    dma_sync_device_to_cpu(dst_dma_fd);
-
-    if (fbc_en) {
-        ret = read_image_from_fbc_file(src_buf, g_input_path,
-                                       src_width, src_height, src_format, 0);
-        if (ret < 0)
-            goto RELEASE_BUFFER;
-    } else {
-        ret = read_image_from_file(src_buf, g_input_path,
-                                   src_width, src_height, src_format, 0);
-        if (ret < 0)
-            goto RELEASE_BUFFER;
-    }
-    memset(tmp_buf, 0x22, tmp_buf_size);
-    memset(dst_buf, 0x33, dst_buf_size);
-
-    dma_sync_cpu_to_device(src_dma_fd);
-    dma_sync_cpu_to_device(tmp_dma_fd);
-    dma_sync_cpu_to_device(dst_dma_fd);
-
     src = wrapbuffer_handle(src_handle, src_width, src_height, src_format);
     tmp = wrapbuffer_handle(tmp_handle, src_width, src_height, src_format);
     dst = wrapbuffer_handle(dst_handle, dst_width, dst_height, dst_format);
@@ -567,13 +598,7 @@ static int rga_run(void *args, rga_slt_case running_case) {
         ret = slt_error;
         goto RELEASE_BUFFER;
     }
-
-    src.rd_mode = data->rd_mode;
-    dst.rd_mode = data->rd_mode;
-
-    if (data->core != IM_SCHEDULER_DEFAULT)
-        imconfig(IM_CONFIG_SCHEDULER_CORE, data->core);
-    imconfig(IM_CONFIG_PRIORITY, data->priority);
+#endif /* ifdef __RT_THREAD__ */
 
     src_img.img = src;
     src_img.buf = src_buf;
@@ -589,6 +614,35 @@ static int rga_run(void *args, rga_slt_case running_case) {
     dst_img.buf = dst_buf;
     dst_img.fd = dst_dma_fd;
     dst_img.buf_size = dst_buf_size;
+
+#ifdef __RT_THREAD__
+    draw_image(src_buf, src_width, src_height, src_format);
+#else
+    if (fbc_en) {
+        ret = read_image_from_fbc_file(src_buf, g_input_path,
+                                       src_width, src_height, src_format, 0);
+        if (ret < 0)
+            goto RELEASE_BUFFER;
+    } else {
+        ret = read_image_from_file(src_buf, g_input_path,
+                                   src_width, src_height, src_format, 0);
+        if (ret < 0)
+            goto RELEASE_BUFFER;
+    }
+#endif /* ifdef __RT_THREAD__ */
+    memset(tmp_buf, 0x22, tmp_buf_size);
+    memset(dst_buf, 0x33, dst_buf_size);
+
+    rga_sync_cache(&src_img, FLUSH_CACHE);
+    rga_sync_cache(&tmp_img, FLUSH_CACHE);
+    rga_sync_cache(&dst_img, FLUSH_CACHE);
+
+    src.rd_mode = data->rd_mode;
+    dst.rd_mode = data->rd_mode;
+
+    if (data->core != IM_SCHEDULER_DEFAULT)
+        imconfig(IM_CONFIG_SCHEDULER_CORE, data->core);
+    imconfig(IM_CONFIG_PRIORITY, data->priority);
 
     do {
         time++;
@@ -616,9 +670,18 @@ RUNNING_FAILED:
     printf("tmp: %#x %#x %#x %#x\n", (int)tmp_buf[0], (int)tmp_buf[1], (int)tmp_buf[2], (int)tmp_buf[3]);
     printf("dst: %#x %#x %#x %#x\n", (int)dst_buf[0], (int)dst_buf[1], (int)dst_buf[2], (int)dst_buf[3]);
 
-    dma_sync_device_to_cpu(src_dma_fd);
-    dma_sync_device_to_cpu(tmp_dma_fd);
-    dma_sync_device_to_cpu(dst_dma_fd);
+#ifdef __RT_THREAD__
+RELEASE_BUFFER:
+    if (src_buf != NULL)
+        rt_free(src_buf);
+    if (tmp_buf != NULL)
+        rt_free(tmp_buf);
+    if (dst_buf != NULL)
+        rt_free(dst_buf);
+#else
+    rga_sync_cache(&src_img, INVALID_CACHE);
+    rga_sync_cache(&tmp_img, INVALID_CACHE);
+    rga_sync_cache(&dst_img, INVALID_CACHE);
 
     if (fbc_en) {
         write_image_to_fbc_file(src_buf, g_output_path,
@@ -635,10 +698,6 @@ RUNNING_FAILED:
         write_image_to_file(dst_buf, g_output_path,
                             dst.wstride, dst.hstride, dst.format, data->id * 10 + 3);
     }
-
-    dma_sync_cpu_to_device(src_dma_fd);
-    dma_sync_cpu_to_device(tmp_dma_fd);
-    dma_sync_cpu_to_device(dst_dma_fd);
 
 RELEASE_BUFFER:
     if (src_handle)
@@ -663,6 +722,7 @@ RELEASE_BUFFER:
         if (dst_buf != NULL)
             free(dst_buf);
     }
+#endif
 
     return ret;
 }
@@ -673,10 +733,14 @@ void *pthread_rga_raster_func(void *args) {
     data->result = rga_run(args, rga_raster_test);
 
 #if IM2D_SLT_THREAD_EN
+#ifdef __RT_THREAD__
+    rt_sem_release(data->sem);
+#else
     pthread_exit(NULL);
+#endif /* #ifdef __RT_THREAD__ */
 #else
     return NULL;
-#endif
+#endif /* #if IM2D_SLT_THREAD_EN */
 }
 
 void *pthread_rga_special_func(void *args) {
@@ -685,10 +749,14 @@ void *pthread_rga_special_func(void *args) {
     data->result = rga_run(args, rga_special_test);
 
 #if IM2D_SLT_THREAD_EN
+#ifdef __RT_THREAD__
+    rt_sem_release(data->sem);
+#else
     pthread_exit(NULL);
+#endif /* #ifdef __RT_THREAD__ */
 #else
     return NULL;
-#endif
+#endif /* #if IM2D_SLT_THREAD_EN */
 }
 
 void *pthread_rga_perf_func(void *args) {
@@ -697,14 +765,54 @@ void *pthread_rga_perf_func(void *args) {
     data->result = rga_run(args, rga_perf_test);
 
 #if IM2D_SLT_THREAD_EN
+#ifdef __RT_THREAD__
+    rt_sem_release(data->sem);
+#else
     pthread_exit(NULL);
+#endif /* #ifdef __RT_THREAD__ */
 #else
     return NULL;
-#endif
+#endif /* #if IM2D_SLT_THREAD_EN */
 }
 
 static int run_test(int pthread_num, private_data_t *data, void *(*test_func)(void *)) {
 #if IM2D_SLT_THREAD_EN
+#ifdef __RT_THREAD__
+    rt_thread_t tid[IM2D_SLT_THREAD_MAX];
+    rt_sem_t all_done_sem;
+
+    all_done_sem = rt_sem_create("done_sem", 0, RT_IPC_FLAG_FIFO);
+    if (all_done_sem == RT_NULL) {
+        rt_kprintf("Failed to create semaphore.\n");
+        return -1;
+    }
+
+    for (int i = 1; i <= pthread_num; i++) {
+        data[i].sem = all_done_sem;
+        tid[i] = rt_thread_create(data[i].name, test_func, (void *)(&data[i]), 163840, 16, 10);
+        if (tid[i]) {
+            rt_thread_startup(tid[i]);
+        } else {
+            rt_kprintf("Failed to create thread %s\n", data[i].name);
+            return -1;
+        }
+    }
+
+    for (int i = 1; i <= pthread_num; i++) {
+        rt_err_t result = rt_sem_take(all_done_sem, RT_WAITING_FOREVER);
+        if (result != RT_EOK) {
+            rt_kprintf("rt_sem_take failed (%d/%d).\n", i, pthread_num);
+            return -1;
+        }
+
+        if (data[i].result < 0) {
+            rt_kprintf("ID[%d] case '%s' is faile!\n", data[i].id, data[i].name);
+            return -1;
+        }
+    }
+
+    rt_sem_delete(all_done_sem);
+#else
     pthread_t tdSyncID[IM2D_SLT_THREAD_MAX];
 
     for (int i = 1; i <= pthread_num; i++) {
@@ -719,6 +827,7 @@ static int run_test(int pthread_num, private_data_t *data, void *(*test_func)(vo
             return -1;
         }
     }
+#endif /* #ifdef __RT_THREAD__ */
 #else
     for (int i = 1; i <= pthread_num; i++) {
         test_func((void *)(&data[i]));
@@ -728,14 +837,24 @@ static int run_test(int pthread_num, private_data_t *data, void *(*test_func)(vo
             return -1;
         }
     }
-#endif
+#endif /* #if IM2D_SLT_THREAD_EN */
 
     return 0;
 }
 
-int main(int argc, char *argv[]) {
+#ifdef __RT_THREAD__
+int rga_slt(int argc, char *argv[]);
+MSH_CMD_EXPORT(rga_slt, rga_slt)
+
+int rga_slt(int argc, char *argv[])
+#else
+int main(int argc, char *argv[])
+#endif
+{
     int pthread_num = 0;
     private_data_t data[IM2D_SLT_THREAD_MAX];
+
+    init_crc_table();
 
     if (rga_slt_parse_argv(argc, argv) < 0) {
         return 0;

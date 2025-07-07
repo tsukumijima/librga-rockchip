@@ -20,6 +20,7 @@
 #define _IM2D_SLT_CONFIG_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "im2d.h"
 #include "rga.h"
@@ -45,9 +46,9 @@
 
 #define IM2D_SLT_TEST_PERF_EN               false   /* Enable perf test. */
 
-enum {
+enum RGA_SLT_FUNC_FLAGS {
     RGA_SLT_FUNC_DIS_ALPHA = 1 << 0,
-} RGA_SLT_FUNC_FLAGS;
+};
 
 struct im2d_slt_config {
     int default_width;
@@ -68,7 +69,7 @@ struct im2d_slt_config {
     const rga_slt_crc_table *crc_data;
 };
 
-static struct im2d_slt_config rk3588_config = {
+static const struct im2d_slt_config rk3588_config = {
     .default_width = 1280,
     .default_height = 720,
     .default_format = RK_FORMAT_RGBA_8888,
@@ -85,7 +86,7 @@ static struct im2d_slt_config rk3588_config = {
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
 };
 
-static struct im2d_slt_config rk3576_config = {
+static const struct im2d_slt_config rk3576_config = {
     .default_width = 1280,
     .default_height = 720,
     .default_format = RK_FORMAT_RGBA_8888,
@@ -102,7 +103,7 @@ static struct im2d_slt_config rk3576_config = {
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
 };
 
-static struct im2d_slt_config common_rga2_config = {
+static const struct im2d_slt_config common_rga2_config = {
     .default_width = 1280,
     .default_height = 720,
     .default_format = RK_FORMAT_RGBA_8888,
@@ -119,7 +120,7 @@ static struct im2d_slt_config common_rga2_config = {
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
 };
 
-static struct im2d_slt_config rv1103b_config = {
+static const struct im2d_slt_config rv1103b_config = {
     .default_width = 1280,
     .default_height = 720,
     .default_format = RK_FORMAT_RGBA_8888,
@@ -136,7 +137,7 @@ static struct im2d_slt_config rv1103b_config = {
     .heap_path = DEFAULT_RK_DMA_HEAP_PATH,
 };
 
-static struct im2d_slt_config rk3506_config = {
+static const struct im2d_slt_config rk3506_config = {
     .default_width = 1280,
     .default_height = 720,
     .default_format = RK_FORMAT_ARGB_4444,
