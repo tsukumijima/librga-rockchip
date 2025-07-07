@@ -11,7 +11,8 @@ src.extend(Glob('../../utils/utils.cpp'))
 CPPPATH = [cwd]
 CPPPATH = CPPPATH + ['../../utils']
 
-LOCAL_CCFLAGS = ' -x c -Wno-incompatible-pointer-types -Wno-int-to-pointer-cast -Wno-pointer-to-int-cast -Wno-format -Wno-unused-variable'
+LOCAL_CCFLAGS = ' -x c'
+LOCAL_CCFLAGS += ' -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function'
 
 group = DefineGroup('rga_slt', src, depend = ['RT_USING_RGA_SLT'], LOCAL_CPPPATH = CPPPATH, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
 

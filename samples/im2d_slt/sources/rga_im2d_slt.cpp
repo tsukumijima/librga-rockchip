@@ -94,6 +94,13 @@ typedef struct private_data {
 } private_data_t;
 
 typedef int (*rga_slt_case) (private_data_t *, int, struct rga_image_info, struct rga_image_info, struct rga_image_info);
+#ifdef __RT_THREAD__
+typedef void (thread_func_t)(void *);
+#define THREAD_FUNC_RETURN_TYPE void
+#else
+typedef void *(*thread_func_t)(void *);
+#define THREAD_FUNC_RETURN_TYPE void *
+#endif
 
 static int file_exists(const char* file_name) {
     FILE* file = fopen(file_name, "r");
@@ -142,7 +149,7 @@ int rga_raster_test(private_data_t *data, int time,
     int usage = 0;
     int ori_format;
     unsigned int result_crc = 0;
-    const rga_slt_crc_table *crc_golden_table;
+    const rga_slt_crc_table *crc_golden_table = NULL;
 
     rga_buffer_t src, dst, tmp;
     char *src_buf, *dst_buf, *tmp_buf;
@@ -295,7 +302,7 @@ int rga_raster_test(private_data_t *data, int time,
 CHECK_ERROR:
     printf("ID[%d] loop[%d]: %s case[%d] check-CRC failed! result = %#x, golden = %#x\n",
            data->id, time, data->name, case_index,
-           result_crc, crc_golden_table[case_index]);
+           result_crc, crc_golden_table ? (*crc_golden_table)[data->id][case_index] : 0);
 
     return slt_check_error;
 }
@@ -391,7 +398,7 @@ int rga_special_test(private_data_t *data, int time,
 CHECK_ERROR:
     printf("ID[%d] loop[%d]: %s case[%d] check-CRC failed! result = %#x, golden = %#x\n",
            data->id, time, data->name, case_index,
-           result_crc, crc_golden_table[case_index]);
+           result_crc, crc_golden_table ? (*crc_golden_table)[data->id][case_index] : 0);
 
     return slt_check_error;
 }
@@ -402,29 +409,8 @@ int rga_perf_test(private_data_t *data, int time,
                   struct rga_image_info dst_img) {
     int ret;
 
-    rga_buffer_t src, dst, tmp;
-    char *src_buf, *dst_buf, *tmp_buf;
-    int src_buf_size, dst_buf_size, tmp_buf_size;
-    im_rect src_rect, tmp_rect, dst_rect;
-
-    memset(&src_rect, 0, sizeof(src_rect));
-    memset(&tmp_rect, 0, sizeof(tmp_rect));
-    memset(&dst_rect, 0, sizeof(dst_rect));
-
-    src = src_img.img;
-    src_buf = src_img.buf;
-    src_buf_size = src_img.buf_size;
-
-    tmp = tmp_img.img;
-    tmp_buf = tmp_img.buf;
-    tmp_buf_size = tmp_img.buf_size;
-
-    dst = dst_img.img;
-    dst_buf = dst_img.buf;
-    dst_buf_size = dst_img.buf_size;
-
     {
-        ret = imcopy(src, dst);
+        ret = imcopy(src_img.img, dst_img.img);
         if (ret != IM_STATUS_SUCCESS) {
             printf("ID[%d]: %s input %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
             return slt_rga_error;
@@ -727,7 +713,8 @@ RELEASE_BUFFER:
     return ret;
 }
 
-void *pthread_rga_raster_func(void *args) {
+THREAD_FUNC_RETURN_TYPE pthread_rga_raster_func(void *args)
+{
     private_data_t *data = (private_data_t *)args;
 
     data->result = rga_run(args, rga_raster_test);
@@ -743,7 +730,7 @@ void *pthread_rga_raster_func(void *args) {
 #endif /* #if IM2D_SLT_THREAD_EN */
 }
 
-void *pthread_rga_special_func(void *args) {
+THREAD_FUNC_RETURN_TYPE pthread_rga_special_func(void *args) {
     private_data_t *data = (private_data_t *)args;
 
     data->result = rga_run(args, rga_special_test);
@@ -759,7 +746,7 @@ void *pthread_rga_special_func(void *args) {
 #endif /* #if IM2D_SLT_THREAD_EN */
 }
 
-void *pthread_rga_perf_func(void *args) {
+THREAD_FUNC_RETURN_TYPE pthread_rga_perf_func(void *args) {
     private_data_t *data = (private_data_t *)args;
 
     data->result = rga_run(args, rga_perf_test);
@@ -775,7 +762,7 @@ void *pthread_rga_perf_func(void *args) {
 #endif /* #if IM2D_SLT_THREAD_EN */
 }
 
-static int run_test(int pthread_num, private_data_t *data, void *(*test_func)(void *)) {
+static int run_test(int pthread_num, private_data_t *data, thread_func_t test_func) {
 #if IM2D_SLT_THREAD_EN
 #ifdef __RT_THREAD__
     rt_thread_t tid[IM2D_SLT_THREAD_MAX];

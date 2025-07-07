@@ -36,6 +36,8 @@ const rga_slt_crc_table *get_crcdata_table(const rga_slt_crc_table *table, const
 void rga_slt_dump_generate_crc(void);
 
 inline static int crc_check(int id, int index, unsigned int crc_data, const rga_slt_crc_table *golden_table) {
+    if (golden_table == NULL)
+        return false;
     return crc_data != (*golden_table)[id][index] ? false : true;
 }
 

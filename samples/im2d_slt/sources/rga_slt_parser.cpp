@@ -125,7 +125,7 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
             /* required_argument */
             case MODE_CHIP_CHAR:
                 if (optarg == NULL) {
-                    printf("[%s, %d], Invalid parameter: chip = %s\n", __FUNCTION__, __LINE__, optarg);
+                    printf("[%s, %d], Invalid parameter: Chip option not set!\n", __FUNCTION__, __LINE__);
                     return -1;
                 }
 

@@ -89,13 +89,19 @@ void rga_slt_dump_generate_crc(void)
 
 void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int case_index)
 {
+    int len;
     FILE* crc_file = NULL;
-    char file_name[100];
+    char file_name[RGA_SLT_STRING_MAX];
 
-    sprintf(file_name,"%s/%s_%s.txt",
+    len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.txt",
             g_golden_path,
             g_golden_prefix,
             prefix_name);
+    if (len >= RGA_SLT_STRING_MAX) {
+        printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
+        exit(0);
+    }
+
     if(case_index == 0) {
         crc_file = fopen(file_name, "wb+");
         if(crc_file == NULL){
@@ -122,10 +128,15 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
     }
 
     /* golden */
-    sprintf(file_name,"%s/%s_%s.bin",
+    len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.bin",
             g_golden_path,
             g_golden_prefix,
             prefix_name);
+    if (len >= RGA_SLT_STRING_MAX) {
+        printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
+        exit(0);
+    }
+
     if(case_index == 0) {
         crc_file = fopen(file_name, "wb+");
         if(crc_file == NULL){
@@ -148,15 +159,21 @@ void save_crcdata_to_file(unsigned int crc_data, const char *prefix_name, int ca
 }
 
 const rga_slt_crc_table *read_crcdata_from_file(const char *prefix_name) {
+    int len;
     int size;
     FILE *golden_file = NULL;
     rga_slt_crc_table *golden_table = NULL;
-    char file_name[100];
+    char file_name[RGA_SLT_STRING_MAX];
 
-    sprintf(file_name,"%s/%s_%s.bin",
+    len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.bin",
             g_golden_path,
             g_golden_prefix,
             prefix_name);
+    if (len >= RGA_SLT_STRING_MAX) {
+        printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
+        exit(0);
+    }
+
     golden_file = fopen(file_name,"rb");
     if (golden_file) {
         fseek(golden_file, 0, SEEK_END);
