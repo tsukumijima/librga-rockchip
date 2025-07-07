@@ -99,7 +99,7 @@ static const struct im2d_slt_config rk3576_config = {
     .special_case_en = true,
 
     .core_mask = IM_SCHEDULER_RGA2_CORE0 | IM_SCHEDULER_RGA2_CORE1,
-    .special_mask = IM_AFBC32x8_MODE | IM_TILE4x4_MODE,
+    .special_mask = IM_AFBC32x8_MODE | IM_RKFBC64x4_MODE | IM_TILE4x4_MODE,
     .func_flags = 0,
 
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
