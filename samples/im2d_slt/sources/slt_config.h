@@ -25,6 +25,8 @@
 #include "im2d.h"
 #include "rga.h"
 
+#include "rga_slt_crc.h"
+
 /* dma-heap path */
 #define DEFAULT_DMA_HEAP_PATH              "/dev/dma_heap/system-uncached"
 #define DEFAULT_DMA32_HEAP_PATH            "/dev/dma_heap/system-uncached-dma32"
@@ -118,6 +120,7 @@ static const struct im2d_slt_config common_rga2_config = {
     .func_flags = 0,
 
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
+    .crc_data = &common_golden_data,
 };
 
 static const struct im2d_slt_config rv1103b_config = {

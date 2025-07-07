@@ -136,7 +136,8 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
                 } else if ((strcmp(optarg, "rk3528") == 0) ||
                            (strcmp(optarg, "rk3562") == 0) ||
                            (strcmp(optarg, "rv1126b") == 0) ||
-                           (strcmp(optarg, "rv1106") == 0)) {
+                           (strcmp(optarg, "rv1106") == 0) ||
+                           (strcmp(optarg, "rK1820") == 0)) {
                     g_chip_config = common_rga2_config;
                 } else if (strcmp(optarg, "rv1103b") == 0) {
                     g_chip_config = rv1103b_config;
