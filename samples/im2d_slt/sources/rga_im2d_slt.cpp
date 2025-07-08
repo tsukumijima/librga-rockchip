@@ -820,10 +820,7 @@ static int run_test(int start, int end, private_data_t *data, thread_func_t test
 }
 
 #ifdef __RT_THREAD__
-int rga_slt(int argc, char *argv[]);
-MSH_CMD_EXPORT(rga_slt, rga_slt)
-
-int rga_slt(int argc, char *argv[])
+int rga_slt_main(int argc, char *argv[])
 #else
 int main(int argc, char *argv[])
 #endif
@@ -1096,3 +1093,59 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+#ifdef __RT_THREAD__
+struct thread_arg {
+    rt_sem_t sem;
+
+    int argc;
+    char **argv;
+
+    int ret;
+};
+
+void rga_slt_main_thread(void *arg)
+{
+    struct thread_arg *thread_arg = (struct thread_arg *)arg;
+    int ret;
+
+    ret = rga_slt_main(thread_arg->argc, thread_arg->argv);
+    if (ret < 0) {
+        printf("RGA SLT failed with error code: %d\n", ret);
+    }
+
+    thread_arg->ret = ret;
+    rt_sem_release(thread_arg->sem);
+}
+
+int rga_slt(int argc, char *argv[])
+{
+    rt_thread_t thread = RT_NULL;
+    struct thread_arg arg;
+
+    arg.sem = rt_sem_create("wait_sem", 0, RT_IPC_FLAG_FIFO);
+    if (!arg.sem) {
+        printf("Failed to create semaphore\n");
+        return -1;
+    }
+
+    arg.argc = argc;
+    arg.argv = argv;
+
+    thread = rt_thread_create("rga_slt", rga_slt_main_thread, &arg, 8192, 16, 10);
+    if (thread != RT_NULL) {
+        rt_thread_startup(thread);
+
+        rt_sem_take(arg.sem, RT_WAITING_FOREVER);
+    } else {
+        printf("Failed to create thread\n");
+
+        return -1;
+    }
+
+    rt_sem_delete(arg.sem);
+
+    return arg.ret;
+}
+MSH_CMD_EXPORT(rga_slt, rga_slt)
+#endif /* #ifdef __RT_THREAD__ */
