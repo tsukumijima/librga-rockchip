@@ -477,9 +477,9 @@ static int rga_run(void *args, rga_slt_case running_case) {
     tmp_buf_size = src_buf_size;
 
 #ifdef __RT_THREAD__
-    src_buf = (char *)rt_malloc(src_buf_size);
-    tmp_buf = (char *)rt_malloc(tmp_buf_size);
-    dst_buf = (char *)rt_malloc(dst_buf_size);
+    src_buf = (char *)rt_malloc_align(src_buf_size, 1 << 12);
+    tmp_buf = (char *)rt_malloc_align(tmp_buf_size, 1 << 12);
+    dst_buf = (char *)rt_malloc_align(dst_buf_size, 1 << 12);
     if (src_buf == NULL || tmp_buf == NULL || dst_buf == NULL) {
         printf("malloc fault!\n");
         ret = slt_error;
@@ -649,11 +649,11 @@ RUNNING_FAILED:
 #ifdef __RT_THREAD__
 RELEASE_BUFFER:
     if (src_buf != NULL)
-        rt_free(src_buf);
+        rt_free_align(src_buf);
     if (tmp_buf != NULL)
-        rt_free(tmp_buf);
+        rt_free_align(tmp_buf);
     if (dst_buf != NULL)
-        rt_free(dst_buf);
+        rt_free_align(dst_buf);
 #else
     rga_sync_cache(&src_img, INVALID_CACHE);
     rga_sync_cache(&tmp_img, INVALID_CACHE);
