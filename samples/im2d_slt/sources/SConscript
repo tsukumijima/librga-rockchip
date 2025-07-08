@@ -10,11 +10,12 @@ src.extend(Glob('../../utils/utils.cpp'))
 
 CPPPATH = [cwd]
 CPPPATH = CPPPATH + ['../../utils']
+PUBLIC_CPPPATH = ['../include']
 
 LOCAL_CCFLAGS = ' -x c'
 LOCAL_CCFLAGS += ' -Wno-unused-variable -Wno-unused-but-set-variable -Wno-unused-function'
 
-group = DefineGroup('rga_slt', src, depend = ['RT_USING_RGA_SLT'], LOCAL_CPPPATH = CPPPATH, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+group = DefineGroup('rga_slt', src, depend = ['RT_USING_RGA_SLT'], LOCAL_CPPPATH = CPPPATH, CPPPATH = PUBLIC_CPPPATH, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
 
 list = os.listdir(cwd)
 for d in list:
