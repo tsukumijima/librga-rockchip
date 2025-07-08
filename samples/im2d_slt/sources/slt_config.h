@@ -38,7 +38,7 @@
 #define IM2D_SLT_DEFAULT_OUTPUT_PATH        "/data/rga_slt"
 
 /* crc32 golden config */
-#define IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX "crcdata"
+#define IM2D_SLT_GENERATE_CRC_GOLDEN_SUFFIX "crcdata"
 #define IM2D_SLT_DEFAULT_GOLDEN_PATH        "/data/rga_slt/golden"
 
 /* im2d_slt config */

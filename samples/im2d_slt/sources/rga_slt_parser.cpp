@@ -35,13 +35,14 @@
 #define MODE_INPUT_CHAR         'i'
 #define MODE_OUTPUT_CHAR        'o'
 #define MODE_GOLDEN_CHAR        'g'
-#define MODE_GOLDEN_PREFIX_CHAR 'p'
+#define MODE_GOLDEN_SUFFIX_CHAR 's'
 #define MODE_GOLDEN_GENERATE_CRC_CHAR   'r'
 
 char g_input_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_INPUT_PATH;
 char g_output_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_OUTPUT_PATH;
 char g_golden_path[RGA_SLT_STRING_MAX] = IM2D_SLT_DEFAULT_GOLDEN_PATH;
-char g_golden_prefix[RGA_SLT_STRING_MAX] = IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX;
+char g_golden_suffix[RGA_SLT_STRING_MAX] = IM2D_SLT_GENERATE_CRC_GOLDEN_SUFFIX;
+char g_chip_name[RGA_SLT_STRING_MAX] = "default";
 bool g_golden_generate_crc = false;
 bool g_golden_input = false;
 struct im2d_slt_config g_chip_config = common_rga2_config;
@@ -69,10 +70,10 @@ static void help_function(bool all) {
             "\t --golden/-g   Set golden file path.\n"
             "\t                 <options>: \n"
             "\t                   <path>        golden image file path, e.g. \"--golden=/data\".\n"
-            "\t --prefix/-p   Set golden prefix.\n"
+            "\t --suffix/-s   Set golden suffix.\n"
             "\t                 <options>: \n"
-            "\t                   <string>      golden image file prefix, e.g. \"--prefix=crcdata\", so that the file name is \"crcdata_xx.bin\".\n"
-            "\t --crc/-r      Generate golden by CRC. The target file will be generated according to --golden and --prefix\n"
+            "\t                   <string>      golden image file suffix, e.g. \"--chip=rk3576 --suffix=crcdata\", so that the file name is \"rk3576_crcdata.bin\".\n"
+            "\t --crc/-r      Generate golden by CRC. The target file will be generated according to --golden and --suffix\n"
             "---------------------------------------- Other -----------------------------------------------------\n"
             "\t --help/-h     Call help\n"
             "\t                 <options>:\n"
@@ -96,7 +97,7 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
         {  "input", required_argument, NULL, MODE_INPUT_CHAR    },
         { "output", required_argument, NULL, MODE_OUTPUT_CHAR   },
         { "golden", required_argument, NULL, MODE_GOLDEN_CHAR   },
-        { "prefix", required_argument, NULL, MODE_GOLDEN_PREFIX_CHAR        },
+        { "suffix", required_argument, NULL, MODE_GOLDEN_SUFFIX_CHAR        },
         {    "crc",       no_argument, NULL, MODE_GOLDEN_GENERATE_CRC_CHAR  },
     };
 
@@ -104,7 +105,7 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
     strcpy(g_input_path, IM2D_SLT_DEFAULT_INPUT_PATH);
     strcpy(g_output_path, IM2D_SLT_DEFAULT_OUTPUT_PATH);
     strcpy(g_golden_path, IM2D_SLT_DEFAULT_GOLDEN_PATH);
-    strcpy(g_golden_prefix, IM2D_SLT_GENERATE_CRC_GOLDEN_PREFIX);
+    strcpy(g_golden_suffix, IM2D_SLT_GENERATE_CRC_GOLDEN_SUFFIX);
     g_golden_generate_crc = false;
     g_golden_input = false;
 
@@ -128,6 +129,13 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
             case MODE_CHIP_CHAR:
                 if (optarg == NULL) {
                     printf("[%s, %d], Invalid parameter: Chip option not set!\n", __FUNCTION__, __LINE__);
+                    return -1;
+                }
+
+                memset(g_chip_name, 0x0, sizeof(g_chip_name));
+                ret = sscanf(optarg, "%s", g_chip_name);
+                if (ret != 1) {
+                    printf("[%s, %d], Invalid parameter: level = %s\n", __FUNCTION__, __LINE__, optarg);
                     return -1;
                 }
 
@@ -229,15 +237,15 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
                 break;
 
             /* required_argument */
-            case MODE_GOLDEN_PREFIX_CHAR:
-                memset(g_golden_prefix, 0x0, sizeof(g_golden_prefix));
-                ret = sscanf(optarg, "%s", g_golden_prefix);
+            case MODE_GOLDEN_SUFFIX_CHAR:
+                memset(g_golden_suffix, 0x0, sizeof(g_golden_suffix));
+                ret = sscanf(optarg, "%s", g_golden_suffix);
                 if (ret != 1) {
                     printf("[%s, %d], Invalid parameter: level = %s\n", __FUNCTION__, __LINE__, optarg);
                     return -1;
                 }
 
-                printf("set golden_prefix[%s]\n", g_golden_prefix);
+                printf("set golden_prefix[%s]\n", g_golden_suffix);
 
                 break;
 
@@ -254,7 +262,7 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
     }
 
     if (g_golden_input && !g_golden_generate_crc)
-        g_read_golden_data = read_crc_table_from_file(g_golden_prefix);
+        g_read_golden_data = read_crc_table_from_file(g_golden_suffix);
 
     return 0;
 }

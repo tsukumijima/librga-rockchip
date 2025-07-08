@@ -292,11 +292,6 @@ int rga_raster_test(private_data_t *data, int time,
         }
     }
 
-    if (g_golden_generate_crc)
-        printf("ID[%d]: %s genrate CRC golden %s/%s_%s.txt\n",
-               data->id, data->name,
-               g_golden_path, g_golden_prefix, data->name);
-
     return 0;
 
 CHECK_ERROR:
@@ -387,11 +382,6 @@ int rga_special_test(private_data_t *data, int time,
             }
         }
     }
-
-    if (g_golden_generate_crc)
-        printf("ID[%d]: %s genrate CRC golden %s/%s_%s.txt\n",
-               data->id, data->name,
-               g_golden_path, g_golden_prefix, data->name);
 
     return 0;
 
@@ -1101,7 +1091,7 @@ int main(int argc, char *argv[])
     if (g_golden_generate_crc) {
         printf("RGA slt generate CRC golden data success!\n");
         rga_slt_dump_generate_crc();
-        save_crc_table_to_file(g_golden_prefix);
+        save_crc_table_to_file(g_golden_suffix);
     }
 
     return 0;

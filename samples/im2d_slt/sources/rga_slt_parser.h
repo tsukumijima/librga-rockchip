@@ -26,7 +26,8 @@
  extern char g_input_path[RGA_SLT_STRING_MAX];
  extern char g_output_path[RGA_SLT_STRING_MAX];
  extern char g_golden_path[RGA_SLT_STRING_MAX];
- extern char g_golden_prefix[RGA_SLT_STRING_MAX];
+ extern char g_golden_suffix[RGA_SLT_STRING_MAX];
+ extern char g_chip_name[RGA_SLT_STRING_MAX];
  extern bool g_golden_input;
  extern bool g_golden_generate_crc;
  extern struct im2d_slt_config g_chip_config;

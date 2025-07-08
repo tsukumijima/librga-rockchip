@@ -35,8 +35,8 @@ void save_crcdata(unsigned int crc_data, int thread_id, int case_index);
 const rga_slt_crc_table *get_crcdata_table(void);
 
 void rga_slt_dump_generate_crc(void);
-int save_crc_table_to_file(const char *prefix_name);
-const rga_slt_crc_table *read_crc_table_from_file(const char *prefix_name);
+int save_crc_table_to_file(const char *suffix_name);
+const rga_slt_crc_table *read_crc_table_from_file(const char *suffix_name);
 
 inline static int crc_check(int id, int index, unsigned int crc_data, const rga_slt_crc_table *golden_table) {
     if (golden_table == NULL)

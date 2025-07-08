@@ -152,9 +152,9 @@ mm -j32
          --golden/-g   Set golden file path.
                          <options>:
                            <path>        golden image file path, e.g. "--golden=/data".
-         --prefix/-p   Set golden prefix.
+         --suffix/-p   Set golden suffix.
                          <options>:
-                           <string>      golden image file prefix, e.g. "--prefix=crcdata", so that the file name is "crcdata_xx.bin".
+                           <string>      golden image file suffix, e.g. "--chip=rk3576 --suffix=crcdata", so that the file name is "rk3576_crcdata.bin".
          --crc/-r      Generate golden by CRC. The target file will be generated according to --golden and --prefix
 ---------------------------------------- Other -----------------------------------------------------
          --help/-h     Call help
@@ -168,8 +168,8 @@ mm -j32
 - --input：配置当前测试源数据存储的绝对路径，未配置该命令时使用默认路径，默认路径可以通过slt_config.h进行修改。
 - --output：配置当前测试输出数据存储的绝对路径，未配置该命令时使用默认路径，默认路径可以通过slt_config.h进行修改。
 - --golden：配置当前测试读取、输出的golden数据存储的绝对路径，未配置该命令时使用默认路径，默认路径可以通过slt_config.h进行修改。
-- --prefix：配置当前测试读取、输出的golden数据文件名的前缀，未配置该命令时使用默认前缀，默认前缀可以通过slt_config.h进行修改。
-- --crc：配置当前测试使用CRC32生成golden数据，由“--golden/--prefix”指导生成golden数据路径、文件名。
+- --suffix：配置当前测试读取、输出的golden数据文件名的后缀，未配置该命令时使用默认后缀，默认后缀可以通过slt_config.h进行修改。
+- --crc：配置当前测试使用CRC32生成golden数据，由“--golden/--suffix”指导生成golden数据路径、文件名。
 
 
 

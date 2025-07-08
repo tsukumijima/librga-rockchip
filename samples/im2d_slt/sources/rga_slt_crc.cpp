@@ -88,15 +88,15 @@ void rga_slt_dump_generate_crc(void)
     printf("====================================================================================================\n");
 }
 
-int save_crc_table_to_file(const char *prefix_name) {
+int save_crc_table_to_file(const char *suffix_name) {
     int len;
     FILE* crc_file = NULL;
     char file_name[RGA_SLT_STRING_MAX];
 
     len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.txt",
             g_golden_path,
-            g_golden_prefix,
-            prefix_name);
+            g_chip_name,
+            suffix_name);
     if (len >= RGA_SLT_STRING_MAX) {
         printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
         return -1;
@@ -121,8 +121,8 @@ int save_crc_table_to_file(const char *prefix_name) {
     /* golden.bin */
     len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.bin",
             g_golden_path,
-            g_golden_prefix,
-            prefix_name);
+            g_chip_name,
+            suffix_name);
     if (len >= RGA_SLT_STRING_MAX) {
         printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
         return -1;
@@ -147,7 +147,7 @@ int save_crc_table_to_file(const char *prefix_name) {
     return 0;
 }
 
-const rga_slt_crc_table *read_crc_table_from_file(const char *prefix_name) {
+const rga_slt_crc_table *read_crc_table_from_file(const char *suffix_name) {
     int len;
     int size;
     FILE *crc_file = NULL;
@@ -155,8 +155,8 @@ const rga_slt_crc_table *read_crc_table_from_file(const char *prefix_name) {
 
     len = snprintf(file_name, sizeof(file_name), "%s/%s_%s.bin",
             g_golden_path,
-            g_golden_prefix,
-            prefix_name);
+            g_chip_name,
+            suffix_name);
     if (len >= RGA_SLT_STRING_MAX) {
         printf("%s,%d:File name too long: %s\n", __FUNCTION__, __LINE__, file_name);
         return NULL;
