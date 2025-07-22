@@ -3447,47 +3447,24 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
             if (dst && dstFd == dst->fd)
                 dstMmuFlag = dst->mmuFlag ? 1 : 0;
 
-#if defined(__arm64__) || defined(__aarch64__)
             NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
-                                    (unsigned long)srcBuf,
-                                    (unsigned long)srcBuf + srcVirW * srcVirH,
+                                    (uintptr_t)srcBuf,
+                                    (uintptr_t)srcBuf + srcVirW * srcVirH,
                                     srcVirW, srcVirH,
                                     RkRgaGetRgaFormat(relSrcRect.format),0);
             /* src1 */
             if (src1)
                 NormalRgaSetPatVirtualInfo(&rgaReg, src1Fd != -1 ? src1Fd : 0,
-                                        (unsigned long)src1Buf,
-                                        (unsigned long)src1Buf + src1VirW * src1VirH,
+                                        (uintptr_t)src1Buf,
+                                        (uintptr_t)src1Buf + src1VirW * src1VirH,
                                         src1VirW, src1VirH, &clip,
                                         RkRgaGetRgaFormat(relSrc1Rect.format),0);
             /*dst*/
             NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned long)dstBuf,
-                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    (uintptr_t)dstBuf,
+                                    (uintptr_t)dstBuf + dstVirW * dstVirH,
                                     dstVirW, dstVirH, &clip,
                                     RkRgaGetRgaFormat(relDstRect.format),0);
-
-#else
-            NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
-                                    (unsigned int)srcBuf,
-                                    (unsigned int)srcBuf + srcVirW * srcVirH,
-                                    srcVirW, srcVirH,
-                                    RkRgaGetRgaFormat(relSrcRect.format),0);
-            /* src1 */
-            if (src1)
-                NormalRgaSetPatVirtualInfo(&rgaReg, src1Fd != -1 ? src1Fd : 0,
-                                        (unsigned int)src1Buf,
-                                        (unsigned int)src1Buf + src1VirW * src1VirH,
-                                        src1VirW, src1VirH, &clip,
-                                        RkRgaGetRgaFormat(relSrc1Rect.format),0);
-            /*dst*/
-            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned int)dstBuf,
-                                    (unsigned int)dstBuf + dstVirW * dstVirH,
-                                    dstVirW, dstVirH, &clip,
-                                    RkRgaGetRgaFormat(relDstRect.format),0);
-
-#endif
 
             break;
     }
@@ -3835,21 +3812,12 @@ int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst) {
                 dstMmuFlag = dstType ? 1 : 0;
             if (dst && dstFd == dst->fd)
                 dstMmuFlag = dst->mmuFlag ? 1 : 0;
-#if defined(__arm64__) || defined(__aarch64__)
             /*dst*/
             NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned long)dstBuf,
-                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    (uintptr_t)dstBuf,
+                                    (uintptr_t)dstBuf + dstVirW * dstVirH,
                                     dstVirW, dstVirH, &clip,
                                     RkRgaGetRgaFormat(relDstRect.format),0);
-#else
-            /*dst*/
-            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned int)dstBuf,
-                                    (unsigned int)dstBuf + dstVirW * dstVirH,
-                                    dstVirW, dstVirH, &clip,
-                                    RkRgaGetRgaFormat(relDstRect.format),0);
-#endif
 
             break;
     }
