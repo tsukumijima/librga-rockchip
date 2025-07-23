@@ -106,7 +106,11 @@ RGA_SINGLETON_STATIC_INSTANCE(RockchipRga)
 #ifdef ANDROID
         property_set("vendor.rga_api.version", RGA_API_VERSION);
 #endif
-        ALOGI("%s", RGA_API_FULL_VERSION);
+        ALOGI("current %s. "
+              "The called RockchipRga API is deprecated and will be removed in a future release, "
+              "currently using the legacy API for compatibility. "
+              "Please refer to the latest IM2D API documentation to update your implementation.",
+              RGA_API_FULL_VERSION);
     }
 
     RockchipRga::~RockchipRga() {

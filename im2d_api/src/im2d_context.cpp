@@ -235,6 +235,12 @@ rga_session_t *get_rga_session() {
     }
     pthread_rwlock_unlock(&session->rwlock);
 
+#ifdef ANDROID
+    property_set("vendor.rga_api.version", RGA_API_VERSION);
+#endif
+
+    IM_LOG(IM_LOG_DIRECT | IM_LOG_FORCE | IM_LOG_INFO, "%s", RGA_API_FULL_VERSION);
+
     return session;
 }
 

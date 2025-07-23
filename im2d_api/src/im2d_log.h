@@ -32,6 +32,7 @@ typedef enum {
     IM_LOG_LEVEL_MASK   = 0xff,
 
     IM_LOG_FORCE        = 0x1 << 8,         /* This will force output to stdout, not to internal error messages. */
+    IM_LOG_DIRECT       = 0x1 << 9,         /* This will output to stdout directly, not to internal error messages. */
 } IM_LOG_LEVEL;
 
 #define GET_LOG_LEVEL(level) ((level) & IM_LOG_LEVEL_MASK)
@@ -80,10 +81,13 @@ size_t rga_get_start_time_ms(void);
         if ((rga_log_enable_get() > 0 && LOG_LEVEL_CHECK(level)) || \
             GET_LOG_LEVEL(level) == IM_LOG_ERROR || \
             (level) & IM_LOG_FORCE) \
-            fprintf(stdout, "%lu %1s %8s: " _str "\n", \
-                (unsigned long)(rga_get_current_time_ms()-rga_get_start_time_ms()), \
-                rga_get_error_type_str(level), LOG_TAG, \
-                ## __VA_ARGS__); \
+            if ((level) & IM_LOG_DIRECT) \
+                fprintf(stdout, _str "\n", ## __VA_ARGS__); \
+            else \
+                fprintf(stdout, "%lu %1s %8s: " _str "\n", \
+                    (unsigned long)(rga_get_current_time_ms()-rga_get_start_time_ms()), \
+                    rga_get_error_type_str(level), LOG_TAG, \
+                    ## __VA_ARGS__); \
     } while(0)
 #else
 #include <sys/syscall.h>
@@ -95,10 +99,13 @@ size_t rga_get_start_time_ms(void);
         if ((rga_log_enable_get() > 0 && LOG_LEVEL_CHECK(level)) || \
             GET_LOG_LEVEL(level) == IM_LOG_ERROR || \
             (level) & IM_LOG_FORCE) \
-            fprintf(stdout, "%lu %6lu %6d %1s %8s: " _str "\n", \
-                    (unsigned long)(rga_get_current_time_ms()-rga_get_start_time_ms()), \
-                    syscall(SYS_gettid), getpid(), rga_get_error_type_str(level), LOG_TAG, \
-                    ## __VA_ARGS__); \
+            if ((level) & IM_LOG_DIRECT) \
+                fprintf(stdout, _str "\n", ## __VA_ARGS__); \
+            else \
+                fprintf(stdout, "%lu %6lu %6d %1s %8s: " _str "\n", \
+                        (unsigned long)(rga_get_current_time_ms()-rga_get_start_time_ms()), \
+                        syscall(SYS_gettid), getpid(), rga_get_error_type_str(level), LOG_TAG, \
+                        ## __VA_ARGS__); \
     } while(0)
 #endif /* #ifdef RT_THREAD */
 
