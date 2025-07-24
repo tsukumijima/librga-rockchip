@@ -4442,6 +4442,7 @@ int generate_color_palette_req(struct rga_req *ioc_req, rga_info_t *src, rga_inf
             rgaReg.palette_mode = 2;
             break;
         case RK_FORMAT_BPP8 :
+        case RK_FORMAT_YCbCr_400 :
             rgaReg.palette_mode = 3;
             break;
     }
