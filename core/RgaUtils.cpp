@@ -110,7 +110,7 @@ const struct format_table_entry format_table[] = {
     { RK_FORMAT_UNKNOWN,            "unknown" }
 };
 
-const char *translate_format_str(int format) {
+const char *translate_format_str_impl(int format) {
     format = convert_to_rga_format(format);
 
     for (size_t i = 0; i < sizeof(format_table) / sizeof(format_table[0]); i++)
@@ -120,7 +120,7 @@ const char *translate_format_str(int format) {
     return "unknown";
 }
 
-int get_string_by_format(char *value, int format) {
+static int get_string_by_format(char *value, int format) {
     const char *name = NULL;
 
     if (!value)
@@ -138,7 +138,7 @@ int get_string_by_format(char *value, int format) {
     return 0;
 }
 
-float get_bpp_from_format(int format) {
+float get_bpp_from_format_impl(int format) {
     float bpp = 0;
 
     switch (convert_to_rga_format(format)) {
@@ -221,7 +221,7 @@ float get_bpp_from_format(int format) {
     return bpp;
 }
 
-int get_perPixel_stride_from_format(int format) {
+int get_perPixel_stride_from_format_impl(int format) {
     switch (convert_to_rga_format(format)) {
         case RK_FORMAT_RGBA2BPP:
             return 2;
@@ -288,7 +288,7 @@ int get_perPixel_stride_from_format(int format) {
     }
 }
 
-int get_buf_size_by_w_h_f(int w, int h, int f) {
+static int get_buf_size_by_w_h_f(int w, int h, int f) {
     float bpp = get_bpp_from_format(f);
     int size = 0;
 
@@ -296,7 +296,7 @@ int get_buf_size_by_w_h_f(int w, int h, int f) {
     return size;
 }
 
-int get_buf_from_file(void *buf, int f, int sw, int sh, int index) {
+int get_buf_from_file_impl(void *buf, int f, int sw, int sh, int index) {
 #ifdef ANDROID
     const char *inputFilePath = "/data/in%dw%d-h%d-%s.bin";
 #endif
@@ -320,7 +320,7 @@ int get_buf_from_file(void *buf, int f, int sw, int sh, int index) {
     return 0;
 }
 
-int get_buf_from_file_FBC(void *buf, int f, int sw, int sh, int index) {
+int get_buf_from_file_FBC_impl(void *buf, int f, int sw, int sh, int index) {
 #ifdef ANDROID
     const char *inputFilePath = "/data/in%dw%d-h%d-%s-afbc.bin";
 #endif
@@ -346,7 +346,7 @@ int get_buf_from_file_FBC(void *buf, int f, int sw, int sh, int index) {
     return 0;
 }
 
-int output_buf_data_to_file(void *buf, int f, int sw, int sh, int index) {
+int output_buf_data_to_file_impl(void *buf, int f, int sw, int sh, int index) {
 #ifdef ANDROID
     const char *outputFilePath = "/data/out%dw%d-h%d-%s.bin";
 #endif
@@ -371,7 +371,7 @@ int output_buf_data_to_file(void *buf, int f, int sw, int sh, int index) {
     return 0;
 }
 
-int output_buf_data_to_file_FBC(void *buf, int f, int sw, int sh, int index) {
+int output_buf_data_to_file_FBC_impl(void *buf, int f, int sw, int sh, int index) {
 #ifdef ANDROID
     const char *outputFilePath = "/data/out%dw%d-h%d-%s-afbc.bin";
 #endif
@@ -396,4 +396,32 @@ int output_buf_data_to_file_FBC(void *buf, int f, int sw, int sh, int index) {
     fclose(file);
 
     return 0;
+}
+
+float get_bpp_from_format(int format) {
+    return get_bpp_from_format_impl(format);
+}
+
+int get_perPixel_stride_from_format(int format) {
+    return get_perPixel_stride_from_format_impl(format);
+}
+
+int get_buf_from_file(void *buf, int f, int sw, int sh, int index) {
+    return get_buf_from_file_impl(buf, f, sw, sh, index);
+}
+
+int output_buf_data_to_file(void *buf, int f, int sw, int sh, int index) {
+    return output_buf_data_to_file_impl(buf, f, sw, sh, index);
+}
+
+const char *translate_format_str(int format) {
+    return translate_format_str_impl(format);
+}
+
+int get_buf_from_file_FBC(void *buf, int f, int sw, int sh, int index) {
+    return get_buf_from_file_FBC_impl(buf, f, sw, sh, index);
+}
+
+int output_buf_data_to_file_FBC(void *buf, int f, int sw, int sh, int index) {
+    return output_buf_data_to_file_FBC_impl(buf, f, sw, sh, index);
 }

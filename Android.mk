@@ -42,6 +42,7 @@ LOCAL_SRC_FILES := \
     core/NormalRgaApi.cpp \
     core/RgaApi.cpp \
     core/RgaUtils.cpp \
+    core/RgaUtils_symbol.cpp \
     core/rga_sync.cpp \
     im2d_api/src/im2d_log.cpp \
     im2d_api/src/im2d_debugger.cpp \

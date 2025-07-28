@@ -20,6 +20,7 @@ librga_srcs = [
     'core/NormalRgaApi.cpp',
     'core/NormalRga.cpp',
     'core/RgaUtils.cpp',
+    'core/RgaUtils_symbol.cpp',
     'core/RockchipRga.cpp',
     'core/RgaApi.cpp',
     'core/rga_sync.cpp',
