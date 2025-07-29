@@ -20,6 +20,7 @@
 #include "NormalRgaContext.h"
 #include "rga.h"
 #ifdef ANDROID
+#include "hardware/hardware_rockchip.h"
 #include "GrallocOps.h"
 #endif
 
