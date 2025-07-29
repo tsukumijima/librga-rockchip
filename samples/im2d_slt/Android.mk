@@ -7,11 +7,11 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_VENDOR_MODULE := true
 
-LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
-
-LOCAL_CFLAGS += -DROCKCHIP_GPU_LIB_ENABLE
-
-LOCAL_CFLAGS += -Wall -Werror -Wunreachable-code
+# LOCAL_CFLAGS += -Wall -Werror -Wunreachable-code
+LOCAL_CFLAGS += \
+    -Wno-error \
+    -Wno-unused-parameter \
+    -Wno-missing-braces
 
 LOCAL_C_INCLUDES += external/tinyalsa/include
 
@@ -31,9 +31,6 @@ LOCAL_SHARED_LIBRARIES := \
     liblog \
     libutils \
     libui \
-    libEGL \
-    libGLESv1_CM \
-    libhardware \
     librga
 
 LOCAL_HEADER_LIBRARIES += \
@@ -41,8 +38,7 @@ LOCAL_HEADER_LIBRARIES += \
     libcutils_headers \
     libhardware_headers \
     liblog_headers \
-    libgui_headers \
-    libbinder_headers
+    libgui_headers
 
 #has no "external/stlport" from Android 6.0 on
 ifeq (1,$(strip $(shell expr $(PLATFORM_VERSION) \< 6.0)))
@@ -56,6 +52,7 @@ include $(LOCAL_PATH)/../utils/utils.mk
 
 LOCAL_SRC_FILES += \
     sources/rga_slt_parser.cpp \
+    sources/rga_slt_crc.cpp \
     sources/rga_im2d_slt.cpp
 
 LOCAL_MODULE:= im2d_slt
