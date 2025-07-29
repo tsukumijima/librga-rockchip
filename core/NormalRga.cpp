@@ -1377,7 +1377,7 @@ int RgaBlit(rga_info *src, rga_info *dst, rga_info *src1) {
      * ditherEn:enable or not.
      * yuvToRgbMode:yuv to rgb, rgb to yuv , or others
      * */
-    NormalRgaSetBitbltMode(&rgaReg, interp, rotateMode, orientation,
+    NormalRgaSetBitbltMode(&rgaReg, &interp, rotateMode, orientation,
                            ditherEn, 0, yuvToRgbMode);
 
     NormalRgaNNQuantizeMode(&rgaReg, dst);

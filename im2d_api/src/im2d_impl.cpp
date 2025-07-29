@@ -2425,12 +2425,14 @@ IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
 IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
     int ret;
     im_rga_job_t *job = NULL;
-    struct rga_user_request submit_request = {0};
+    struct rga_user_request submit_request;
     rga_session_t *session;
 
     session = get_rga_session();
     if (IS_ERR(session))
         return (IM_STATUS)PTR_ERR(session);
+
+    memset(&submit_request, 0x0, sizeof(submit_request));
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2485,12 +2487,14 @@ free_job:
 IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
     int ret;
     im_rga_job_t *job = NULL;
-    struct rga_user_request config_request = {0};
+    struct rga_user_request config_request;
     rga_session_t *session;
 
     session = get_rga_session();
     if (IS_ERR(session))
         return (IM_STATUS)PTR_ERR(session);
+
+    memset(&config_request, 0x0, sizeof(config_request));
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -3544,7 +3548,7 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
      * ditherEn:enable or not.
      * yuvToRgbMode:yuv to rgb, rgb to yuv , or others
      * */
-    NormalRgaSetBitbltMode(&rgaReg, interp, rotateMode, orientation,
+    NormalRgaSetBitbltMode(&rgaReg, &interp, rotateMode, orientation,
                            ditherEn, 0, yuvToRgbMode);
 
     NormalRgaNNQuantizeMode(&rgaReg, dst);

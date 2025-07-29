@@ -174,7 +174,7 @@ bool        NormalRgaFormatHasAlpha(int format);
 // dither en flag
 // AA flag
 int         NormalRgaSetBitbltMode(struct rga_req *msg,
-                                   struct rga_interp interp,  unsigned char rotate_mode,
+                                   struct rga_interp *interp,  unsigned char rotate_mode,
                                    unsigned int  angle,       unsigned int  dither_en,
                                    unsigned int  AA_en,       unsigned int  yuv2rgb_mode);
 
