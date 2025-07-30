@@ -27,6 +27,10 @@
 #include "RgaUtils.h"
 #include "rga.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void draw_rgba(char *buffer, int width, int height) {
     for (int i = 0; i < height; i++) {
        for (int j = 0; j < width/4; j++) {
@@ -203,3 +207,7 @@ int write_image_to_file(void *buf, const char *path, int sw, int sh, int fmt, in
 
     return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif

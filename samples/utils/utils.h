@@ -22,6 +22,10 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 inline static int64_t get_cur_us() {
   struct timeval tv;
   gettimeofday(&tv, NULL);
@@ -43,5 +47,9 @@ int read_image_from_fbc_file(void *buf, const char *path, int sw, int sh, int fm
 int read_image_from_file(void *buf, const char *path, int sw, int sh, int fmt, int index);
 int write_image_to_fbc_file(void *buf, const char *path, int sw, int sh, int fmt, int index);
 int write_image_to_file(void *buf, const char *path, int sw, int sh, int fmt, int index);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* #ifndef __RGA_SAMPLES_UTILS_H__ */
