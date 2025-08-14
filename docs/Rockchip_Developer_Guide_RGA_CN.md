@@ -1630,14 +1630,14 @@ IM_STATUS imresize(const rga_buffer_t src,
                    rga_buffer_t dst,
                    double fx = 0,
                    double fy = 0,
-                   int interpolation = INTER_LINEAR,
+                   int interpolation = IM_INTERP_DEFAULT,
                    int sync = 1,
                    int *release_fence_fd = NULL);
 ```
 
 > 根据不同的应用场景，可选择配置dst来描述缩放的目标图像大小，或配置缩放系数fx/fy实现缩放指定倍率的效果。同时配置dst和缩放系数fx/fy时，将采用缩放系数fx/fy计算后的结果作为目标图像大小。
 >
-> interpolation 仅硬件版本RGA1/RGA1 plus 可以支持配置，其他硬件版本RGA须查询对应TRM确认缩放算法。
+> interpolation不同硬件支持情况不同，可根据《设计指标》小节中不同硬件支持算法进行配置。 
 >
 > 注意：使用缩放系数fx/fy进行倍率缩放时，YUV等对宽高对齐有要求的格式将强制向下对齐至符合要求，使用该功能有可能会改变预期缩放效果。
 
@@ -1647,7 +1647,7 @@ IM_STATUS imresize(const rga_buffer_t src,
 | dst              | **[required]** output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src. |
 | fx               | **[optional]** scale factor along the horizontal axis; when it equals 0, it is computed as:<br/>fx = (double) dst.width / src.width |
 | fy               | **[optional]** scale factor along the vertical axis; when it equals 0, it is computed as:<br/>fy = (double) dst.height / src.height |
-| interpolation    | **[optional]** interpolation method:<br/>INTER_NEAREST - a nearest-neighbor interpolation<br/>INTER_LINEAR - a bilinear interpolation (used by default)<br/>INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood |
+| interpolation    | **[optional]** interpolation method:<br/>IM_INTERP_DEFAULT<br/>IM_INTERP_LINEAR<br/>IM_INTERP_CUBIC<br/>IM_INTERP_AVERAGE |
 | sync             | **[optional]** wait until operation complete                 |
 | release_fence_fd | **[optional]**Used in async mode, as a parameter of imsync() |
 
@@ -1696,7 +1696,7 @@ IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle,
 | dst           | **[required]** output image; it has the size dsize (when it is non-zero) or the size computed from src.size(), fx, and fy; the type of dst is the same as of src. |
 | fx            | **[optional]** scale factor along the horizontal axis; when it equals 0, it is computed as:<br/>fx = (double) dst.width / src.width |
 | fy            | **[optional]** scale factor along the vertical axis; when it equals 0, it is computed as:<br/>fy = (double) dst.height / src.height |
-| interpolation | **[optional]** interpolation method:<br/>INTER_NEAREST - a nearest-neighbor interpolation<br/>INTER_LINEAR - a bilinear interpolation (used by default)<br/>INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood |
+| interpolation | **[optional]** interpolation method:<br/>IM_INTERP_DEFAULT<br/>IM_INTERP_LINEAR<br/>IM_INTERP_CUBIC<br/>IM_INTERP_AVERAGE |
 
 **Return** IM_STATUS_SUCCESS on success or else negative error code.
 
