@@ -1059,7 +1059,7 @@ int main(int argc, char *argv[])
 
         start_id = pthread_num;
 
-        for (pthread_num = start_id; pthread_num < start_id + IM2D_SLT_THREAD_MAX; pthread_num++) {
+        for (pthread_num = start_id; pthread_num < start_id + IM2D_SLT_PERF_THREAD_MAX; pthread_num++) {
             data[pthread_num].id = pthread_num;
             data[pthread_num].name = "perf_test";
             data[pthread_num].dma_heap_name = g_chip_config.heap_path;

@@ -43,7 +43,9 @@
 
 /* im2d_slt config */
 #define IM2D_SLT_THREAD_EN                  true    /* Enable multi-threaded mode. */
-#define IM2D_SLT_THREAD_MAX                 10      /* Maximum number of threads. */
+#define IM2D_SLT_TEST_THREAD_MAX            10      /* Maximum number of threads. */
+#define IM2D_SLT_PERF_THREAD_MAX            5       /* Maximum number of threads for perf test. */
+#define IM2D_SLT_THREAD_MAX                 (IM2D_SLT_TEST_THREAD_MAX + IM2D_SLT_PERF_THREAD_MAX)
 #define IM2D_SLT_WHILE_NUM                  500     /* Number of while mode. */
 
 #define IM2D_SLT_TEST_PERF_EN               false   /* Enable perf test. */
