@@ -58,7 +58,7 @@ IM_API IM_STATUS imcopy(const rga_buffer_t src, rga_buffer_t dst, int sync = 1, 
  *
  * @returns success or else negative error code.
  */
-IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx = 0, double fy = 0, int interpolation = 0, int sync = 1, int *release_fence_fd = NULL);
+IM_API IM_STATUS imresize(const rga_buffer_t src, rga_buffer_t dst, double fx = 0, double fy = 0, int interpolation = IM_INTERP_DEFAULT, int sync = 1, int *release_fence_fd = NULL);
 
 /**
  * Crop
@@ -578,9 +578,9 @@ IM_C_API IM_STATUS imgaussianBlur_t(rga_buffer_t src, rga_buffer_t dst,
         double __args[] = {__VA_ARGS__}; \
         int __argc = sizeof(__args)/sizeof(double); \
         if (__argc == 0) { \
-            __ret = imresize_t(src, dst, 0, 0, INTER_LINEAR, 1); \
+            __ret = imresize_t(src, dst, 0, 0, IM_INTERP_DEFAULT, 1); \
         } else if (__argc == 2){ \
-            __ret = imresize_t(src, dst, __args[RGA_GET_MIN(__argc, 0)], __args[RGA_GET_MIN(__argc, 1)], INTER_LINEAR, 1); \
+            __ret = imresize_t(src, dst, __args[RGA_GET_MIN(__argc, 0)], __args[RGA_GET_MIN(__argc, 1)], IM_INTERP_DEFAULT, 1); \
         } else if (__argc == 3){ \
             __ret = imresize_t(src, dst, __args[RGA_GET_MIN(__argc, 0)], __args[RGA_GET_MIN(__argc, 1)], (int)__args[RGA_GET_MIN(__argc, 2)], 1); \
         } else if (__argc == 4){ \
@@ -597,7 +597,7 @@ IM_C_API IM_STATUS imgaussianBlur_t(rga_buffer_t src, rga_buffer_t dst,
                    dst, \
                    direction == IM_UP_SCALE ? 0.5 : 2, \
                    direction == IM_UP_SCALE ? 0.5 : 2, \
-                   INTER_LINEAR, 1)
+                   IM_INTERP_DEFAULT, 1)
 
 /**
  * format convert
