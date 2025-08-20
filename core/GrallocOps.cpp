@@ -17,6 +17,8 @@
  */
 #ifdef ANDROID
 
+#include <inttypes.h>
+
 #include "GrallocOps.h"
 
 #if USE_GRALLOC_4
@@ -335,9 +337,10 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
     if (ret)
         ALOGE("GraphicBufferGetHandldAttributes fail %d for:%s",ret,strerror(ret));
     else if (false) {
-        ALOGD("%d,%d,%d,%d,%d,%d",attrs->at(0),attrs->at(1),attrs->at(2),
+        ALOGD( "%" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64,
+              attrs->at(0),attrs->at(1),attrs->at(2),
               attrs->at(3),attrs->at(4),attrs->at(5));
-        fprintf(stderr,"%d,%d,%d,%d,%d,%d\n",
+        fprintf(stderr, "%" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n",
                 attrs->at(0),attrs->at(1),attrs->at(2),
                 attrs->at(3),attrs->at(4),attrs->at(5));
     }
