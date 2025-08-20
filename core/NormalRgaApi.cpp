@@ -16,9 +16,12 @@
  * limitations under the License.
  */
 
-#include "NormalRga.h"
+#include <string.h>
+
 #include "NormalRgaContext.h"
+#include "drmrga.h"
 #include "rga.h"
+
 #ifdef ANDROID
 #include "hardware/hardware_rockchip.h"
 #include "GrallocOps.h"

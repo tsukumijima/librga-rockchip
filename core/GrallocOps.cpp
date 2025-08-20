@@ -21,6 +21,8 @@
 
 #if USE_GRALLOC_4
 
+#include <hardware/gralloc.h>
+
 #include "platform_gralloc4.h"
 
 int RkRgaGetHandleFd(buffer_handle_t handle, int *fd) {
