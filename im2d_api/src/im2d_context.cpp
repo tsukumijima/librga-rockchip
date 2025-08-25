@@ -291,5 +291,5 @@ __attribute__((destructor)) static void librga_exit() {
     rga_session_deinit(&g_rga_session);
 }
 #ifdef RT_THREAD
-INIT_APP_EXPORT(librga_init);
+INIT_COMPONENT_EXPORT(librga_init);
 #endif
