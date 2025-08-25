@@ -271,8 +271,7 @@ int is_debug_en(void) {
     return is_debug;
 }
 
-/* Pre-processing during librga load/unload */
-__attribute__((constructor)) static int librga_init() {
+static int librga_init() {
     if (pthread_rwlock_init(&g_rga_session.rwlock, NULL) != 0) {
         IM_LOGE("im2d API context init failed!\n");
         return -1;
@@ -287,9 +286,19 @@ __attribute__((constructor)) static int librga_init() {
     return 0;
 }
 
-__attribute__((destructor)) static void librga_exit() {
+static void librga_exit() {
     rga_session_deinit(&g_rga_session);
 }
+
+/* Pre-processing during librga load/unload */
 #ifdef RT_THREAD
 INIT_COMPONENT_EXPORT(librga_init);
+#else
+__attribute__((constructor)) int librga_init_constructor() {
+    return librga_init();
+}
+
+__attribute__((destructor)) void librga_exit_destructor() {
+    librga_exit();
+}
 #endif
