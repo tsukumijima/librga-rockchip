@@ -433,7 +433,21 @@ struct rga_req {
     int32_t sina;                         /* dst angle  default value 0  16.16 scan from table */
     int32_t cosa;                         /* dst angle  default value 0  16.16 scan from table */
 
-    uint16_t alpha_rop_flag;              /* alpha rop process flag           */
+    union {
+        struct {
+            uint16_t alpha_rop_enable:1;
+            uint16_t rop_enable:1;
+            uint16_t fading_enable:1;
+            uint16_t PD_enable:1;
+            uint16_t alpha_cal_mode_sel:1;
+            uint16_t dither_enable:1;
+            uint16_t gradient_fill_mode_sel:1;
+            uint16_t AA_enable:1;
+            uint16_t nn_quantize:1;
+            uint16_t real_color_mode:1;
+            uint16_t secure_access:1;
+        };
+        uint16_t alpha_rop_flag;          /* legacy alpha rop process flag    */
                                           /* ([0] = 1 alpha_rop_enable)       */
                                           /* ([1] = 1 rop enable)             */
                                           /* ([2] = 1 fading_enable)          */
@@ -444,6 +458,7 @@ struct rga_req {
                                           /* ([7] = 1 AA_enable)              */
                                           /* ([8] = 1 nn_quantize)            */
                                           /* ([9] = 1 Real color mode)        */
+    };
 
     union {
         struct rga_interp interp;
