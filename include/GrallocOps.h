@@ -48,7 +48,7 @@
 #include <cutils/native_handle.h>
 #include "rga.h"
 
-typedef std::vector<uint64_t> rga_gralloc_attr_t;
+typedef std::vector<int> rga_gralloc_attr_t;
 
 // -------------------------------------------------------------------------------
 int         RkRgaGetHandleFd(buffer_handle_t handle, int *fd);

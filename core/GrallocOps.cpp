@@ -83,9 +83,6 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
         return -1;
     }
 
-    fourcc_format = gralloc4::get_fourcc_format(handle);
-    format_modifier = gralloc4::get_format_modifier(handle);
-
     //add to attrs.
     attrs->emplace_back((uint64_t)w);
     attrs->emplace_back((uint64_t)h);
@@ -93,8 +90,6 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
     attrs->emplace_back((uint64_t)format);
     attrs->emplace_back((uint64_t)size);
     attrs->emplace_back(0); //type, unused
-    attrs->emplace_back((uint64_t)fourcc_format);
-    attrs->emplace_back((uint64_t)format_modifier);
 
     return err;
 }
@@ -210,8 +205,7 @@ int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
     attributes->push_back(hnd->format);
     attributes->push_back(hnd->size);
     attributes->push_back(hnd->type);
-    attributes->push_back(0); //drm fourcc, unused
-    attributes->push_back(0); //drm modifier, unused
+
     return 0;
 }
 
@@ -233,8 +227,7 @@ int gralloc_backend_get_attrs(private_handle_t* hnd, void *attrs) {
     attributes->push_back(hnd->format);
     attributes->push_back(hnd->size);
     attributes->push_back(hnd->type);
-    attributes->push_back(0); //drm fourcc, unused
-    attributes->push_back(0); //drm modifier, unused
+
     return 0;
 }
 
@@ -310,8 +303,6 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
     attrs->emplace_back(format);
     attrs->emplace_back(size);
     attrs->emplace_back(0); //type, unused
-    attrs->emplace_back(0); //drm fourcc, unused
-    attrs->emplace_back(0); //drm modifier, unused
 
 #else
 
@@ -337,10 +328,10 @@ int RkRgaGetHandleAttributes(buffer_handle_t handle,
     if (ret)
         ALOGE("GraphicBufferGetHandldAttributes fail %d for:%s",ret,strerror(ret));
     else if (false) {
-        ALOGD( "%" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64,
+        ALOGD("%d,%d,%d,%d,%d,%d",
               attrs->at(0),attrs->at(1),attrs->at(2),
               attrs->at(3),attrs->at(4),attrs->at(5));
-        fprintf(stderr, "%" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 ", %" PRIu64 "\n",
+        fprintf(stderr, "%d, %d, %d, %d, %d, %d\n",
                 attrs->at(0),attrs->at(1),attrs->at(2),
                 attrs->at(3),attrs->at(4),attrs->at(5));
     }
