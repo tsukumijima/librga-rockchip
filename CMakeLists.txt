@@ -121,6 +121,7 @@ set(IM2D_CORE_CPP_SRCS
     core/NormalRga.cpp
     core/RgaApi.cpp
     core/RgaUtils_symbol.cpp
+    core/rga_gralloc.cpp
 )
 
 set(IM2D_3RDPARTY_CPP_INCLUDE

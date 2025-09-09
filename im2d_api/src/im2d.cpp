@@ -46,7 +46,7 @@
 
 #ifdef ANDROID
 #include "core/NormalRga.h"
-#include "RockchipRga.h"
+#include "rga_gralloc.h"
 
 using namespace android;
 #endif /* #ifdef ANDROID */
@@ -275,28 +275,16 @@ IM_API rga_buffer_handle_t importbuffer_GraphicBuffer_handle(buffer_handle_t hnd
     int fd = -1;
     int size = 0;
     void *virt_addr = NULL;
-    rga_gralloc_attr_t dstAttrs;
 
-    RockchipRga& rkRga(RockchipRga::get());
-
-    ret = RkRgaGetHandleAttributes(hnd, &dstAttrs);
-    if (ret) {
-        IM_LOGE("handle get Attributes fail ret = %d,hnd=%p", ret, &hnd);
-        return IM_STATUS_ILLEGAL_PARAM;
-    }
-
-    size = dstAttrs.at(ASIZE);
-
-    ret = rkRga.RkRgaGetBufferFd(hnd, &fd);
-    if (ret)
-        IM_LOGE("rga_im2d: get buffer fd fail: %s, hnd=%p", strerror(errno), (void*)(hnd));
-
+    size = rga_gralloc_get_handle_size(hnd);
+    fd = rga_gralloc_get_handle_fd(hnd);
     if (fd <= 0) {
-        ret = rkRga.RkRgaGetHandleMapCpuAddress(hnd, &virt_addr);
+        virt_addr = rga_gralloc_get_handle_virtual_addr(hnd);
         if(!virt_addr) {
             IM_LOGE("invaild GraphicBuffer, can not get fd and virtual address, hnd = %p", (void *)hnd);
             return -1;
         } else {
+            IM_LOGE("invaild GraphicBuffer, can not get buffer fd, hnd = %p", (void*)(hnd));
             return importbuffer_virtualaddr(virt_addr, size);
         }
     } else {
@@ -312,43 +300,48 @@ IM_API rga_buffer_handle_t importbuffer_GraphicBuffer(sp<GraphicBuffer> buf) {
 /*it is necessary to check whether fd and virtual address of the return rga_buffer_t are valid parameters*/
 IM_API rga_buffer_t wrapbuffer_handle(buffer_handle_t hnd) {
     int ret = 0;
-    int format, rd_mode;
+    int width, height;
+    int wstride, hstride;
+    int format, fourcc, rd_mode;
+    uint64_t modifier;
     rga_buffer_t buffer;
-    rga_gralloc_attr_t dstAttrs;
-
-    RockchipRga& rkRga(RockchipRga::get());
 
     memset(&buffer, 0, sizeof(rga_buffer_t));
 
-    ret = rkRga.RkRgaGetBufferFd(hnd, &buffer.fd);
-    if (ret)
+    buffer.fd = rga_gralloc_get_handle_fd(hnd);
+    if (buffer.fd <= 0) {
         IM_LOGE("rga_im2d: get buffer fd fail: %s, hnd=%p", strerror(errno), (void*)(hnd));
 
-    if (buffer.fd <= 0) {
-        ret = rkRga.RkRgaGetHandleMapCpuAddress(hnd, &buffer.vir_addr);
+        buffer.vir_addr = rga_gralloc_get_handle_virtual_addr(hnd);
         if(!buffer.vir_addr) {
             IM_LOGE("invaild GraphicBuffer, can not get fd and virtual address, hnd = %p", (void *)hnd);
             goto INVAILD;
         }
     }
 
-    ret = RkRgaGetHandleAttributes(hnd, &dstAttrs);
-    if (ret) {
-        IM_LOGE("handle get Attributes fail, ret = %d,hnd = %p", ret, (void *)hnd);
+    width = rga_gralloc_get_handle_width(hnd);
+    height = rga_gralloc_get_handle_height(hnd);
+    wstride = rga_gralloc_get_handle_stride(hnd);
+    hstride = rga_gralloc_get_handle_height_stride(hnd);
+    format = rga_gralloc_get_handle_format(hnd);
+    if (width <= 0 || height <= 0 || wstride <= 0 || hstride <= 0 || format <= 0) {
+        IM_LOGE("invaild GraphicBuffer, width=%d, height=%d, wstride=%d, hstride=%d, format=%d, hnd=%p",
+                width, height, wstride, hstride, format, (void*)(hnd));
         goto INVAILD;
     }
 
-    if (dstAttrs.at(AFOURCC) > 0) {
-        format = get_format_from_drm_fourcc(dstAttrs.at(AFOURCC));
-        rd_mode = get_mode_from_drm_modifier(dstAttrs.at(AMODIFIER));
+    fourcc = rga_gralloc_get_handle_drm_fourcc(hnd);
+    modifier = rga_gralloc_get_handle_drm_modifier(hnd);
+
+    if (fourcc > 0) {
+        format = get_format_from_drm_fourcc(fourcc);
+        rd_mode = get_mode_from_drm_modifier(modifier);
     } else {
-        format = get_format_from_android_hal(dstAttrs.at(AFORMAT));
-        rd_mode = get_mode_from_android_hal(dstAttrs.at(AFORMAT));
+        format = get_format_from_android_hal(format);
+        rd_mode = get_mode_from_android_hal(format);
     }
 
-    set_default_rga_buffer(&buffer,
-                           dstAttrs.at(AWIDTH), dstAttrs.at(AHEIGHT), format,
-                           dstAttrs.at(ASTRIDE), dstAttrs.at(AHEIGHT));
+    set_default_rga_buffer(&buffer, width, height, format, wstride, hstride);
 
     if (buffer.wstride % 16) {
         IM_LOGE("Graphicbuffer wstride needs align to 16, please align to 16 or use other buffer types, wstride = %d", buffer.wstride);
