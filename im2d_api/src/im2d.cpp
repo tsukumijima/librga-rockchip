@@ -1452,6 +1452,15 @@ IM_API IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
     return rga_single_task_submit(src, dst, pat, srect, drect, prect, -1, NULL, NULL, usage);
 }
 
+IM_C_API IM_STATUS improcessOpt(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
+                                im_rect srect, im_rect drect, im_rect prect,
+                                int acquire_fence_fd, int *release_fence_fd,
+                                im_opt_t *opt_ptr, int usage) {
+    return rga_single_task_submit(src, dst, pat, srect, drect, prect,
+                                  acquire_fence_fd, release_fence_fd,
+                                  opt_ptr, usage);
+}
+
 #ifdef __cplusplus
 IM_API IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
                            im_rect srect, im_rect drect, im_rect prect,
@@ -1620,6 +1629,18 @@ IM_STATUS immakeBorder(rga_buffer_t src, rga_buffer_t dst,
 cancel_job_handle:
     imcancelJob(job_handle);
     return ret;
+}
+
+IM_C_API IM_STATUS immakeBorder(rga_buffer_t src, rga_buffer_t dst,
+                                int top, int bottom, int left, int right,
+                                int border_type, int value) {
+    return immakeBorder(src, dst, top, bottom, left, right, border_type, value, 1, -1, NULL);
+}
+IM_C_API IM_STATUS immakeBorderAsync(rga_buffer_t src, rga_buffer_t dst,
+                                     int top, int bottom, int left, int right,
+                                     int border_type, int value,
+                                     int sync, int acquir_fence_fd, int *release_fence_fd) {
+    return immakeBorder(src, dst, top, bottom, left, right, border_type, value, sync, acquir_fence_fd, release_fence_fd);
 }
 
 /* Start task api */

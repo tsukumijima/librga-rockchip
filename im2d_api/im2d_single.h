@@ -494,6 +494,12 @@ IM_API IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
  *      Border type.
  * @param value
  *      The pixel value at which the border is filled.
+ * @param sync
+ *      When 'sync == 1', wait for the operation to complete and return, otherwise return directly.
+ * @param acquir_fence_fd
+ *      When 'sync == 0', the fence_fd used to identify the current job producer state.
+ * @param release_fence_fd
+ *      When 'sync == 0', the fence_fd used to identify the current job state.
  *
  * @returns success or else negative error code.
  */
@@ -501,6 +507,13 @@ IM_API IM_STATUS immakeBorder(rga_buffer_t src, rga_buffer_t dst,
                               int top, int bottom, int left, int right,
                               int border_type, int value = 0,
                               int sync = 1, int acquir_fence_fd = -1, int *release_fence_fd = NULL);
+IM_C_API IM_STATUS immakeBorder(rga_buffer_t src, rga_buffer_t dst,
+                                int top, int bottom, int left, int right,
+                                int border_type, int value);
+IM_C_API IM_STATUS immakeBorderAsync(rga_buffer_t src, rga_buffer_t dst,
+                                     int top, int bottom, int left, int right,
+                                     int border_type, int value,
+                                     int sync, int acquir_fence_fd, int *release_fence_fd);
 
 IM_C_API IM_STATUS immosaic(const rga_buffer_t image, im_rect rect, int mosaic_mode, int sync);
 IM_C_API IM_STATUS imosd(const rga_buffer_t osd,const rga_buffer_t dst,
@@ -509,6 +522,10 @@ IM_C_API IM_STATUS imosd(const rga_buffer_t osd,const rga_buffer_t dst,
 
 IM_C_API IM_STATUS improcess(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
                              im_rect srect, im_rect drect, im_rect prect, int usage);
+IM_C_API IM_STATUS improcessOpt(rga_buffer_t src, rga_buffer_t dst, rga_buffer_t pat,
+                                im_rect srect, im_rect drect, im_rect prect,
+                                int acquire_fence_fd, int *release_fence_fd,
+                                im_opt_t *opt_ptr, int usage);
 
 /* Start: Symbols reserved for compatibility with macro functions */
 IM_C_API IM_STATUS imcopy_t(const rga_buffer_t src, rga_buffer_t dst, int sync);
