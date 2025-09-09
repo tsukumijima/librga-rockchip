@@ -79,6 +79,8 @@ int get_height(buffer_handle_t handle, uint64_t* height);
 
 int get_pixel_stride(buffer_handle_t handle, int* pixel_stride);
 
+int get_height_stride(buffer_handle_t handle, int* height_stride);
+
 int get_byte_stride(buffer_handle_t handle, int* byte_stride);
 
 int get_format_requested(buffer_handle_t handle, int* format_requested);
