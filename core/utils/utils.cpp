@@ -65,6 +65,7 @@ bool is_yuv_format(int format) {
         case RK_FORMAT_YCbCr_422_10b_SP:
         case RK_FORMAT_YCbCr_444_SP:
         case RK_FORMAT_YCrCb_444_SP:
+        case RK_FORMAT_YUV_101010:
             ret = true;
             break;
     }
@@ -97,6 +98,15 @@ bool is_rgb_format(int format) {
         case RK_FORMAT_XBGR_8888:
         case RK_FORMAT_ABGR_5551:
         case RK_FORMAT_ABGR_4444:
+
+        case RK_FORMAT_RGBA_1010102:
+        case RK_FORMAT_BGRA_1010102:
+        case RK_FORMAT_ARGB_2101010:
+        case RK_FORMAT_ABGR_2101010:
+        case RK_FORMAT_RGBX_1010102:
+        case RK_FORMAT_BGRX_1010102:
+        case RK_FORMAT_XRGB_2101010:
+        case RK_FORMAT_XBGR_2101010:
             ret = true;
             break;
         default:
@@ -123,6 +133,14 @@ bool is_alpha_format(int format) {
         case RK_FORMAT_ABGR_5551:
         case RK_FORMAT_ABGR_4444:
         case RK_FORMAT_RGBA2BPP:
+        case RK_FORMAT_RGBA_1010102:
+        case RK_FORMAT_BGRA_1010102:
+        case RK_FORMAT_ARGB_2101010:
+        case RK_FORMAT_ABGR_2101010:
+        case RK_FORMAT_RGBX_1010102:
+        case RK_FORMAT_BGRX_1010102:
+        case RK_FORMAT_XRGB_2101010:
+        case RK_FORMAT_XBGR_2101010:
             ret = true;
             break;
         default:

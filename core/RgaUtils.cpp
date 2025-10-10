@@ -107,6 +107,17 @@ const struct format_table_entry format_table[] = {
 
     { RK_FORMAT_Y8,                 "Y8" },
 
+    { RK_FORMAT_RGBA_1010102,      "rgba1010102" },
+    { RK_FORMAT_BGRA_1010102,      "bgra1010102" },
+    { RK_FORMAT_ARGB_2101010,      "argb2101010" },
+    { RK_FORMAT_ABGR_2101010,      "abgr2101010" },
+    { RK_FORMAT_RGBX_1010102,      "rgbx1010102" },
+    { RK_FORMAT_BGRX_1010102,      "bgrx1010102" },
+    { RK_FORMAT_XRGB_2101010,      "xrgb2101010" },
+    { RK_FORMAT_XBGR_2101010,      "xbgr2101010" },
+
+    { RK_FORMAT_YUV_101010,         "yuv101010" },
+
     { RK_FORMAT_UNKNOWN,            "unknown" }
 };
 
@@ -203,6 +214,9 @@ float get_bpp_from_format_impl(int format) {
         case RK_FORMAT_YCrCb_444_SP:
             bpp = 3;
             break;
+        case RK_FORMAT_YUV_101010:
+            bpp = 3.75;
+            break;
         case RK_FORMAT_RGBA_8888:
         case RK_FORMAT_RGBX_8888:
         case RK_FORMAT_BGRA_8888:
@@ -211,6 +225,14 @@ float get_bpp_from_format_impl(int format) {
         case RK_FORMAT_XRGB_8888:
         case RK_FORMAT_ABGR_8888:
         case RK_FORMAT_XBGR_8888:
+        case RK_FORMAT_RGBA_1010102:
+        case RK_FORMAT_BGRA_1010102:
+        case RK_FORMAT_ARGB_2101010:
+        case RK_FORMAT_ABGR_2101010:
+        case RK_FORMAT_RGBX_1010102:
+        case RK_FORMAT_BGRX_1010102:
+        case RK_FORMAT_XRGB_2101010:
+        case RK_FORMAT_XBGR_2101010:
             bpp = 4;
             break;
         default:
@@ -273,6 +295,8 @@ int get_perPixel_stride_from_format_impl(int format) {
         case RK_FORMAT_BGR_888:
         case RK_FORMAT_RGB_888:
             return  (3 * 8);
+        case RK_FORMAT_YUV_101010:
+            return  (3 * 10);
         case RK_FORMAT_RGBA_8888:
         case RK_FORMAT_RGBX_8888:
         case RK_FORMAT_BGRA_8888:
@@ -281,6 +305,14 @@ int get_perPixel_stride_from_format_impl(int format) {
         case RK_FORMAT_XRGB_8888:
         case RK_FORMAT_ABGR_8888:
         case RK_FORMAT_XBGR_8888:
+        case RK_FORMAT_RGBA_1010102:
+        case RK_FORMAT_BGRA_1010102:
+        case RK_FORMAT_ARGB_2101010:
+        case RK_FORMAT_ABGR_2101010:
+        case RK_FORMAT_RGBX_1010102:
+        case RK_FORMAT_BGRX_1010102:
+        case RK_FORMAT_XRGB_2101010:
+        case RK_FORMAT_XBGR_2101010:
             return  (4 * 8);
         default:
             printf("Is unsupport format now, please fix \n");

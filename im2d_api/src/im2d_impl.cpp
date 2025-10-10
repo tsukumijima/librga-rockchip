@@ -1038,6 +1038,27 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
         ret = rga_yuv_legality_check(name, info, rect);
         if (ret != IM_STATUS_SUCCESS)
             return ret;
+    } else if (format == RK_FORMAT_RGBA_1010102 || format == RK_FORMAT_BGRA_1010102 ||
+               format == RK_FORMAT_ARGB_2101010 || format == RK_FORMAT_ABGR_2101010 ||
+               format == RK_FORMAT_RGBX_1010102 || format == RK_FORMAT_BGRX_1010102 ||
+               format == RK_FORMAT_XRGB_2101010 || format == RK_FORMAT_XBGR_2101010) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_RGBA_1010102) {
+            IM_LOGW("%s unsupported RGB 10bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+    } else if (format == RK_FORMAT_YUV_101010) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_101010) {
+            IM_LOGW("%s unsupported YUV 10bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        ret = rga_yuv_legality_check(name, info, rect);
+        if (ret != IM_STATUS_SUCCESS)
+            return ret;
     } else {
         IM_LOGW("%s unsupported this format, format = 0x%x(%s)\n%s",
                 name, info.format, translate_format_str(info.format),
