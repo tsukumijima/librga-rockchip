@@ -56,6 +56,7 @@ bool is_yuv_format(int format) {
         case RK_FORMAT_YUYV_420:
         case RK_FORMAT_UYVY_422:
         case RK_FORMAT_UYVY_420:
+        case RK_FORMAT_Y8:
         case RK_FORMAT_Y4:
         case RK_FORMAT_YCbCr_400:
         case RK_FORMAT_YCbCr_420_SP_10B:
