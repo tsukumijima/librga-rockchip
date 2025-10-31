@@ -220,6 +220,7 @@ rga_session_t *get_rga_session() {
     int ret;
     rga_session_t *session =  &g_rga_session;
 
+    /* to fast get session, first using rdlock */
     pthread_rwlock_rdlock(&session->rwlock);
     if (session->rga_dev_fd > 0) {
         pthread_rwlock_unlock(&session->rwlock);
@@ -228,6 +229,11 @@ rga_session_t *get_rga_session() {
     pthread_rwlock_unlock(&session->rwlock);
 
     pthread_rwlock_wrlock(&session->rwlock);
+    if (session->rga_dev_fd > 0) {
+        pthread_rwlock_unlock(&session->rwlock);
+        return session;
+    }
+
     ret = rga_session_init(session);
     if (ret != IM_STATUS_SUCCESS) {
         pthread_rwlock_unlock(&session->rwlock);
