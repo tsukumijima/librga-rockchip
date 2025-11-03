@@ -29,6 +29,10 @@
 #include <hardware/gralloc.h>
 
 #include "platform_gralloc4.h"
+#elif USE_GRALLOC_5
+#include <hardware/gralloc.h>
+
+#include "platform_gralloc5.h"
 #else /* Gralloc 0.3 */
 
 #if (defined(ANDROID_7_DRM) && !defined(RK3368))
@@ -161,6 +165,9 @@ int rga_gralloc_get_handle_fd(buffer_handle_t handle) {
 #if USE_GRALLOC_4
     int err = gralloc4::get_share_fd(handle, &share_fd);
     ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    int err = gralloc5::get_share_fd(handle, &share_fd);
+    ret = (err != android::OK) ? -EINVAL : 0;
 #else
     ret = rga_gralloc_perform_backend(handle, GRALLOC_MODULE_PERFORM_GET_HADNLE_PRIME_FD, &share_fd);
 #endif /* #if USE_GRALLOC_4 */
@@ -180,6 +187,11 @@ int rga_gralloc_get_handle_width(buffer_handle_t handle) {
     uint64_t width;
 
     int err = gralloc4::get_width(handle, &width);
+    ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    uint64_t width;
+
+    int err = gralloc5::get_width(handle, &width);
     ret = (err != android::OK) ? -EINVAL : 0;
 #else
     int width;
@@ -203,6 +215,11 @@ int rga_gralloc_get_handle_height(buffer_handle_t handle) {
 
     int err = gralloc4::get_height(handle, &height);
     ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    uint64_t height;
+
+    int err = gralloc5::get_height(handle, &height);
+    ret = (err != android::OK) ? -EINVAL : 0;
 #else
     int height;
 
@@ -224,6 +241,9 @@ int rga_gralloc_get_handle_stride(buffer_handle_t handle) {
 #if USE_GRALLOC_4
     int err = gralloc4::get_pixel_stride(handle, &pixel_stride);
     ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    int err = gralloc5::get_pixel_stride(handle, &pixel_stride);
+    ret = (err != android::OK) ? -EINVAL : 0;
 #else
     ret = rga_gralloc_perform_backend(handle, GRALLOC_MODULE_PERFORM_GET_HADNLE_STRIDE, &pixel_stride);
 #endif /* #if USE_GRALLOC_4 */
@@ -238,12 +258,20 @@ int rga_gralloc_get_handle_stride(buffer_handle_t handle) {
 
 int rga_gralloc_get_handle_height_stride(buffer_handle_t handle) {
     int ret = 0;
-    int pixel_height_stride;
 
 #if USE_GRALLOC_4
+    int pixel_height_stride;
+
     int err = gralloc4::get_height_stride(handle, &pixel_height_stride);
     ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    uint64_t pixel_height_stride;
+
+    int err = gralloc5::get_height_stride(handle, &pixel_height_stride);
+    ret = (err != android::OK) ? -EINVAL : 0;
 #else
+    int pixel_height_stride;
+
     ret = rga_gralloc_perform_backend(handle, GRALLOC_MODULE_PERFORM_GET_HADNLE_HEIGHT, &pixel_height_stride);
 #endif /* #if USE_GRALLOC_4 */
 
@@ -261,6 +289,9 @@ int rga_gralloc_get_handle_format(buffer_handle_t handle) {
 
 #if USE_GRALLOC_4
     int err = gralloc4::get_format_requested(handle, &format);
+    ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    int err = gralloc5::get_format_requested(handle, &format);
     ret = (err != android::OK) ? -EINVAL : 0;
 #else
     ret = rga_gralloc_perform_backend(handle, GRALLOC_MODULE_PERFORM_GET_HADNLE_FORMAT, &format);
@@ -282,6 +313,11 @@ int rga_gralloc_get_handle_size(buffer_handle_t handle) {
 
     int err = gralloc4::get_allocation_size(handle, &size);
     ret = (err != android::OK) ? -EINVAL : 0;
+#elif USE_GRALLOC_5
+    uint64_t size;
+
+    int err = gralloc5::get_allocation_size(handle, &size);
+    ret = (err != android::OK) ? -EINVAL : 0;
 #else
     int size;
 
@@ -302,6 +338,8 @@ uint32_t rga_gralloc_get_handle_drm_fourcc(buffer_handle_t handle) {
 
 #if USE_GRALLOC_4
     drm_fourcc = gralloc4::get_fourcc_format(handle);
+#elif USE_GRALLOC_5
+    drm_fourcc = gralloc5::get_fourcc_format(handle);
 #else
     drm_fourcc = 0;
 #endif /* #if USE_GRALLOC_4 */
@@ -315,6 +353,8 @@ uint64_t rga_gralloc_get_handle_drm_modifier(buffer_handle_t handle) {
 
 #if USE_GRALLOC_4
     drm_modifier = gralloc4::get_format_modifier(handle);
+#elif USE_GRALLOC_5
+    drm_modifier = gralloc5::get_format_modifier(handle);
 #else
     drm_modifier = 0;
 #endif /* #if USE_GRALLOC_4 */
@@ -352,6 +392,32 @@ void *rga_gralloc_get_handle_virtual_addr(buffer_handle_t handle) {
     }
 
     gralloc4::unlock(handle);
+#elif USE_GRALLOC_5
+    int wstride;
+    uint64_t hstride;
+
+    ret = gralloc5::get_pixel_stride(handle, &wstride);
+    if (ret != android::OK)
+    {
+        ALOGE("Failed to get buffer width, ret : %d", ret);
+        return NULL;
+    }
+
+    ret = gralloc5::get_height_stride(handle, &hstride);
+    if (ret != android::OK)
+    {
+        ALOGE("Failed to get buffer height, ret : %d", ret);
+        return NULL;
+    }
+
+    ret = gralloc5::lock(handle, usage, 0, 0, wstride, hstride, &buf);
+    if (ret != android::OK)
+    {
+        ALOGE("Failed to lock buffer, ret : %d", ret);
+        return NULL;
+    }
+
+    gralloc5::unlock(handle);
 #else
 #ifdef ANDROID_7_DRM
     usage |= GRALLOC_USAGE_HW_FB;

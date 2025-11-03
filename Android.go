@@ -57,7 +57,7 @@ func Defaults(ctx android.LoadHookContext) {
         p.Cflags = getCflags(ctx, sdkVersionInt, platform, gralloc_version)
         p.Shared_libs = getSharedLibs(ctx, sdkVersionInt, gralloc_version)
         p.Include_dirs = getIncludeDirs(ctx, sdkVersionInt, gralloc_version)
-        p.Header_libs = getHeaders(ctx, sdkVersionInt)
+        p.Header_libs = getHeaders(ctx, sdkVersionInt, gralloc_version)
         p.Export_header_lib_headers = getExportHeaders(ctx, sdkVersionInt)
 
         double_loadable := true
@@ -90,6 +90,8 @@ func getSrcs(ctx android.BaseContext, sdkVersion int, gralloc_version string) ([
         if (sdkVersion >= 30 ) {
             src = append(src, "core/platform_gralloc4.cpp")
         }
+    } else if (strings.EqualFold(gralloc_version, "5") ) {
+        src = append(src, "core/platform_gralloc5.cpp")
     }
 
     return src
@@ -108,6 +110,8 @@ func getCflags(ctx android.BaseContext, sdkVersion int, platform string, gralloc
         if (sdkVersion >= 30 ) {
             cppflags = append(cppflags,"-DUSE_GRALLOC_4")
         }
+    } else if (strings.EqualFold(gralloc_version, "5") ) {
+        cppflags = append(cppflags,"-DUSE_GRALLOC_5")
     }
 
     //Android 12开始使用libhardware_rockchip存放RK私有定义
@@ -128,6 +132,12 @@ func getSharedLibs(ctx android.BaseContext, sdkVersion int, gralloc_version stri
             libs = append(libs, "libhidlbase")
             libs = append(libs, "android.hardware.graphics.mapper@4.0")
         }
+    } else if (strings.EqualFold(gralloc_version, "5") ) {
+        libs = append(libs, "libhidlbase")
+        libs = append(libs, "libgralloctypes")
+        libs = append(libs, "libnativewindow")
+        libs = append(libs, "android.hardware.graphics.allocator-V2-ndk")
+        libs = append(libs, "libbinder_ndk")
     }
 
     if (sdkVersion < 29 ) {
@@ -158,11 +168,18 @@ func getIncludeDirs(ctx android.BaseContext, sdkVersion int, gralloc_version str
     return dirs
 }
 
-func getHeaders(ctx android.BaseContext, sdkVersion int) ([]string) {
+func getHeaders(ctx android.BaseContext, sdkVersion int, gralloc_version string) ([]string) {
     var headers []string
 
     if (sdkVersion >= 31 ) {
         headers = append(headers, "libhardware_rockchip_headers")
+    }
+
+    if (strings.EqualFold(gralloc_version, "5") ) {
+        headers = append(headers, "libnativebase_headers")
+        headers = append(headers, "libui_headers")
+        headers = append(headers, "libimapper_stablec")
+        headers = append(headers, "libimapper_providerutils")
     }
 
     return headers
