@@ -122,19 +122,21 @@ void rga_version_update(void) {
 }
 
 int rga_log_enable_update(void) {
-    return rga_log_enable_get();
+    atomic_store(&g_log_en, rga_log_enable_property_get());
+    return atomic_load(&g_log_en);
 }
 
 int rga_log_level_update(void) {
-    return rga_log_level_get();
+    atomic_store(&g_log_level, rga_log_level_property_get());
+    return atomic_load(&g_log_level);
 }
 
 int rga_log_level_get(void) {
-    return g_log_level;
+    return atomic_load(&g_log_level);
 }
 
 int rga_log_enable_get(void) {
-    return g_log_en;
+    return atomic_load(&g_log_en);
 }
 
 size_t rga_get_current_time_ms(void) {
