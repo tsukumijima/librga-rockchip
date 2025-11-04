@@ -20,12 +20,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O2 -pthread")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -pthread -lm -Wno-unused-command-line-argument")
 set(RGA_SAMPLES_ENABLE true)
 
+add_library(COMMON_LIBS INTERFACE)
+
 if(CMAKE_BUILD_TARGET STREQUAL android_ndk)
     message("cmake build android ndk")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error -DLOG_TAG=librga")
     add_compile_options(-DLINUX)
     add_compile_options(-DANDROID_VNDK)
     string(REPLACE "-DANDROID" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    target_link_libraries(COMMON_LIBS INTERFACE
+        log
+    )
 endif()
 
 if(CMAKE_BUILD_TARGET STREQUAL buildroot)
@@ -185,6 +191,7 @@ target_include_directories(${OBJECT_NAME} PRIVATE ${IM2D_INCLUDE})
 # Some older compilers need to explicitly set this property
 # After setting this property, it can be used to generate a shared library
 set_target_properties(${OBJECT_NAME} PROPERTIES POSITION_INDEPENDENT_CODE 1)
+target_link_libraries(${OBJECT_NAME} PRIVATE COMMON_LIBS)
 
 # build shared lib
 set(SHARED_LIB_NAME ${PROJECT_NAME})
@@ -192,6 +199,7 @@ set(SHARED_LIB_NAME ${PROJECT_NAME})
 add_library(${SHARED_LIB_NAME} SHARED $<TARGET_OBJECTS:${OBJECT_NAME}>)
 
 target_include_directories(${SHARED_LIB_NAME} PRIVATE ${IM2D_INCLUDE})
+target_link_libraries(${SHARED_LIB_NAME} PRIVATE COMMON_LIBS)
 
 if(NOT DEFINED IM2D_API_VERSION)
     set_target_properties(${SHARED_LIB_NAME} PROPERTIES
@@ -210,6 +218,7 @@ add_library(${STATIC_LIB_NAME} STATIC $<TARGET_OBJECTS:${OBJECT_NAME}>)
 
 target_include_directories(${STATIC_LIB_NAME} PRIVATE ${IM2D_INCLUDE})
 set_target_properties(${STATIC_LIB_NAME} PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+target_link_libraries(${STATIC_LIB_NAME} PRIVATE COMMON_LIBS)
 
 # If cmake version is 3.5.1, FIXIT
 if (NOT DEFINED CMAKE_INSTALL_LIBDIR)

@@ -39,17 +39,20 @@ typedef enum {
 #define LOG_LEVEL_CHECK(level) ((level) >= rga_log_level_get())
 
 const char *rga_get_error_type_str(int type);
-
 int rga_error_msg_set(const char* format, ...);
-int rga_log_level_init(void);
-void rga_log_level_update(void);
+
+/* log property */
+int rga_log_enable_update(void);
+int rga_log_level_update(void);
 int rga_log_level_get(void);
 int rga_log_enable_get(void);
+
+void rga_version_update(void);
 
 size_t rga_get_current_time_ms(void);
 size_t rga_get_start_time_ms(void);
 
-#ifdef ANDROID
+#if (defined(ANDROID) || defined(ANDROID_VNDK))
 #include <android/log.h>
 
 #define IM_LOG(level, ...) \

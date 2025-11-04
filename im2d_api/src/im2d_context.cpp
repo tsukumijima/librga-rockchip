@@ -23,10 +23,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef ANDROID
-#include <cutils/properties.h>
-#endif
-
 #include "im2d_log.h"
 #include "im2d_context.h"
 #include "im2d_impl.h"
@@ -41,19 +37,6 @@
 #endif
 
 rga_session_t g_rga_session;
-
-static int get_debug_property(void) {
-#ifdef ANDROID
-    char level[PROP_VALUE_MAX];
-    __system_property_get("vendor.rga.log" ,level);
-#else
-    char *level = getenv("ROCKCHIP_RGA_LOG");
-    if (level == NULL)
-        level = (char *)"0";
-#endif
-
-    return atoi(level);
-}
 
 static void set_driver_feature(rga_session_t *session) {
     if (rga_version_compare(session->driver_verison, (struct rga_version_t){ 1, 3, 0, {0} }) >= 0)
@@ -239,11 +222,10 @@ rga_session_t *get_rga_session() {
         pthread_rwlock_unlock(&session->rwlock);
         return (rga_session_t *)ERR_PTR(IM_STATUS_NO_SESSION);
     }
-    pthread_rwlock_unlock(&session->rwlock);
 
-#ifdef ANDROID
-    property_set("vendor.rga_api.version", RGA_API_VERSION);
-#endif
+    rga_version_update();
+
+    pthread_rwlock_unlock(&session->rwlock);
 
     IM_LOG(IM_LOG_DIRECT | IM_LOG_FORCE | IM_LOG_INFO, "%s", RGA_API_FULL_VERSION);
 
@@ -257,7 +239,8 @@ int get_debug_state(void) {
     session = get_rga_session();
 
     pthread_rwlock_wrlock(&session->rwlock);
-    session->is_debug = get_debug_property();
+    rga_log_level_update();
+    session->is_debug = rga_log_enable_update();
     is_debug = session->is_debug;
     pthread_rwlock_unlock(&session->rwlock);
 
