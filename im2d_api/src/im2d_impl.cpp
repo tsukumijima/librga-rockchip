@@ -798,14 +798,6 @@ IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rec
         return IM_STATUS_ILLEGAL_PARAM;
     }
 
-    if ((rect.width > 0  && rect.width < 2) || (rect.height > 0 && rect.height < 2) ||
-        (rect.x > 0 && rect.x < 2)          || (rect.y > 0 && rect.y < 2)) {
-        IM_LOGW("Hardware limitation %s rect, unsupported operation of images smaller than 2 pixels, "
-                "rect[x,y,w,h] = [%d, %d, %d, %d]",
-                name, rect.x, rect.y, rect.width, rect.height);
-        return IM_STATUS_INVALID_PARAM;
-    }
-
     if ((rect.width + rect.x > info.wstride) || (rect.height + rect.y > info.hstride)) {
         IM_LOGW("Invaild %s rect, the sum of width and height of rect needs to be less than wstride or hstride, "
                 "rect[x,y,w,h] = [%d, %d, %d, %d], wstride = %d, hstride = %d",
