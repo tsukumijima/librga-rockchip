@@ -2429,7 +2429,7 @@ IM_API IM_STATUS imrectangle(rga_buffer_t dst,
 >
 > color参数按照RGBA格式填写颜色值，由高到低位分别是A，B，G，R，例如，红色：color = 0x000000ff.
 
-【注意】填充区域rect宽高须大于或等于2
+【注意】填充区域rect宽高须大于或等于2，thickness不为负值时须大于或等于2
 
 | Parameter        | Description                                                  |
 | ---------------- | ------------------------------------------------------------ |
@@ -2460,7 +2460,7 @@ IM_API IM_STATUS imrectangleArray(rga_buffer_t dst,
 >
 > color参数按照RGBA格式填写颜色值，由高到低位分别是A，B，G，R，例如，红色：color = 0x000000ff.
 
-【注意】填充区域rect宽高须大于或等于2
+【注意】填充区域rect宽高须大于或等于2，thickness不为负值时须大于或等于2
 
 | Parameter        | Description                                                  |
 | ---------------- | ------------------------------------------------------------ |
@@ -2488,7 +2488,7 @@ IM_API IM_STATUS imrectangleTask(im_job_handle_t job_handle,
 
 > 通过job_handle向指定的任务中添加图像填充矩形边框操作，用法和imrectangle一致。
 
-【注意】填充区域rect宽高须大于或等于2
+【注意】填充区域rect宽高须大于或等于2，thickness不为负值时须大于或等于2
 
 | Parameter  | Description                                                  |
 | ---------- | ------------------------------------------------------------ |
@@ -2515,7 +2515,7 @@ IM_API IM_STATUS imrectangleTaskArray(im_job_handle_t job_handle,
 
 > 通过job_handle向指定的任务中添加对图像绘制多个矩形边框的操作，用法和imrectangleArray一致。
 
-【注意】填充区域rect宽高须大于或等于2
+【注意】填充区域rect宽高须大于或等于2，thickness不为负值时须大于或等于2
 
 | Parameter  | Description                                                  |
 | ---------- | ------------------------------------------------------------ |
@@ -2548,7 +2548,7 @@ IM_API IM_STATUS immakeBorder(rga_buffer_t src,
 
 > 根据配置的top/bottom/left/right像素数，对输入图像绘制边框后，输出到输出的目标图像缓冲区上。
 
-【注意】top/bottom/left/right值须大于或等于2
+【注意】top/bottom/left/right值须大于或等于2，top/bottom须小于或等于源图像实际操作区域的高，left/right须小于或等于源图像实际操作区域的宽度
 
 | Parameter        | Description                                                  |
 | ---------------- | ------------------------------------------------------------ |

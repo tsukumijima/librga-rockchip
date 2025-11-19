@@ -2422,7 +2422,7 @@ IM_API IM_STATUS imrectangle(rga_buffer_t dst,
 >
 > Color parameters from high to low are respectively R，G，B，A. For example, red: color = 0xff000000.
 
-【 Note 】 The width and height of the rect must be greater than or equal to 2
+【 Note 】 The width and height of the rect must be greater than or equal to 2, when thickness is not negative, it must be greater than or equal to 2
 
 | Parameter        | Description                                                  |
 | ---------------- | ------------------------------------------------------------ |
@@ -2453,7 +2453,7 @@ IM_API IM_STATUS imrectangleArray(rga_buffer_t dst,
 >
 > Color parameters from high to low are respectively R，G，B，A. For example, red: color = 0xff000000.
 
-【 Note 】 The width and height of the rect must be greater than or equal to 2
+【 Note 】 The width and height of the rect must be greater than or equal to 2, when thickness is not negative, it must be greater than or equal to 2
 
 | Parameter        | Description                                                  |
 | ---------------- | ------------------------------------------------------------ |
@@ -2481,7 +2481,7 @@ IM_API IM_STATUS imrectangleTask(im_job_handle_t job_handle,
 
 > Add an Draw border operation to the specified job through job_handle. The configuration parameters are the same as imrectangle.
 
-【 Note 】 The width and height of the rect must be greater than or equal to 2
+【 Note 】 The width and height of the rect must be greater than or equal to 2, when thickness is not negative, it must be greater than or equal to 2
 
 | Parameter  | Description                                                  |
 | ---------- | ------------------------------------------------------------ |
@@ -2508,7 +2508,7 @@ IM_API IM_STATUS imrectangleTaskArray(im_job_handle_t job_handle,
 
 > Add an Draw multiple border operation to the specified job through job_handle. The configuration parameters are the same as imrectangleArray.
 
-【 Note 】 The width and height of the rect must be greater than or equal to 2
+【 Note 】 The width and height of the rect must be greater than or equal to 2, when thickness is not negative, it must be greater than or equal to 2
 
 | Parameter  | Description                                                  |
 | ---------- | ------------------------------------------------------------ |
@@ -2541,7 +2541,7 @@ IM_API IM_STATUS immakeBorder(rga_buffer_t src,
 
 > According to the configured top/bottom/left/right pixels, draw a border to the input image and output it to the output target image buffer.
 
-【 Note 】 The width and height of the rect must be greater than or equal to 2
+【 Note 】 The width and height of the rect must be greater than or equal to 2, top/bottom must be less than or equal to the actual height of source image, and left/right must be less than or equal to the actual width of source image
 
 | Parameter        | Description                                                  |
 | ---------------- | ------------------------------------------------------------ |
