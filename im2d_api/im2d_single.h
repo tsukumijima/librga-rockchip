@@ -50,7 +50,7 @@ IM_API IM_STATUS imcopy(const rga_buffer_t src, rga_buffer_t dst, int sync = 1, 
  * @param fy
  *      X-direction resize factor.
  * @param interpolation
- *      Interpolation formula(Only RGA1 support).
+ *      Interpolation formula.
  * @param sync
  *      When 'sync == 1', wait for the operation to complete and return, otherwise return directly.
  * @param release_fence_fd
