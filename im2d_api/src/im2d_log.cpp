@@ -116,7 +116,7 @@ static int inline rga_log_level_property_get(void) {
 void rga_version_update(void) {
 #if (defined(ANDROID) || defined(ANDROID_VNDK))
     __system_property_set("vendor.rga_api.version", RGA_API_VERSION);
-#else
+#elif (!defined(RT_THREAD))
     setenv("ROCKCHIP_RGA_API_VERSION", RGA_API_VERSION, 1);
 #endif
 }
