@@ -109,9 +109,6 @@ typedef enum _Rga_SURF_FORMAT {
                                              * plane 1: 2x1 subsampled [0:19] Cr:Cb 10:10  (default)
                                              * or
                                              * plane 1: 2x1 subsampled [0:23] Cr:Cb 16: 16 */
-    /* For compatibility with misspellings */
-    RK_FORMAT_YCbCr_422_10b_SP = RK_FORMAT_YCbCr_422_SP_10B,
-    RK_FORMAT_YCrCb_422_10b_SP = RK_FORMAT_YCrCb_422_SP_10B,
 
     RK_FORMAT_BGR_565      = 0x24 << 8, /* [0:16] B:G:R 5:6:5 little endian */
     RK_FORMAT_BGRA_5551    = 0x25 << 8, /* [0:16] B:G:R:A 5:5:5:1 little endian */
@@ -119,11 +116,11 @@ typedef enum _Rga_SURF_FORMAT {
 
     RK_FORMAT_ARGB_8888    = 0x28 << 8, /* [0:31] A:R:G:B 8:8:8:8 little endian */
     RK_FORMAT_XRGB_8888    = 0x29 << 8, /* [0:31] X:R:G:B 8:8:8:8 little endian */
-    RK_FORMAT_ARGB_5551    = 0x2a << 8, /* [0:16] A:R:G:B 5:5:5:1 little endian */
+    RK_FORMAT_ARGB_1555    = 0x2a << 8, /* [0:16] A:R:G:B 1:5:5:5 little endian */
     RK_FORMAT_ARGB_4444    = 0x2b << 8, /* [0:16] A:R:G:B 4:4:4:4 little endian */
     RK_FORMAT_ABGR_8888    = 0x2c << 8, /* [0:31] A:B:G:R 8:8:8:8 little endian */
     RK_FORMAT_XBGR_8888    = 0x2d << 8, /* [0:31] X:B:G:R 8:8:8:8 little endian */
-    RK_FORMAT_ABGR_5551    = 0x2e << 8, /* [0:16] A:B:G:R 5:5:5:1 little endian */
+    RK_FORMAT_ABGR_1555    = 0x2e << 8, /* [0:16] A:B:G:R 1:5:5:5 little endian */
     RK_FORMAT_ABGR_4444    = 0x2f << 8, /* [0:16] A:B:G:R 4:4:4:4 little endian */
 
     RK_FORMAT_RGBA2BPP     = 0x30 << 8, /* [0:1] Color:Alpha 1:1 little endian */
@@ -150,6 +147,12 @@ typedef enum _Rga_SURF_FORMAT {
     RK_FORMAT_YUV_101010   = 0x3e << 8, /* [0:31] Y:Cr:cb 10:10:10 little endian */
 
     RK_FORMAT_UNKNOWN      = 0x100 << 8,
+
+    /* For compatibility with misspellings */
+    RK_FORMAT_YCbCr_422_10b_SP = RK_FORMAT_YCbCr_422_SP_10B,
+    RK_FORMAT_YCrCb_422_10b_SP = RK_FORMAT_YCrCb_422_SP_10B,
+    RK_FORMAT_ABGR_5551 = RK_FORMAT_ABGR_1555,
+    RK_FORMAT_ARGB_5551 = RK_FORMAT_ARGB_1555,
 } RgaSURF_FORMAT;
 
 enum {
