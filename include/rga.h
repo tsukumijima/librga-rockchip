@@ -146,6 +146,14 @@ typedef enum _Rga_SURF_FORMAT {
 
     RK_FORMAT_YUV_444_10B  = 0x3e << 8, /* [0:31] Y:Cr:cb 10:10:10 little endian */
 
+    RK_FORMAT_Y210         = 0x3f << 8,  /* [0:63] 0:Y0:0:Cb0:0:Cr0:0:Y1 6:10:6:10:6:10:6:10 little endian per 2 Y pixels */
+    RK_FORMAT_P010         = 0x40 << 8,  /* 2 plane YUV 4:2:0 little endian
+                                          * plane 0: [0:15] x:Y 6:10
+                                          * plane 1: 2x2 subsampled [0:31] x:Cb:x:Cr 6:10:6:10 */
+    RK_FORMAT_P210         = 0x41 << 8,  /* 2 plane YUV 4:2:2 little endian
+                                          * plane 0: [0:15] x:Y 6:10
+                                          * plane 1: 2x1 subsampled [0:31] x:Cb:x:Cr 6:10:6:10 */
+
     RK_FORMAT_UNKNOWN      = 0x100 << 8,
 
     /* For compatibility with misspellings */
