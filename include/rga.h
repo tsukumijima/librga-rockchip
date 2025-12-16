@@ -144,7 +144,7 @@ typedef enum _Rga_SURF_FORMAT {
     RK_FORMAT_XRGB_2101010 = 0x3c << 8, /* [0:31] X:R:G:B 2:10:10:10 little endian */
     RK_FORMAT_XBGR_2101010 = 0x3d << 8, /* [0:31] X:B:G:R 2:10:10:10 little endian */
 
-    RK_FORMAT_YUV_101010   = 0x3e << 8, /* [0:31] Y:Cr:cb 10:10:10 little endian */
+    RK_FORMAT_YUV_444_10B  = 0x3e << 8, /* [0:31] Y:Cr:cb 10:10:10 little endian */
 
     RK_FORMAT_UNKNOWN      = 0x100 << 8,
 

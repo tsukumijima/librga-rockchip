@@ -688,7 +688,7 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                     merge_table.output_format |= IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT |
                                                  IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT |
                                                  IM_RGA_SUPPORT_FORMAT_RGBA_1010102 |
-                                                 IM_RGA_SUPPORT_FORMAT_YUV_101010;
+                                                 IM_RGA_SUPPORT_FORMAT_YUV_444_PACED_10_BIT;
                     merge_table.feature |= IM_RGA_SUPPORT_FEATURE_SECURE;
                     merge_table.feature &= ~(IM_RGA_SUPPORT_FEATURE_QUANTIZE | IM_RGA_SUPPORT_FEATURE_ROP);
                     break;
@@ -1067,8 +1067,8 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
             return IM_STATUS_NOT_SUPPORTED;
         }
-    } else if (format == RK_FORMAT_YUV_101010) {
-        if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_101010) {
+    } else if (format == RK_FORMAT_YUV_444_10B) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_444_PACED_10_BIT) {
             IM_LOGW("%s unsupported YUV 10bit format, format = 0x%x(%s)\n%s",
                     name, info.format, translate_format_str(info.format),
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
