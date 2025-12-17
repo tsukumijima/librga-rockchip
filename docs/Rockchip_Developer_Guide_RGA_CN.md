@@ -1320,7 +1320,7 @@ RGA模块支持库为librga.so，通过对图像缓冲区结构体struct rga_inf
     <td>importbuffer_GraphicBuffer</td>
     <td>C++</td>
     <td>Android</td>
-    <td>√</td>
+    <td>≥1.7.2</td>
     <td>/</td>
     <td>/</td>
   </tr>
@@ -1328,7 +1328,7 @@ RGA模块支持库为librga.so，通过对图像缓冲区结构体struct rga_inf
     <td>importbuffer_GraphicBuffer_handle</td>
     <td>C++</td>
     <td>Android</td>
-    <td>√</td>
+    <td>≥1.7.2</td>
     <td>/</td>
     <td>/</td>
   </tr>
@@ -1336,7 +1336,7 @@ RGA模块支持库为librga.so，通过对图像缓冲区结构体struct rga_inf
     <td>importbuffer_AHardwareBuffer</td>
     <td>C++</td>
     <td>Android</td>
-    <td>√</td>
+    <td>≥1.7.2</td>
     <td>/</td>
     <td>/</td>
   </tr>

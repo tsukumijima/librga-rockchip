@@ -1312,7 +1312,7 @@ Support status of each API in different environments:
     <td>importbuffer_GraphicBuffer</td>
     <td>C++</td>
     <td>Android</td>
-    <td>√</td>
+    <td>≥1.7.2</td>
     <td>/</td>
     <td>/</td>
   </tr>
@@ -1320,7 +1320,7 @@ Support status of each API in different environments:
     <td>importbuffer_GraphicBuffer_handle</td>
     <td>C++</td>
     <td>Android</td>
-    <td>√</td>
+    <td>≥1.7.2</td>
     <td>/</td>
     <td>/</td>
   </tr>
@@ -1328,7 +1328,7 @@ Support status of each API in different environments:
     <td>importbuffer_AHardwareBuffer</td>
     <td>C++</td>
     <td>Android</td>
-    <td>√</td>
+    <td>≥1.7.2</td>
     <td>/</td>
     <td>/</td>
   </tr>
