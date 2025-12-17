@@ -75,6 +75,7 @@ size_t rga_get_start_time_ms(void);
 
 #else
 #ifdef RT_THREAD
+#include <stdio.h>
 #include <rtthread.h>
 
 #define IM_LOG(level, _str, ...) \
@@ -95,6 +96,7 @@ size_t rga_get_start_time_ms(void);
         } \
     } while(0)
 #else
+#include <stdio.h>
 #include <sys/syscall.h>
 
 #define IM_LOG(level, _str, ...) \
