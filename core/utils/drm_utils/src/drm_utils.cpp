@@ -16,9 +16,21 @@
  * limitations under the License.
  */
 
+#ifdef LOG_TAG
+#undef LOG_TAG
+#define LOG_TAG "librga"
+#else
+#define LOG_TAG "librga"
+#endif
+
+#include <stdbool.h>
+#include <inttypes.h>
+
 #include "drm_utils/drm_utils.h"
 #include "rga.h"
 #include "im2d_type.h"
+
+#include "src/im2d_log.h"
 
 #ifndef RGA_UTILS_DRM_DISABLE
 
@@ -141,8 +153,7 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
         (((modifier >> 52) & 0xf) == DRM_FORMAT_MOD_ARM_TYPE_AFBC)) {
         if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_16x16)
             return IM_AFBC16x16_MODE;
-        if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8 &&
-            modifier & AFBC_FORMAT_MOD_SPLIT)
+        if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8)
             return IM_AFBC32x8_MODE;
     } else if (fourcc_mod_is_vendor(modifier, ROCKCHIP)) {
         if (IS_ROCKCHIP_RFBC_MOD(modifier)) {
@@ -160,6 +171,65 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
 
     return IM_RASTER_MODE;
 }
+
+bool check_drm_modifier_afbc(uint32_t drm_fourcc, uint64_t modifier) {
+    bool ret;
+
+    if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8) {
+        switch (drm_fourcc) {
+            case DRM_FORMAT_RGB888:
+            case DRM_FORMAT_BGR888:
+            case DRM_FORMAT_RGBA8888:
+            case DRM_FORMAT_BGRA8888:
+            case DRM_FORMAT_ARGB8888:
+            case DRM_FORMAT_ABGR8888:
+            case DRM_FORMAT_RGBX8888:
+            case DRM_FORMAT_BGRX8888:
+            case DRM_FORMAT_XRGB8888:
+            case DRM_FORMAT_XBGR8888:
+            case DRM_FORMAT_ABGR2101010:
+            case DRM_FORMAT_ARGB2101010:
+            case DRM_FORMAT_XBGR2101010:
+            case DRM_FORMAT_XRGB2101010:
+            case DRM_FORMAT_RGBA1010102:
+            case DRM_FORMAT_BGRA1010102:
+            case DRM_FORMAT_RGBX1010102:
+            case DRM_FORMAT_BGRX1010102:
+            case DRM_FORMAT_VUY101010:
+                if ((modifier & AFBC_FORMAT_MOD_SPLIT) == 0) {
+                    IM_LOGW("%c%c%c%c support AFBC 32x8 only with SPLIT mode, modifier[%" PRIx64 "]" ,
+                        drm_fourcc, drm_fourcc >> 8, drm_fourcc >> 16, drm_fourcc >> 24, modifier);
+                    ret = false;
+                } else {
+                    ret = true;
+                }
+
+                break;
+            case DRM_FORMAT_YUV420_8BIT:
+            case DRM_FORMAT_YUV420_10BIT:
+            case DRM_FORMAT_YUYV:
+            case DRM_FORMAT_Y210:
+                if ((modifier & AFBC_FORMAT_MOD_SPLIT) > 0) {
+                    IM_LOGW("%c%c%c%c does not support AFBC 32x8 with SPLIT mode, modifier[%" PRIx64 "]" ,
+                        drm_fourcc, drm_fourcc >> 8, drm_fourcc >> 16, drm_fourcc >> 24, modifier);
+                    ret = false;
+                } else {
+                    ret = true;
+                }
+
+                break;
+            default:
+                ret = true;
+
+                break;
+        }
+    } else {
+        ret = true;
+    }
+
+    return ret;
+}
+
 #else
 uint32_t get_format_from_drm_fourcc(uint32_t drm_fourcc) {
     return RK_FORMAT_UNKNOWN;
@@ -169,5 +239,8 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
     return IM_RASTER_MODE;
 }
 
+bool check_drm_modifier_afbc(uint32_t drm_fourcc, uint64_t modifier) {
+    return false;
+}
 
 #endif /* #ifndef RGA_UTILS_DRM_DISABLE */

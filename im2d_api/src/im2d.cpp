@@ -267,6 +267,27 @@ IM_API rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t  handle,
                                       int format) {
     return wrapbuffer_handle(handle, width, height, format, width, height);
 }
+
+rga_buffer_t wrapbuffer_handle(rga_buffer_handle_t handle, int width, int height,
+                               uint32_t drm_fourcc, uint64_t drm_modifier,
+                               int wstride, int hstride) {
+    rga_buffer_t buffer;
+    int format = get_format_from_drm_fourcc(drm_fourcc);
+    int rd_mode = get_mode_from_drm_modifier(drm_modifier);
+
+    memset(&buffer, 0, sizeof(rga_buffer_t));
+
+    if (check_drm_modifier_afbc(drm_fourcc, drm_modifier) == false)
+        return buffer;
+
+    buffer.handle = handle;
+    set_default_rga_buffer(&buffer, width, height, format,
+                           wstride ? wstride : width,
+                           hstride ? hstride : height);
+    buffer.rd_mode = rd_mode;
+
+    return buffer;
+}
 #endif
 
 #ifdef ANDROID

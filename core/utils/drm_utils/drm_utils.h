@@ -28,5 +28,6 @@
 
 uint32_t get_format_from_drm_fourcc(uint32_t drm_fourcc);
 int get_mode_from_drm_modifier(uint64_t modifier);
+bool check_drm_modifier_afbc(uint32_t drm_fourcc, uint64_t modifier);
 
 #endif /* #ifndef _RGA_UTILS_DRM_UTILS_H_ */
