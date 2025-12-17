@@ -363,7 +363,7 @@ static const rga_info_table_entry hw_info_table[] = {
                                         1928,
                                         /* reserved */
                                         (char){0} },
-    { IM_RGA_HW_VERSION_RGA_2_LITE2     , {2880, 1620}, {2880, 1620}, 4, 16, 2,
+    { IM_RGA_HW_VERSION_RGA_2_LITE2     , {2880, 8192}, {2880, 8192}, 4, 16, 2,
                                         /* input format */
                                         IM_RGA_SUPPORT_FORMAT_RGB |
                                         IM_RGA_SUPPORT_FORMAT_ARGB_16BIT |

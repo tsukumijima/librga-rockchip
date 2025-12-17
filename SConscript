@@ -31,16 +31,13 @@ im2d_include = [
 ]
 
 im2d_3rdparty_include = [
-    'core/3rdparty/libdrm/include/drm'
+    'core/3rdparty/libdrm/include/drm',
+    'core/3rdparty/android_hal/'
 ]
 
 im2d_public_include = [
     'im2d_api',
     'include'
-]
-
-im2d_3rdparty_include = [
-    'core/3rdparty/libdrm/include/drm'
 ]
 
 src = []
