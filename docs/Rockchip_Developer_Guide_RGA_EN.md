@@ -2,9 +2,9 @@
 
 ID: RK-KF-YF-403
 
-Release Version: V2.2.8
+Release Version: V2.2.9
 
-Release Date: 2025-06-10
+Release Date: 2025-12-24
 
 Security Level: □Top-Secret   □Secret   □Internal   ■Public
 
@@ -59,6 +59,7 @@ This document (this guide) is mainly intended for:
 | 2025/03/27 | 2.2.6 | Yu Qiaowei | Add chip RV1126B introduction |
 | 2025/04/30 | 2.2.7 | Yu Qiaowei | Fixed over-constraints on actual_height in the description of RK3506/RV1103B |
 | 2025/06/10 | 2.2.8 | Yu Qiaowei | - Add chip RK1820 introduction<br />- Remove chip codename |
+| 2025/12/24 | 2.2.9 | Yu Qiaowei | Add chip RK3538 introduction |
 
 ---
 
@@ -220,7 +221,7 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
        <td>RK3562</td>
     </tr>
     <tr>
-      <td rowspan="3">RGA2-Pro</td>
+      <td rowspan="4">RGA2-Pro</td>
       <td>RK3576</td>
       <td rowspan="3">2x2</td>
       <td rowspan="3">8192x8192</td>
@@ -234,6 +235,15 @@ RGA (Raster Graphic Acceleration Unit) is an independent 2D hardware accelerator
    </tr>
    <tr>
       <td>RK1820</td>
+   </tr>
+   <tr>
+      <td>RK3538</td>
+      <td rowspan="1">2x2</td>
+      <td rowspan="1">8192x8192</td>
+      <td rowspan="1">2x2</td>
+      <td rowspan="1">8192x8192</td>
+      <td rowspan="1">90/180/270 Rotate<br/>X/Y Mirror<br/>Crop<br/>1/16~16 scale<br/>scale-up(bi-linear/bi-cubic)<br/>scale-down(bi-linear/average)<br/>Alpha blend<br/>Color key<br/>Color fill<br/>Color palette<br/>osd<br/>mosaic<br/>ARGB5551 alpha bit map<br/>rkfbc64x4 input<br/>afbc32x8(without src1)<br/>security<br/>IOMMU(40bit)</td>
+      <td rowspan="1">2</td>
    </tr>
    <tr>
       <td rowspan="1">RGA3</td>
@@ -391,7 +401,7 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMA
       <td>RK3562</td>
    </tr>
    <tr>
-      <td rowspan="3">RGA2-Pro</td>
+      <td rowspan="4">RGA2-Pro</td>
       <td>RK3576</td>
       <td rowspan="3"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B<br/>RK_FORMA_A8 (only src for alpha blend)<br/>RK_FORMAT_BPP1 (only for color palette)<br/>RK_FORMAT_BPP2 (only for color palette)<br/>RK_FORMAT_BPP4 (only for color palette)<br/>RK_FORMAT_BPP8 (only for color palette)
       </td>
@@ -403,6 +413,13 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMA
    </tr>
    <tr>
       <td>RK1820</td>
+   </tr>
+   <tr>
+      <td>RK3538</td>
+      <td rowspan="1"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B<br/>RK_FORMAT_Y210 (only AFBC)<br>RK_FORMA_A8 (only src for alpha blend)<br/>RK_FORMAT_BPP1 (only for color palette)<br/>RK_FORMAT_BPP2 (only for color palette)<br/>RK_FORMAT_BPP4 (only for color palette)<br/>RK_FORMAT_BPP8 (only for color palette)
+      </td>
+      <td rowspan="1"> RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_ARGB_8888<br/>RK_FORMAT_ABGR_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMAT_BGRX_8888<br/>RK_FORMAT_XRGB_8888<br/>RK_FORMAT_XBGR_8888<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMAT_ABGR_4444<br/>RK_FORMAT_ARGB_5551<br/>RK_FORMAT_ABGR_5551<br/>RK_FORMAT_RGB_888<br/>RK_FORMAT_BGR_888<br/>RK_FORMAT_RGB_565<br/>RK_FORMAT_BGR_565<br>RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/>RK_FORMAT_YCrCb_422_SP<br/>RK_FORMAT_YCbCr_444_SP<br/>RK_FORMAT_YCrCb_444_SP<br/>RK_FORMAT_YCbCr_420_P<br/>RK_FORMAT_YCrCb_420_P<br/>RK_FORMAT_YCbCr_422_P<br/>RK_FORMAT_YCrCb_422_P<br/>RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YCbCr_400<br/>RK_FORMAT_Y4 <br/>RK_FORMAT_Y8<br/>RK_FORMAT_RGBA_1010102 (only AFBC)<br/>RK_FORMAT_BGRA_1010102 (only AFBC)<br/>RK_FORMAT_ARGB_2101010 (only AFBC)<br/>RK_FORMAT_ABGR_2101010 (only AFBC)<br/>RK_FORMAT_RGBX_1010102 (only AFBC)<br/>RK_FORMAT_BGRX_1010102 (only AFBC)<br/>RK_FORMAT_XRGB_2101010 (only AFBC)<br/>RK_FORMAT_XBGR_2101010 (only AFBC)<br/>RK_FORMAT_Y210 (only AFBC)<br>RK_FORMAT_YUV_444_10B (only AFBC)
+      </td>
    </tr>
    <tr>
       <td rowspan="1">RGA3</td>
@@ -426,6 +443,8 @@ RK_FORMAT_RGBA_8888<br/>RK_FORMAT_BGRA_8888<br/>RK_FORMAT_RGBX_8888<br/>RK_FORMA
 
 
 ### Image Format Alignment Instructions
+
+#### Raster Pixel Format Alignment
 
 <table>
     <tr>
@@ -476,7 +495,7 @@ RK_FORMAT_RGBA_4444<br/>RK_FORMAT_BGRA_4444<br/>RK_FORMAT_ARGB_4444<br/>RK_FORMA
     </tr>
     <tr>
     	<td>
-RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YUYV_420<br/>RK_FORMAT_YVYU_420<br/>RK_FORMAT_UYVY_420<br/>RK_FORMAT_VYUY_420
+RK_FORMAT_YUYV_422<br/>RK_FORMAT_YVYU_422<br/>RK_FORMAT_UYVY_422<br/>RK_FORMAT_VYUY_422<br/>RK_FORMAT_YUYV_420<br/>RK_FORMAT_YVYU_420<br/>RK_FORMAT_UYVY_420<br/>RK_FORMAT_VYUY_420<br/>RK_FORMAT_Y210
         </td>
         <td>width stride must be 2-aligned，x_offset、y_offset、width、height、height stride must be 2-aligned</td>
     </tr>
@@ -494,7 +513,7 @@ RK_FORMAT_YCbCr_420_SP<br/>RK_FORMAT_YCrCb_420_SP<br/>RK_FORMAT_YCbCr_422_SP<br/
     </tr>
     <tr>
         <td>
-RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B
+RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_422_SP_10B<br/>RK_FORMAT_YCrCb_422_SP_10B<br/>RK_FORMAT_YUV_444_10B
         </td>
         <td>width stride must be 16-aligned，x_offset、y_offset must be 64-aligned，width、height、height stride must be 2-aligned</td>
     </tr>
@@ -546,11 +565,43 @@ RK_FORMAT_YCbCr_420_SP_10B<br/>RK_FORMAT_YCrCb_420_SP_10B<br/>RK_FORMAT_YCbCr_42
     </tr>
 </table>
 
+
 > Note:
 >
 > 1). Alignment requirement formula: lcm(bpp，byte_stride * 8) / pixel_stride.
 >
 > 2). When loaded with multiple versions of hardware, chip platform constraints according to the most strict alignment requirements.
+
+
+
+#### None-Linear Mode Alignment
+
+In addition to the formatting requirements themselves, the following non-linear modes will have additional alignment requirements:
+
+<table>
+	<tr>
+		<td rowspan="5">FBC/TILE</td>
+        <td>AFBC16x16</td>
+        <td>width stride、height_stride must be 16-aligned.</td>
+    </tr>
+    <tr>
+        <td>AFBC32x8</td>
+        <td>width stride must be 32-aligned，height_stride must be 8-aligned</td>
+    </tr>
+    <tr>
+        <td>RFBC64x4</td>
+        <td>width stride must be 64-aligned，height_stride must be 4-aligned</td>
+    </tr>
+    <tr>
+        <td>TILE8x8</td>
+        <td>width stride、height_stride must be 8-aligned</td>
+    </tr>
+    <tr>
+        <td>TILE4x4</td>
+        <td>width stride、height_stride must be 4-aligned</td>
+    </tr>
+</table>
+
 
 
 
