@@ -155,7 +155,7 @@ mm -j32
          --suffix/-p   Set golden suffix.
                          <options>:
                            <string>      golden image file suffix, e.g. "--chip=rk3576 --suffix=crcdata", so that the file name is "rk3576_crcdata.bin".
-         --crc/-r      Generate golden by CRC. The target file will be generated according to --golden and --prefix
+         --crc/-r      Generate golden by CRC. The target file will be generated according to --golden and --suffix
 ---------------------------------------- Other -----------------------------------------------------
          --help/-h     Call help
                          <options>:
