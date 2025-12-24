@@ -26,6 +26,7 @@
 typedef unsigned int rga_slt_crc_table[RGA_SLT_THREAD_MAX][RGA_SLT_CASE_MAX];
 
 extern rga_slt_crc_table common_golden_data;
+extern rga_slt_crc_table rk3538_golden_data;
 extern const rga_slt_crc_table *g_read_golden_data;
 
 void init_crc_table(void);

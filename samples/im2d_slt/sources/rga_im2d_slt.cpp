@@ -84,6 +84,7 @@ typedef struct private_data {
     int format;
 
     int rd_mode;
+    struct rga_slt_special_case *special_case;
     int core;
     int priority;
 
@@ -341,28 +342,31 @@ int rga_special_test(private_data_t *data, int time,
     }
 
     {
+        case_index = -1;
+
         /* case: in */
-        case_index = 0;
+        if (data->special_case->input0) {
+            case_index++;
 
-        ret = imcopy(src, tmp);
-        if (ret != IM_STATUS_SUCCESS) {
-            printf("ID[%d]: %s input %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
-            return slt_rga_error;
-        }
+            ret = imcopy(src, tmp);
+            if (ret != IM_STATUS_SUCCESS) {
+                printf("ID[%d]: %s input %d time running failed! %s\n", data->id, data->name, time, imStrError(ret));
+                return slt_rga_error;
+            }
 
-        rga_sync_cache(&dst_img, INVALID_CACHE);
+            rga_sync_cache(&dst_img, INVALID_CACHE);
 
-        result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
-        if(g_golden_generate_crc) {
-            save_crcdata(result_crc, data->id, case_index);
-        } else {
-            if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
-                goto CHECK_ERROR;
+            result_crc = crc32(0xffffffff, (unsigned char *)dst_buf, dst_buf_size);
+            if(g_golden_generate_crc) {
+                save_crcdata(result_crc, data->id, case_index);
+            } else {
+                if (!crc_check(data->id, case_index, result_crc, crc_golden_table))
+                    goto CHECK_ERROR;
+            }
         }
 
         /* case: out */
-        if (!(data->rd_mode == IM_AFBC32x8_MODE ||
-                data->rd_mode == IM_RKFBC64x4_MODE)) {
+        if (data->special_case->output) {
             case_index++;
 
             ret = imcopy(tmp, dst);
@@ -909,7 +913,7 @@ int main(int argc, char *argv[])
     printf("-------------------------------------------------\n");
     printf("RGA raster-test success!\n");
 
-    if (g_chip_config.special_case_en) {
+    if (g_chip_config.special_case_en && g_chip_config.special_case != NULL) {
         memset(&data, 0x0, sizeof(private_data_t) * IM2D_SLT_THREAD_MAX);
         printf("-------------------------------------------------\n");
 
@@ -926,6 +930,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = g_chip_config.default_height;
                 data[pthread_num].format = g_chip_config.default_format;
                 data[pthread_num].rd_mode = IM_AFBC16x16_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_AFBC16x16_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA3_CORE0;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -941,6 +946,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = g_chip_config.default_height;
                 data[pthread_num].format = g_chip_config.default_format;
                 data[pthread_num].rd_mode = IM_AFBC16x16_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_AFBC16x16_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA3_CORE1;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -958,6 +964,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = 240;
                 data[pthread_num].format = RK_FORMAT_RGBA_8888;
                 data[pthread_num].rd_mode = IM_AFBC32x8_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_AFBC32x8_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -973,6 +980,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = 240;
                 data[pthread_num].format = RK_FORMAT_RGBA_8888;
                 data[pthread_num].rd_mode = IM_AFBC32x8_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_AFBC32x8_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -990,6 +998,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = 240;
                 data[pthread_num].format = RK_FORMAT_YCbCr_420_SP;
                 data[pthread_num].rd_mode = IM_RKFBC64x4_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_RKFBC64x4_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -1005,6 +1014,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = 240;
                 data[pthread_num].format = RK_FORMAT_YCbCr_420_SP;
                 data[pthread_num].rd_mode = IM_RKFBC64x4_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_RKFBC64x4_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -1022,6 +1032,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = g_chip_config.default_height;
                 data[pthread_num].format = g_chip_config.default_format;
                 data[pthread_num].rd_mode = IM_TILE4x4_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_TILE4x4_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE0;
                 data[pthread_num].priority = 1;
                 pthread_num++;
@@ -1037,6 +1048,7 @@ int main(int argc, char *argv[])
                 data[pthread_num].height = g_chip_config.default_height;
                 data[pthread_num].format = g_chip_config.default_format;
                 data[pthread_num].rd_mode = IM_TILE4x4_MODE;
+                data[pthread_num].special_case = &g_chip_config.special_case[RGA_SLT_TILE4x4_INDEX];
                 data[pthread_num].core = IM_SCHEDULER_RGA2_CORE1;
                 data[pthread_num].priority = 1;
                 pthread_num++;

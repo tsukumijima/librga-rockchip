@@ -54,6 +54,21 @@ enum RGA_SLT_FUNC_FLAGS {
     RGA_SLT_FUNC_DIS_ALPHA = 1 << 0,
 };
 
+enum RGA_SLT_SPECIAL_MODE_INDEX {
+    RGA_SLT_AFBC16x16_INDEX = 0,
+    RGA_SLT_TILE8x8_INDEX,
+    RGA_SLT_TILE4x4_INDEX,
+    RGA_SLT_RKFBC64x4_INDEX,
+    RGA_SLT_AFBC32x8_INDEX,
+};
+
+struct rga_slt_special_case {
+    uint32_t special_mode;
+    bool input0;
+    bool input1;
+    bool output;
+};
+
 struct im2d_slt_config {
     int default_width;
     int default_height;
@@ -66,11 +81,20 @@ struct im2d_slt_config {
 
     int core_mask;
     int special_mask;
+    struct rga_slt_special_case *special_case;
     int func_flags;
 
     const char *heap_path;
 
     const rga_slt_crc_table *crc_data;
+};
+
+static struct rga_slt_special_case rk3588_special_case[] = {
+    { IM_AFBC16x16_MODE,    true,  true,  true  },
+    { IM_TILE8x8_MODE,      true,  true,  true  },
+    { IM_TILE4x4_MODE,      false,  false, false  },
+    { IM_RKFBC64x4_MODE,      false,  false, false  },
+    { IM_AFBC32x8_MODE,      false,  false, false  },
 };
 
 static const struct im2d_slt_config rk3588_config = {
@@ -85,9 +109,18 @@ static const struct im2d_slt_config rk3588_config = {
 
     .core_mask = IM_SCHEDULER_RGA2_CORE0 | IM_SCHEDULER_RGA3_CORE0 | IM_SCHEDULER_RGA3_CORE1,
     .special_mask = IM_AFBC16x16_MODE | IM_TILE8x8_MODE,
+    .special_case = rk3588_special_case,
     .func_flags = 0,
 
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
+};
+
+static struct rga_slt_special_case rk3576_special_case[] = {
+    { IM_AFBC16x16_MODE,    false,  false,  false  },
+    { IM_TILE8x8_MODE,      false,  false,  false  },
+    { IM_TILE4x4_MODE,      true,   false,  true  },
+    { IM_RKFBC64x4_MODE,    true,   false,  false  },
+    { IM_AFBC32x8_MODE,     true,   false,  false  },
 };
 
 static const struct im2d_slt_config rk3576_config = {
@@ -102,9 +135,37 @@ static const struct im2d_slt_config rk3576_config = {
 
     .core_mask = IM_SCHEDULER_RGA2_CORE0 | IM_SCHEDULER_RGA2_CORE1,
     .special_mask = IM_AFBC32x8_MODE | IM_RKFBC64x4_MODE | IM_TILE4x4_MODE,
+    .special_case = rk3576_special_case,
     .func_flags = 0,
 
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
+};
+
+static struct rga_slt_special_case rk3538_special_case[] = {
+    { IM_AFBC16x16_MODE,    false,  false,  false  },
+    { IM_TILE8x8_MODE,      false,  false,  false  },
+    { IM_TILE4x4_MODE,      false,  false,  false  },
+    { IM_RKFBC64x4_MODE,    true,   false,  false  },
+    { IM_AFBC32x8_MODE,     true,   false,  true  },
+};
+
+static const struct im2d_slt_config rk3538_config = {
+    .default_width = 1280,
+    .default_height = 720,
+    .default_format = RK_FORMAT_RGBA_8888,
+
+    .perf_case_en = IM2D_SLT_TEST_PERF_EN,
+    .while_num = IM2D_SLT_WHILE_NUM,
+
+    .special_case_en = true,
+
+    .core_mask = IM_SCHEDULER_RGA2_CORE0,
+    .special_mask = IM_AFBC32x8_MODE | IM_RKFBC64x4_MODE,
+    .special_case = rk3538_special_case,
+    .func_flags = 0,
+
+    .heap_path = DEFAULT_DMA32_HEAP_PATH,
+    .crc_data = &rk3538_golden_data,
 };
 
 static const struct im2d_slt_config common_rga2_config = {
@@ -119,6 +180,7 @@ static const struct im2d_slt_config common_rga2_config = {
 
     .core_mask = IM_SCHEDULER_RGA2_CORE0,
     .special_mask = 0,
+    .special_case = NULL,
     .func_flags = 0,
 
     .heap_path = DEFAULT_DMA32_HEAP_PATH,
@@ -137,6 +199,7 @@ static const struct im2d_slt_config rv1103b_config = {
 
     .core_mask = IM_SCHEDULER_RGA2_CORE0,
     .special_mask = 0,
+    .special_case = NULL,
     .func_flags = RGA_SLT_FUNC_DIS_ALPHA,
 
     .heap_path = DEFAULT_RK_DMA_HEAP_PATH,
@@ -154,6 +217,7 @@ static const struct im2d_slt_config rk3506_config = {
 
     .core_mask = IM_SCHEDULER_RGA2_CORE0,
     .special_mask = 0,
+    .special_case = NULL,
     .func_flags = RGA_SLT_FUNC_DIS_ALPHA,
 
     .heap_path = 0,

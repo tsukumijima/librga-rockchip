@@ -143,6 +143,8 @@ int rga_slt_parse_argv(int argc, char *argv[]) {
                     g_chip_config = rk3588_config;
                 } else if (strcmp(optarg, "rk3576") == 0) {
                     g_chip_config = rk3576_config;
+                } else if (strcmp(optarg, "rk3538") == 0) {
+                    g_chip_config = rk3538_config;
                 } else if ((strcmp(optarg, "rk3528") == 0) ||
                            (strcmp(optarg, "rk3562") == 0) ||
                            (strcmp(optarg, "rv1126b") == 0) ||
