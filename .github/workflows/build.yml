@@ -5,12 +5,18 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Target commit SHA to build (full SHA recommended).'
+        required: true
+        type: string
 
 jobs:
 
-  build_and_release:
+  build-and-release:
     name: Build and Release Debian Package
-    runs-on: ubuntu-latest
+    # Run on arm64 hosted runner to avoid QEMU emulation slowness.
+    runs-on: ubuntu-22.04-arm
     strategy:
       matrix:
         image:
@@ -21,15 +27,13 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
         with:
-          platforms: linux/arm64
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_sha || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
+      # The package is still built inside Ubuntu 20.04 container for glibc compatibility.
       - name: Cache Docker layers
         uses: docker/build-push-action@v3
         with:
@@ -50,15 +54,19 @@ jobs:
         run: |
           echo "version=$(docker run --rm -i -v $(pwd):/work -w /work ${{ matrix.image }}:build bash -c 'dpkg-parsechangelog --show-field Version')" >> $GITHUB_OUTPUT
 
-      - name: Get commit hash
+      - name: Get commit metadata
         id: get_commit_hash
-        uses: pr-mpt/actions-commit-hash@v2
+        run: |
+          echo "date=$(git show -s --format=%cd --date=format:%Y%m%d HEAD)" >> $GITHUB_OUTPUT
+          echo "full=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          echo "short=$(git rev-parse --short=7 HEAD)" >> $GITHUB_OUTPUT
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          name: v${{ steps.get_version.outputs.version }}-${{ steps.get_commit_hash.outputs.short }}
-          tag_name: v${{ steps.get_version.outputs.version }}-${{ steps.get_commit_hash.outputs.short }}
+          name: v${{ steps.get_version.outputs.version }}-${{ steps.get_commit_hash.outputs.date }}-${{ steps.get_commit_hash.outputs.short }}
+          tag_name: v${{ steps.get_version.outputs.version }}-${{ steps.get_commit_hash.outputs.date }}-${{ steps.get_commit_hash.outputs.short }}
+          target_commitish: ${{ steps.get_commit_hash.outputs.full }}
           generate_release_notes: true
           files: |
             ./*.deb
