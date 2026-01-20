@@ -28,8 +28,6 @@
 #ifdef ANDROID
 #define DRMRGA_HARDWARE_MODULE_ID "librga"
 
-#include <hardware/gralloc.h>
-#include <hardware/hardware.h>
 #include <system/graphics.h>
 #include <cutils/native_handle.h>
 

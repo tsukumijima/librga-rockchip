@@ -92,7 +92,8 @@ typedef struct rt_spinlock spinlock_t;
 })
 
 /* pthread_rwlock */
-typedef struct rt_mutex pthread_rwlock_t;
+#define pthread_rwlock_t struct rt_mutex
+// typedef struct rt_mutex pthread_rwlock_t;
 
 #define pthread_rwlock_rdlock(m) rt_mutex_take(m, RT_WAITING_FOREVER)
 #define pthread_rwlock_wrlock(m) rt_mutex_take(m, RT_WAITING_FOREVER)

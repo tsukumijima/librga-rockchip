@@ -285,6 +285,24 @@ int get_pixel_stride(buffer_handle_t handle, int* pixel_stride)
     return err;
 }
 
+int get_height_stride(buffer_handle_t handle, int* height_stride) {
+    auto& mapper = get_service();
+    int err = -1;
+    std::vector<PlaneLayout> layouts;
+    err = get_metadata(mapper, handle, MetadataType_PlaneLayouts, decodePlaneLayouts, &layouts);
+    if (err != android::OK || layouts.size() < 1) {
+        ALOGE("Failed to get plane layouts. err : %d", err);
+        return err;
+    }
+
+    if (layouts.size() > 1) {
+        // W("it's not reasonable to get global pixel_stride of buffer with planes more than 1.");
+    }
+
+    *height_stride = layouts[0].heightInSamples;
+    return err;
+}
+
 int get_byte_stride(buffer_handle_t handle, int* byte_stride)
 {
     auto &mapper = get_service();

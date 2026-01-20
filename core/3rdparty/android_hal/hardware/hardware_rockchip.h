@@ -3,7 +3,10 @@
 
 #include "stdio.h"
 
-__BEGIN_DECLS
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 #define HWC_BLENDING_DIM            0x0805
 #define HWC_BLENDING_CLEAR_HOLE     0x0806
@@ -81,5 +84,8 @@ typedef enum {
     HAL_PIXEL_FORMAT_YUV444_10BIT_RFBC  = 0x205,
 } rk_pixel_format_t;
 
-__END_DECLS
+#ifdef __cplusplus
+}
+#endif
+
 #endif // LIBHARDWARE_HARDWARE_ROCKCHIP_H

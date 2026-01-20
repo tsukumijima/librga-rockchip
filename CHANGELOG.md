@@ -1,5 +1,36 @@
 # 更新日志
 
+## 1.10.5 (2025-07-29)
+
+该版本RGA驱动建议更新至1.3.10及以上版本，最低支持1.2.4。
+
+### 新增
+
+- 新增支持芯片RK1820。
+- 适配RT-Thread v5.1.x。
+- C++ librga.so 新增 RgaUtils API对应的 C-Symbol 。
+- impalette()支持输入格式RK_FORMAT_YCbCr_400。
+- 新增示例代码。
+  - palette_demo。
+  - C 环境调用demo（samples/copy_demo/src/rga_copy_splice_c_demo.c）。
+- rga_slt支持命令行配置。
+
+### 变更
+
+- 解除RK3506、RV1103B虚高的过度约束。
+- 文档中移除芯片代号。
+- legacy API（RockchipRga.h、rgaAPI.h）初始化时打印弃用声明。
+
+### 修复
+
+- 修复部分编译环境编译报错（system/graphics.h相关）。
+- 修复YUV444格式无法正确的CSC的问题。
+- 修复多进程并发调用imfill概率出现参数错误的问题。
+- 修复C lirbga.so无法通过strings命令查询版本的问题。
+- 修复Android平台 8.1及以下使用Android.mk编译失败的问题。
+
+
+
 ## 1.10.4 （2025-04-03）
 
 该版本RGA驱动建议更新至1.3.9及以上版本，最低支持1.2.4。

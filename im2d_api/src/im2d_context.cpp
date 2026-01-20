@@ -23,10 +23,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#ifdef ANDROID
-#include <cutils/properties.h>
-#endif
-
 #include "im2d_log.h"
 #include "im2d_context.h"
 #include "im2d_impl.h"
@@ -41,19 +37,6 @@
 #endif
 
 rga_session_t g_rga_session;
-
-static int get_debug_property(void) {
-#ifdef ANDROID
-    char level[PROP_VALUE_MAX];
-    __system_property_get("vendor.rga.log" ,level);
-#else
-    char *level = getenv("ROCKCHIP_RGA_LOG");
-    if (level == NULL)
-        level = (char *)"0";
-#endif
-
-    return atoi(level);
-}
 
 static void set_driver_feature(rga_session_t *session) {
     if (rga_version_compare(session->driver_verison, (struct rga_version_t){ 1, 3, 0, {0} }) >= 0)
@@ -220,6 +203,7 @@ rga_session_t *get_rga_session() {
     int ret;
     rga_session_t *session =  &g_rga_session;
 
+    /* to fast get session, first using rdlock */
     pthread_rwlock_rdlock(&session->rwlock);
     if (session->rga_dev_fd > 0) {
         pthread_rwlock_unlock(&session->rwlock);
@@ -228,12 +212,22 @@ rga_session_t *get_rga_session() {
     pthread_rwlock_unlock(&session->rwlock);
 
     pthread_rwlock_wrlock(&session->rwlock);
+    if (session->rga_dev_fd > 0) {
+        pthread_rwlock_unlock(&session->rwlock);
+        return session;
+    }
+
     ret = rga_session_init(session);
     if (ret != IM_STATUS_SUCCESS) {
         pthread_rwlock_unlock(&session->rwlock);
         return (rga_session_t *)ERR_PTR(IM_STATUS_NO_SESSION);
     }
+
+    rga_version_update();
+
     pthread_rwlock_unlock(&session->rwlock);
+
+    IM_LOG(IM_LOG_DIRECT | IM_LOG_FORCE | IM_LOG_INFO, "%s", RGA_API_FULL_VERSION);
 
     return session;
 }
@@ -245,7 +239,8 @@ int get_debug_state(void) {
     session = get_rga_session();
 
     pthread_rwlock_wrlock(&session->rwlock);
-    session->is_debug = get_debug_property();
+    rga_log_level_update();
+    session->is_debug = rga_log_enable_update();
     is_debug = session->is_debug;
     pthread_rwlock_unlock(&session->rwlock);
 
@@ -265,8 +260,7 @@ int is_debug_en(void) {
     return is_debug;
 }
 
-/* Pre-processing during librga load/unload */
-__attribute__((constructor)) static int librga_init() {
+static int librga_init() {
     if (pthread_rwlock_init(&g_rga_session.rwlock, NULL) != 0) {
         IM_LOGE("im2d API context init failed!\n");
         return -1;
@@ -281,9 +275,19 @@ __attribute__((constructor)) static int librga_init() {
     return 0;
 }
 
-__attribute__((destructor)) static void librga_exit() {
+static void librga_exit() {
     rga_session_deinit(&g_rga_session);
 }
+
+/* Pre-processing during librga load/unload */
 #ifdef RT_THREAD
-INIT_APP_EXPORT(librga_init);
+INIT_COMPONENT_EXPORT(librga_init);
+#else
+__attribute__((constructor)) int librga_init_constructor() {
+    return librga_init();
+}
+
+__attribute__((destructor)) void librga_exit_destructor() {
+    librga_exit();
+}
 #endif

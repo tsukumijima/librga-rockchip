@@ -98,38 +98,21 @@ int         NormalRgaSetSrcActiveInfo(struct rga_req *req,
                                       unsigned int x_off, unsigned int y_off);
 
 
-#if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaSetSrcVirtualInfo(struct rga_req *req,
-                                       unsigned long yrgb_addr,unsigned long uv_addr,unsigned long v_addr,
+                                       uintptr_t yrgb_addr, uintptr_t uv_addr, uintptr_t v_addr,
                                        unsigned int vir_w,unsigned int vir_h, unsigned int format,
                                        unsigned char a_swap_en);
-#else
-int         NormalRgaSetSrcVirtualInfo(struct rga_req *req,
-                                       unsigned int yrgb_addr, unsigned int uv_addr,unsigned int v_addr,
-                                       unsigned int vir_w, unsigned int vir_h, unsigned int format,
-                                       unsigned char a_swap_en);
-#endif
-
 
 int         NormalRgaSetDstActiveInfo(struct rga_req *req,
                                       unsigned int width, unsigned int height,
                                       unsigned int x_off, unsigned int y_off);
 
 
-#if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaSetDstVirtualInfo(struct rga_req *msg,
-                                       unsigned long yrgb_addr,unsigned long uv_addr,unsigned long v_addr,
+                                       uintptr_t yrgb_addr, uintptr_t uv_addr, uintptr_t v_addr,
                                        unsigned int  vir_w,    unsigned int vir_h,
                                        RECT          *clip,
                                        unsigned int format, unsigned char a_swap_en);
-#else
-int         NormalRgaSetDstVirtualInfo(struct rga_req *msg,
-                                       unsigned int yrgb_addr,unsigned int uv_addr,  unsigned int v_addr,
-                                       unsigned int vir_w,    unsigned int vir_h,
-                                       RECT *clip,
-                                       unsigned int  format, unsigned char a_swap_en);
-#endif
-
 
 int         NormalRgaSetPatInfo(struct rga_req *msg,
                                 unsigned int width,unsigned int height,unsigned int x_off,
@@ -139,28 +122,14 @@ int         NormalRgaSetPatActiveInfo(struct rga_req *req,
                                       unsigned int width, unsigned int height,
                                       unsigned int x_off, unsigned int y_off);
 
-#if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaSetPatVirtualInfo(struct rga_req *msg,
-                                       unsigned long yrgb_addr,unsigned long uv_addr,unsigned long v_addr,
+                                       uintptr_t yrgb_addr, uintptr_t uv_addr, uintptr_t v_addr,
                                        unsigned int  vir_w,    unsigned int vir_h,
                                        RECT *clip,
                                        unsigned int format, unsigned char a_swap_en);
-#else
-int         NormalRgaSetPatVirtualInfo(struct rga_req *msg,
-                                       unsigned int yrgb_addr,unsigned int uv_addr,  unsigned int v_addr,
-                                       unsigned int vir_w,    unsigned int vir_h,
-                                       RECT *clip,
-                                       unsigned int  format, unsigned char a_swap_en);
-#endif
 
-#if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaSetRopMaskInfo(struct rga_req *msg,
-                                    unsigned long rop_mask_addr,unsigned int rop_mask_endian_mode);
-#else
-int         NormalRgaSetRopMaskInfo(struct rga_req *msg,
-                                    unsigned int rop_mask_addr,unsigned int rop_mask_endian_mode);
-#endif
-
+                                    uintptr_t rop_mask_addr, unsigned int rop_mask_endian_mode);
 
 /* 0:alpha' = alpha + (alpha>>7) | alpha' = alpha */
 /* 0 global alpha / 1 per pixel alpha / 2 mix mode */
@@ -205,7 +174,7 @@ bool        NormalRgaFormatHasAlpha(int format);
 // dither en flag
 // AA flag
 int         NormalRgaSetBitbltMode(struct rga_req *msg,
-                                   struct rga_interp interp,  unsigned char rotate_mode,
+                                   struct rga_interp *interp,  unsigned char rotate_mode,
                                    unsigned int  angle,       unsigned int  dither_en,
                                    unsigned int  AA_en,       unsigned int  yuv2rgb_mode);
 
@@ -263,14 +232,8 @@ int         NormalRgaSetPreScalingMode(
 
 /* LUT table addr      */
 /* 1bpp/2bpp/4bpp/8bpp */
-#if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaUpdatePaletteTableMode(
-    struct rga_req *msg,unsigned long LUT_addr,unsigned int palette_mode);
-#else
-int         NormalRgaUpdatePaletteTableMode(
-    struct rga_req *msg,unsigned int LUT_addr, unsigned int palette_mode);
-#endif
-
+    struct rga_req *msg, uintptr_t LUT_addr, unsigned int palette_mode);
 
 /* patten addr    */
 /* patten width   */
@@ -287,17 +250,10 @@ int NormalRgaFullColorSpaceConvert(struct rga_req *msg, int color_space_mode);
 
 int NormalRgaDitherMode(struct rga_req *msg, rga_info_t *dst, int format);
 
-#if defined(__arm64__) || defined(__aarch64__)
 int         NormalRgaMmuInfo(struct rga_req *msg,
                              unsigned char  mmu_en,   unsigned char  src_flush,
                              unsigned char  dst_flush,unsigned char  cmd_flush,
-                             unsigned long base_addr, unsigned char  page_size);
-#else
-int         NormalRgaMmuInfo(struct rga_req *msg,
-                             unsigned char  mmu_en,   unsigned char  src_flush,
-                             unsigned char  dst_flush,unsigned char  cmd_flush,
-                             unsigned int base_addr,  unsigned char  page_size);
-#endif
+                             uintptr_t base_addr, unsigned char  page_size);
 
 int         NormalRgaMmuFlag(struct rga_req *msg,
                              int  src_mmu_en,   int  dst_mmu_en);

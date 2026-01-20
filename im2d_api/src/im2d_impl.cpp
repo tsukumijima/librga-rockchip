@@ -68,7 +68,7 @@ using namespace android;
 #endif
 #endif
 
-__thread im_context_t g_im2d_context;
+RGA_THREAD_LOCAL im_context_t g_im2d_context;
 
 static IM_STATUS rga_support_info_merge_table(rga_info_table_entry *dst_table, rga_info_table_entry *merge_table) {
     if (dst_table == NULL || merge_table == NULL) {
@@ -631,6 +631,14 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                                              IM_RGA_SUPPORT_FEATURE_QUANTIZE | IM_RGA_SUPPORT_FEATURE_MOSAIC);
 
                     break;
+                case 0x33689:
+                    // RK1820
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+
+                    merge_table.output_format &= ~(IM_RGA_SUPPORT_FORMAT_Y4 | IM_RGA_SUPPORT_FORMAT_Y8);
+                    merge_table.feature &= ~IM_RGA_SUPPORT_FEATURE_MOSAIC;
+                    break;
                 default :
                     goto TRY_TO_COMPATIBLE;
             }
@@ -664,6 +672,25 @@ IM_STATUS rga_get_info(struct rga_hw_versions_t *version, rga_info_table_entry *
                     memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
 
                     merge_table.feature |= IM_RGA_SUPPORT_FEATURE_SRC1_R2Y_CSC;
+                    break;
+                default :
+                    goto TRY_TO_COMPATIBLE;
+            }
+        } else if (version->version[i].major == 5 &&
+                   version->version[i].minor == 2) {
+            switch (version->version[i].revision) {
+                case 0x48482 :
+                    // RK3538
+                    rga_version = IM_RGA_HW_VERSION_RGA_2_PRO_INDEX;
+                    memcpy(&merge_table, &hw_info_table[rga_version], sizeof(merge_table));
+
+                    merge_table.input_format |= IM_RGA_SUPPORT_FORMAT_RGBA_16BIT;
+                    merge_table.output_format |= IM_RGA_SUPPORT_FORMAT_YUV_420_SEMI_PLANNER_10_BIT |
+                                                 IM_RGA_SUPPORT_FORMAT_YUV_422_SEMI_PLANNER_10_BIT |
+                                                 IM_RGA_SUPPORT_FORMAT_RGBA_1010102 |
+                                                 IM_RGA_SUPPORT_FORMAT_YUV_444_PACED_10_BIT;
+                    merge_table.feature |= IM_RGA_SUPPORT_FEATURE_SECURE;
+                    merge_table.feature &= ~(IM_RGA_SUPPORT_FEATURE_QUANTIZE | IM_RGA_SUPPORT_FEATURE_ROP);
                     break;
                 default :
                     goto TRY_TO_COMPATIBLE;
@@ -788,14 +815,6 @@ IM_STATUS rga_check_info(const char *name, const rga_buffer_t info, const im_rec
         IM_LOGW("Illegal %s rect, the parameter cannot be negative, rect[x,y,w,h] = [%d, %d, %d, %d]",
                 name, rect.x, rect.y, rect.width, rect.height);
         return IM_STATUS_ILLEGAL_PARAM;
-    }
-
-    if ((rect.width > 0  && rect.width < 2) || (rect.height > 0 && rect.height < 2) ||
-        (rect.x > 0 && rect.x < 2)          || (rect.y > 0 && rect.y < 2)) {
-        IM_LOGW("Hardware limitation %s rect, unsupported operation of images smaller than 2 pixels, "
-                "rect[x,y,w,h] = [%d, %d, %d, %d]",
-                name, rect.x, rect.y, rect.width, rect.height);
-        return IM_STATUS_INVALID_PARAM;
     }
 
     if ((rect.width + rect.x > info.wstride) || (rect.height + rect.y > info.hstride)) {
@@ -1030,6 +1049,27 @@ IM_STATUS rga_check_format(const char *name, rga_buffer_t info, im_rect rect, in
     } else if (format == RK_FORMAT_Y8) {
         if (~format_usage & IM_RGA_SUPPORT_FORMAT_Y8) {
             IM_LOGW("%s unsupported Y8 format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+
+        ret = rga_yuv_legality_check(name, info, rect);
+        if (ret != IM_STATUS_SUCCESS)
+            return ret;
+    } else if (format == RK_FORMAT_RGBA_1010102 || format == RK_FORMAT_BGRA_1010102 ||
+               format == RK_FORMAT_ARGB_2101010 || format == RK_FORMAT_ABGR_2101010 ||
+               format == RK_FORMAT_RGBX_1010102 || format == RK_FORMAT_BGRX_1010102 ||
+               format == RK_FORMAT_XRGB_2101010 || format == RK_FORMAT_XBGR_2101010) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_RGBA_1010102) {
+            IM_LOGW("%s unsupported RGB 10bit format, format = 0x%x(%s)\n%s",
+                    name, info.format, translate_format_str(info.format),
+                    querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
+            return IM_STATUS_NOT_SUPPORTED;
+        }
+    } else if (format == RK_FORMAT_YUV_444_10B) {
+        if (~format_usage & IM_RGA_SUPPORT_FORMAT_YUV_444_PACED_10_BIT) {
+            IM_LOGW("%s unsupported YUV 10bit format, format = 0x%x(%s)\n%s",
                     name, info.format, translate_format_str(info.format),
                     querystring((strcmp("dst", name) == 0) ? RGA_OUTPUT_FORMAT : RGA_INPUT_FORMAT));
             return IM_STATUS_NOT_SUPPORTED;
@@ -2417,12 +2457,14 @@ IM_STATUS rga_job_cancel(im_job_handle_t job_handle) {
 IM_STATUS rga_job_submit(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
     int ret;
     im_rga_job_t *job = NULL;
-    struct rga_user_request submit_request = {0};
+    struct rga_user_request submit_request;
     rga_session_t *session;
 
     session = get_rga_session();
     if (IS_ERR(session))
         return (IM_STATUS)PTR_ERR(session);
+
+    memset(&submit_request, 0x0, sizeof(submit_request));
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -2477,12 +2519,14 @@ free_job:
 IM_STATUS rga_job_config(im_job_handle_t job_handle, int sync_mode, int acquire_fence_fd, int *release_fence_fd) {
     int ret;
     im_rga_job_t *job = NULL;
-    struct rga_user_request config_request = {0};
+    struct rga_user_request config_request;
     rga_session_t *session;
 
     session = get_rga_session();
     if (IS_ERR(session))
         return (IM_STATUS)PTR_ERR(session);
+
+    memset(&config_request, 0x0, sizeof(config_request));
 
     switch (sync_mode) {
         case IM_SYNC:
@@ -3447,47 +3491,24 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
             if (dst && dstFd == dst->fd)
                 dstMmuFlag = dst->mmuFlag ? 1 : 0;
 
-#if defined(__arm64__) || defined(__aarch64__)
             NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
-                                    (unsigned long)srcBuf,
-                                    (unsigned long)srcBuf + srcVirW * srcVirH,
+                                    (uintptr_t)srcBuf,
+                                    (uintptr_t)srcBuf + srcVirW * srcVirH,
                                     srcVirW, srcVirH,
                                     RkRgaGetRgaFormat(relSrcRect.format),0);
             /* src1 */
             if (src1)
                 NormalRgaSetPatVirtualInfo(&rgaReg, src1Fd != -1 ? src1Fd : 0,
-                                        (unsigned long)src1Buf,
-                                        (unsigned long)src1Buf + src1VirW * src1VirH,
+                                        (uintptr_t)src1Buf,
+                                        (uintptr_t)src1Buf + src1VirW * src1VirH,
                                         src1VirW, src1VirH, &clip,
                                         RkRgaGetRgaFormat(relSrc1Rect.format),0);
             /*dst*/
             NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned long)dstBuf,
-                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    (uintptr_t)dstBuf,
+                                    (uintptr_t)dstBuf + dstVirW * dstVirH,
                                     dstVirW, dstVirH, &clip,
                                     RkRgaGetRgaFormat(relDstRect.format),0);
-
-#else
-            NormalRgaSetSrcVirtualInfo(&rgaReg, srcFd != -1 ? srcFd : 0,
-                                    (unsigned int)srcBuf,
-                                    (unsigned int)srcBuf + srcVirW * srcVirH,
-                                    srcVirW, srcVirH,
-                                    RkRgaGetRgaFormat(relSrcRect.format),0);
-            /* src1 */
-            if (src1)
-                NormalRgaSetPatVirtualInfo(&rgaReg, src1Fd != -1 ? src1Fd : 0,
-                                        (unsigned int)src1Buf,
-                                        (unsigned int)src1Buf + src1VirW * src1VirH,
-                                        src1VirW, src1VirH, &clip,
-                                        RkRgaGetRgaFormat(relSrc1Rect.format),0);
-            /*dst*/
-            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned int)dstBuf,
-                                    (unsigned int)dstBuf + dstVirW * dstVirH,
-                                    dstVirW, dstVirH, &clip,
-                                    RkRgaGetRgaFormat(relDstRect.format),0);
-
-#endif
 
             break;
     }
@@ -3559,7 +3580,7 @@ int generate_blit_req(struct rga_req *ioc_req, rga_info_t *src, rga_info_t *dst,
      * ditherEn:enable or not.
      * yuvToRgbMode:yuv to rgb, rgb to yuv , or others
      * */
-    NormalRgaSetBitbltMode(&rgaReg, interp, rotateMode, orientation,
+    NormalRgaSetBitbltMode(&rgaReg, &interp, rotateMode, orientation,
                            ditherEn, 0, yuvToRgbMode);
 
     NormalRgaNNQuantizeMode(&rgaReg, dst);
@@ -3663,7 +3684,7 @@ int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst) {
     COLOR_FILL fillColor ;
     void *dstBuf = NULL;
     RECT clip;
-    static struct rga_req rgaReg;
+    struct rga_req rgaReg;
 
     int sync_mode = RGA_BLIT_SYNC;
 
@@ -3835,21 +3856,12 @@ int generate_fill_req(struct rga_req *ioc_req, rga_info_t *dst) {
                 dstMmuFlag = dstType ? 1 : 0;
             if (dst && dstFd == dst->fd)
                 dstMmuFlag = dst->mmuFlag ? 1 : 0;
-#if defined(__arm64__) || defined(__aarch64__)
             /*dst*/
             NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned long)dstBuf,
-                                    (unsigned long)dstBuf + dstVirW * dstVirH,
+                                    (uintptr_t)dstBuf,
+                                    (uintptr_t)dstBuf + dstVirW * dstVirH,
                                     dstVirW, dstVirH, &clip,
                                     RkRgaGetRgaFormat(relDstRect.format),0);
-#else
-            /*dst*/
-            NormalRgaSetDstVirtualInfo(&rgaReg, dstFd != -1 ? dstFd : 0,
-                                    (unsigned int)dstBuf,
-                                    (unsigned int)dstBuf + dstVirW * dstVirH,
-                                    dstVirW, dstVirH, &clip,
-                                    RkRgaGetRgaFormat(relDstRect.format),0);
-#endif
 
             break;
     }
@@ -4466,6 +4478,7 @@ int generate_color_palette_req(struct rga_req *ioc_req, rga_info_t *src, rga_inf
             rgaReg.palette_mode = 2;
             break;
         case RK_FORMAT_BPP8 :
+        case RK_FORMAT_YCbCr_400 :
             rgaReg.palette_mode = 3;
             break;
     }

@@ -16,9 +16,21 @@
  * limitations under the License.
  */
 
+#ifdef LOG_TAG
+#undef LOG_TAG
+#define LOG_TAG "librga"
+#else
+#define LOG_TAG "librga"
+#endif
+
+#include <stdbool.h>
+#include <inttypes.h>
+
 #include "drm_utils/drm_utils.h"
 #include "rga.h"
 #include "im2d_type.h"
+
+#include "src/im2d_log.h"
 
 #ifndef RGA_UTILS_DRM_DISABLE
 
@@ -38,15 +50,7 @@ typedef struct drm_fourcc_format rga_drm_fourcc_map_t[];
 #endif /* #ifdef __cplusplus */
 
 const static rga_drm_fourcc_map_t drm_fourcc_table = {
-    { DRM_FORMAT_RGBA8888, RK_FORMAT_ABGR_8888 },
-    { DRM_FORMAT_BGRA8888, RK_FORMAT_ARGB_8888 },
-    { DRM_FORMAT_ARGB8888, RK_FORMAT_BGRA_8888 },
-    { DRM_FORMAT_ABGR8888, RK_FORMAT_RGBA_8888 },
-    { DRM_FORMAT_RGBX8888, RK_FORMAT_XBGR_8888 },
-    { DRM_FORMAT_BGRX8888, RK_FORMAT_XRGB_8888 },
-    { DRM_FORMAT_XRGB8888, RK_FORMAT_BGRX_8888 },
-    { DRM_FORMAT_XBGR8888, RK_FORMAT_RGBX_8888 },
-
+    /* 16 bpp RGB */
     { DRM_FORMAT_RGBA5551, RK_FORMAT_ABGR_5551 },
     { DRM_FORMAT_BGRA5551, RK_FORMAT_ARGB_5551 },
     { DRM_FORMAT_ARGB1555, RK_FORMAT_BGRA_5551 },
@@ -55,42 +59,73 @@ const static rga_drm_fourcc_map_t drm_fourcc_table = {
     { DRM_FORMAT_BGRA4444, RK_FORMAT_ARGB_4444 },
     { DRM_FORMAT_ARGB4444, RK_FORMAT_BGRA_4444 },
     { DRM_FORMAT_ABGR4444, RK_FORMAT_RGBA_4444 },
-
-    { DRM_FORMAT_RGB888, RK_FORMAT_BGR_888 },
-    { DRM_FORMAT_BGR888, RK_FORMAT_RGB_888 },
     { DRM_FORMAT_RGB565, RK_FORMAT_BGR_565 },
     { DRM_FORMAT_BGR565, RK_FORMAT_RGB_565 },
 
-    { DRM_FORMAT_NV16, RK_FORMAT_YCbCr_422_SP },
-    { DRM_FORMAT_NV61, RK_FORMAT_YCrCb_422_SP },
-    { DRM_FORMAT_YUV422, RK_FORMAT_YCbCr_422_P },
-    { DRM_FORMAT_YVU422, RK_FORMAT_YCrCb_422_P },
-    // { , RK_FORMAT_YCbCr_422_SP_10B },
-    // { , RK_FORMAT_YCrCb_422_SP_10B },
+    /* 24 bpp RGB */
+    { DRM_FORMAT_RGB888, RK_FORMAT_BGR_888 },
+    { DRM_FORMAT_BGR888, RK_FORMAT_RGB_888 },
+
+    /* 32 bpp RGB */
+    { DRM_FORMAT_RGBA8888, RK_FORMAT_ABGR_8888 },
+    { DRM_FORMAT_BGRA8888, RK_FORMAT_ARGB_8888 },
+    { DRM_FORMAT_ARGB8888, RK_FORMAT_BGRA_8888 },
+    { DRM_FORMAT_ABGR8888, RK_FORMAT_RGBA_8888 },
+    { DRM_FORMAT_RGBX8888, RK_FORMAT_XBGR_8888 },
+    { DRM_FORMAT_BGRX8888, RK_FORMAT_XRGB_8888 },
+    { DRM_FORMAT_XRGB8888, RK_FORMAT_BGRX_8888 },
+    { DRM_FORMAT_XBGR8888, RK_FORMAT_RGBX_8888 },
+    { DRM_FORMAT_ABGR2101010, RK_FORMAT_RGBA_1010102 },
+    { DRM_FORMAT_ARGB2101010, RK_FORMAT_BGRA_1010102 },
+    { DRM_FORMAT_XBGR2101010, RK_FORMAT_RGBX_1010102 },
+    { DRM_FORMAT_XRGB2101010, RK_FORMAT_BGRX_1010102 },
+    { DRM_FORMAT_RGBA1010102, RK_FORMAT_ABGR_2101010 },
+    { DRM_FORMAT_BGRA1010102, RK_FORMAT_ARGB_2101010 },
+    { DRM_FORMAT_RGBX1010102, RK_FORMAT_XBGR_2101010 },
+    { DRM_FORMAT_BGRX1010102, RK_FORMAT_XRGB_2101010 },
+
+    /* 1-plane YUV 4:2:0 */
+    /*
+     *   none-linear, RGA does not have a defined corresponding format,
+     * so NV12/NV15 is used instead.
+     */
+    { DRM_FORMAT_YUV420_8BIT, RK_FORMAT_YCbCr_420_SP },
+    { DRM_FORMAT_YUV420_10BIT, RK_FORMAT_YCbCr_420_SP_10B },
+    /* YUV 420 semi-planar */
     { DRM_FORMAT_NV12, RK_FORMAT_YCbCr_420_SP },
     { DRM_FORMAT_NV21, RK_FORMAT_YCrCb_420_SP },
+    { DRM_FORMAT_NV15, RK_FORMAT_YCbCr_420_SP_10B },
+    { DRM_FORMAT_P010, RK_FORMAT_P010 },
+    /* YUV 420 planar */
     { DRM_FORMAT_YUV420, RK_FORMAT_YCbCr_420_P },
     { DRM_FORMAT_YVU420, RK_FORMAT_YCrCb_420_P },
-    { DRM_FORMAT_NV15, RK_FORMAT_YCbCr_420_SP_10B },
-    // { , RK_FORMAT_YCrCb_420_SP_10B },
 
+    /* YUV 422 packed */
     { DRM_FORMAT_YUYV, RK_FORMAT_YUYV_422 },
     { DRM_FORMAT_YVYU, RK_FORMAT_YVYU_422 },
     { DRM_FORMAT_UYVY, RK_FORMAT_UYVY_422 },
     { DRM_FORMAT_VYUY, RK_FORMAT_VYUY_422 },
-    // { , RK_FORMAT_YUYV_420 },
-    // { , RK_FORMAT_YVYU_420 },
-    // { , RK_FORMAT_UYVY_420 },
-    // { , RK_FORMAT_VYUY_420 },
+    { DRM_FORMAT_Y210, RK_FORMAT_Y210 },
+    /* YUV 422 semi-planar */
+    { DRM_FORMAT_NV16, RK_FORMAT_YCbCr_422_SP },
+    { DRM_FORMAT_NV61, RK_FORMAT_YCrCb_422_SP },
+    { DRM_FORMAT_NV20, RK_FORMAT_YCbCr_422_SP_10B },
+    { DRM_FORMAT_P210, RK_FORMAT_P210 },
+    /* YUV 422 planar */
+    { DRM_FORMAT_YUV422, RK_FORMAT_YCbCr_422_P },
+    { DRM_FORMAT_YVU422, RK_FORMAT_YCrCb_422_P },
 
-    // { , RK_FORMAT_Y4 },
-    // { , RK_FORMAT_YCbCr_400 },
+    /* YUV 444 packed */
+    // { DRM_FORMAT_VUY888,  },
+    { DRM_FORMAT_VUY101010, RK_FORMAT_YUV_444_10B },
+    /* YUV 444 semi-planar */
+    { DRM_FORMAT_NV24, RK_FORMAT_YCbCr_444_SP },
+    { DRM_FORMAT_NV42, RK_FORMAT_YCrCb_444_SP },
+    // { DRM_FORMAT_NV30,  }
+    /* YUV 444 planar */
+    // { DRM_FORMAT_YUV444,  },
+    // { DRM_FORMAT_YVU444,  },
 
-    // { , RK_FORMAT_BPP1 },
-    // { , RK_FORMAT_BPP2 },
-    // { , RK_FORMAT_BPP4 },
-    // { , RK_FORMAT_BPP8 },
-    // { , RK_FORMAT_RGBA2BPP },
     { DRM_FORMAT_INVALID, RK_FORMAT_UNKNOWN },
 };
 
@@ -118,8 +153,7 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
         (((modifier >> 52) & 0xf) == DRM_FORMAT_MOD_ARM_TYPE_AFBC)) {
         if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_16x16)
             return IM_AFBC16x16_MODE;
-        if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8 &&
-            modifier & AFBC_FORMAT_MOD_SPLIT)
+        if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8)
             return IM_AFBC32x8_MODE;
     } else if (fourcc_mod_is_vendor(modifier, ROCKCHIP)) {
         if (IS_ROCKCHIP_RFBC_MOD(modifier)) {
@@ -137,6 +171,65 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
 
     return IM_RASTER_MODE;
 }
+
+bool check_drm_modifier_afbc(uint32_t drm_fourcc, uint64_t modifier) {
+    bool ret;
+
+    if ((modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_MASK) == AFBC_FORMAT_MOD_BLOCK_SIZE_32x8) {
+        switch (drm_fourcc) {
+            case DRM_FORMAT_RGB888:
+            case DRM_FORMAT_BGR888:
+            case DRM_FORMAT_RGBA8888:
+            case DRM_FORMAT_BGRA8888:
+            case DRM_FORMAT_ARGB8888:
+            case DRM_FORMAT_ABGR8888:
+            case DRM_FORMAT_RGBX8888:
+            case DRM_FORMAT_BGRX8888:
+            case DRM_FORMAT_XRGB8888:
+            case DRM_FORMAT_XBGR8888:
+            case DRM_FORMAT_ABGR2101010:
+            case DRM_FORMAT_ARGB2101010:
+            case DRM_FORMAT_XBGR2101010:
+            case DRM_FORMAT_XRGB2101010:
+            case DRM_FORMAT_RGBA1010102:
+            case DRM_FORMAT_BGRA1010102:
+            case DRM_FORMAT_RGBX1010102:
+            case DRM_FORMAT_BGRX1010102:
+            case DRM_FORMAT_VUY101010:
+                if ((modifier & AFBC_FORMAT_MOD_SPLIT) == 0) {
+                    IM_LOGW("%c%c%c%c support AFBC 32x8 only with SPLIT mode, modifier[%" PRIx64 "]" ,
+                        drm_fourcc, drm_fourcc >> 8, drm_fourcc >> 16, drm_fourcc >> 24, modifier);
+                    ret = false;
+                } else {
+                    ret = true;
+                }
+
+                break;
+            case DRM_FORMAT_YUV420_8BIT:
+            case DRM_FORMAT_YUV420_10BIT:
+            case DRM_FORMAT_YUYV:
+            case DRM_FORMAT_Y210:
+                if ((modifier & AFBC_FORMAT_MOD_SPLIT) > 0) {
+                    IM_LOGW("%c%c%c%c does not support AFBC 32x8 with SPLIT mode, modifier[%" PRIx64 "]" ,
+                        drm_fourcc, drm_fourcc >> 8, drm_fourcc >> 16, drm_fourcc >> 24, modifier);
+                    ret = false;
+                } else {
+                    ret = true;
+                }
+
+                break;
+            default:
+                ret = true;
+
+                break;
+        }
+    } else {
+        ret = true;
+    }
+
+    return ret;
+}
+
 #else
 uint32_t get_format_from_drm_fourcc(uint32_t drm_fourcc) {
     return RK_FORMAT_UNKNOWN;
@@ -146,5 +239,8 @@ int get_mode_from_drm_modifier(uint64_t modifier) {
     return IM_RASTER_MODE;
 }
 
+bool check_drm_modifier_afbc(uint32_t drm_fourcc, uint64_t modifier) {
+    return false;
+}
 
 #endif /* #ifndef RGA_UTILS_DRM_DISABLE */

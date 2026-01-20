@@ -16,10 +16,14 @@
  * limitations under the License.
  */
 
-#include "NormalRga.h"
+#include <string.h>
+
 #include "NormalRgaContext.h"
+#include "drmrga.h"
 #include "rga.h"
+
 #ifdef ANDROID
+#include "hardware/hardware_rockchip.h"
 #include "GrallocOps.h"
 #endif
 
@@ -397,17 +401,10 @@ int NormalRgaSetFdsOffsets(struct rga_req *req,
     return 0;
 }
 
-#if defined(__arm64__) || defined(__aarch64__)
 int NormalRgaSetSrcVirtualInfo(struct rga_req *req,
-                               unsigned long yrgb_addr,unsigned long uv_addr,unsigned long v_addr,
-                               unsigned int vir_w,unsigned int vir_h, unsigned int format,
-                               unsigned char a_swap_en)
-#else
-int NormalRgaSetSrcVirtualInfo(struct rga_req *req,
-                               unsigned int yrgb_addr, unsigned int uv_addr,unsigned int v_addr,
+                               uintptr_t yrgb_addr, uintptr_t uv_addr, uintptr_t v_addr,
                                unsigned int vir_w, unsigned int vir_h, unsigned int format,
                                unsigned char a_swap_en)
-#endif
 {
     req->src.yrgb_addr = yrgb_addr;
     req->src.uv_addr  = uv_addr;
@@ -431,19 +428,11 @@ int NormalRgaSetDstActiveInfo(struct rga_req *req,
     return 1;
 }
 
-#if defined(__arm64__) || defined(__aarch64__)
 int NormalRgaSetDstVirtualInfo(struct rga_req *msg,
-                               unsigned long yrgb_addr,unsigned long uv_addr,unsigned long v_addr,
+                               uintptr_t yrgb_addr, uintptr_t uv_addr, uintptr_t v_addr,
                                unsigned int  vir_w,    unsigned int vir_h,
                                RECT *clip,
                                unsigned int format, unsigned char a_swap_en)
-#else
-int NormalRgaSetDstVirtualInfo(struct rga_req *msg,
-                               unsigned int yrgb_addr,unsigned int uv_addr,  unsigned int v_addr,
-                               unsigned int vir_w,    unsigned int vir_h,
-                               RECT *clip,
-                               unsigned int  format, unsigned char a_swap_en)
-#endif
 {
     msg->dst.yrgb_addr = yrgb_addr;
     msg->dst.uv_addr  = uv_addr;
@@ -472,19 +461,11 @@ int NormalRgaSetPatActiveInfo(struct rga_req *req,
     return 1;
 }
 
-#if defined(__arm64__) || defined(__aarch64__)
 int NormalRgaSetPatVirtualInfo(struct rga_req *msg,
-                               unsigned long yrgb_addr,unsigned long uv_addr,unsigned long v_addr,
+                               uintptr_t yrgb_addr, uintptr_t uv_addr, uintptr_t v_addr,
                                unsigned int  vir_w,    unsigned int vir_h,
                                RECT *clip,
                                unsigned int format, unsigned char a_swap_en)
-#else
-int NormalRgaSetPatVirtualInfo(struct rga_req *msg,
-                               unsigned int yrgb_addr,unsigned int uv_addr,  unsigned int v_addr,
-                               unsigned int vir_w,    unsigned int vir_h,
-                               RECT *clip,
-                               unsigned int  format, unsigned char a_swap_en)
-#endif
 {
     msg->pat.yrgb_addr = yrgb_addr;
     msg->pat.uv_addr  = uv_addr;
@@ -516,13 +497,8 @@ int NormalRgaSetPatInfo(struct rga_req *msg,
     return 1;
 }
 
-#if defined(__arm64__) || defined(__aarch64__)
 int NormalRgaSetRopMaskInfo(struct rga_req *msg,
-                            unsigned long rop_mask_addr,unsigned int rop_mask_endian_mode)
-#else
-int NormalRgaSetRopMaskInfo(struct rga_req *msg,
-                            unsigned int rop_mask_addr,unsigned int rop_mask_endian_mode)
-#endif
+                            uintptr_t rop_mask_addr,unsigned int rop_mask_endian_mode)
 {
     msg->rop_mask_addr = rop_mask_addr;
     msg->endian_mode = rop_mask_endian_mode;
@@ -600,13 +576,13 @@ int NormalRgaSetSrcTransModeInfo(struct rga_req *msg,
 // dither en flag
 // AA flag
 int NormalRgaSetBitbltMode(struct rga_req *msg,
-                           struct rga_interp interp,  unsigned char rotate_mode,
+                           struct rga_interp *interp,  unsigned char rotate_mode,
                            unsigned int  angle,       unsigned int  dither_en,
                            unsigned int  AA_en,       unsigned int  yuv2rgb_mode) {
     unsigned int alpha_mode;
     msg->render_mode = bitblt_mode;
 
-    msg->interp = interp;
+    msg->interp = *interp;
     msg->rotate_mode = rotate_mode;
 
     msg->sina = sina_table[angle];
@@ -759,13 +735,8 @@ int NormalRgaSetPreScalingMode(
 
 /* LUT table addr      */
 /* 1bpp/2bpp/4bpp/8bpp */
-#if defined(__arm64__) || defined(__aarch64__)
 int NormalRgaUpdatePaletteTableMode(
-    struct rga_req *msg,unsigned long LUT_addr,unsigned int palette_mode)
-#else
-int NormalRgaUpdatePaletteTableMode(
-    struct rga_req *msg,unsigned int LUT_addr, unsigned int palette_mode)
-#endif
+    struct rga_req *msg, uintptr_t LUT_addr, unsigned int palette_mode)
 {
     msg->render_mode = update_palette_table_mode;
 
@@ -791,17 +762,10 @@ int NormalRgaUpdatePattenBuffMode(struct rga_req *msg,
     return 1;
 }
 
-#if defined(__arm64__) || defined(__aarch64__)
 int NormalRgaMmuInfo(struct rga_req *msg,
                      unsigned char  mmu_en,   unsigned char  src_flush,
                      unsigned char  dst_flush,unsigned char  cmd_flush,
-                     unsigned long base_addr, unsigned char  page_size)
-#else
-int NormalRgaMmuInfo(struct rga_req *msg,
-                     unsigned char  mmu_en,   unsigned char  src_flush,
-                     unsigned char  dst_flush,unsigned char  cmd_flush,
-                     unsigned int base_addr,  unsigned char  page_size)
-#endif
+                     uintptr_t base_addr, unsigned char  page_size)
 {
     msg->mmu_info.mmu_en    = mmu_en;
     msg->mmu_info.base_addr = base_addr;
@@ -1101,13 +1065,8 @@ void NormalRgaCompatModeConvertRga2(struct rga2_req *req, struct rga_req *orig_r
     NormalRgaCompatModeConvertRga2ImgeInfo(&req->dst, &orig_req->dst);
     NormalRgaCompatModeConvertRga2ImgeInfo(&req->pat, &orig_req->pat);
 
-#if defined(__arm64__) || defined(__aarch64__)
-    req->rop_mask_addr = (unsigned long)orig_req->rop_mask_addr;
-    req->LUT_addr = (unsigned long)orig_req->LUT_addr;
-#else
-    req->rop_mask_addr = (unsigned int)orig_req->rop_mask_addr;
-    req->LUT_addr = (unsigned int)orig_req->LUT_addr;
-#endif
+    req->rop_mask_addr = (uintptr_t)orig_req->rop_mask_addr;
+    req->LUT_addr = (uintptr_t)orig_req->LUT_addr;
 
     NormalRgaCompatModeConvertRga2Rect(&req->clip, &orig_req->clip);
 

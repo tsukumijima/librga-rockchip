@@ -88,14 +88,14 @@ IM_API IM_STATUS imcopyTask(im_job_handle_t job_handle, const rga_buffer_t src, 
  * @param fy
  *      X-direction resize factor.
  * @param interpolation
- *      Interpolation formula(Only RGA1 support).
+ *      Interpolation formula.
  *
  * @returns success or else negative error code.
  */
 IM_API IM_STATUS imresizeTask(im_job_handle_t job_handle,
                               const rga_buffer_t src, rga_buffer_t dst,
                               double fx = 0, double fy = 0,
-                              int interpolation = 0);
+                              int interpolation = IM_INTERP_DEFAULT);
 
 /**
  * Add crop task

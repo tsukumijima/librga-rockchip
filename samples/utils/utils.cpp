@@ -25,18 +25,11 @@
 #include <sys/time.h>
 
 #include "RgaUtils.h"
+#include "rga.h"
 
-int64_t get_cur_us() {
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    return tv.tv_sec * 1000000 + tv.tv_usec;
-}
-
-int64_t get_cur_ms() {
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
-}
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void draw_rgba(char *buffer, int width, int height) {
     for (int i = 0; i < height; i++) {
@@ -99,6 +92,23 @@ void draw_gray256(char *buffer, int width, int height) {
        for (int j = width/4*3; j < width; j++) {
            buffer[(i*width*4) + j*4] = 0x30;
        }
+    }
+}
+
+void draw_image(char *buffer, int width, int height, int format) {
+    switch (format) {
+        case RK_FORMAT_RGBA_8888:
+            draw_rgba(buffer, width, height);
+            break;
+        case RK_FORMAT_YCbCr_420_SP:
+            draw_YUV420(buffer, width, height);
+            break;
+        case RK_FORMAT_YCbCr_422_SP:
+            draw_YUV422(buffer, width, height);
+            break;
+        default:
+            draw_gray256(buffer, width * get_bpp_from_format(format), height);
+            break;
     }
 }
 
@@ -197,3 +207,7 @@ int write_image_to_file(void *buf, const char *path, int sw, int sh, int fmt, in
 
     return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif

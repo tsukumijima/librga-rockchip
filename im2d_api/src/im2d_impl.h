@@ -77,7 +77,7 @@ bool rga_is_buffer_valid(rga_buffer_t buf);
 bool rga_is_rect_valid(im_rect rect);
 void empty_structure(rga_buffer_t *src, rga_buffer_t *dst, rga_buffer_t *pat,
                      im_rect *srect, im_rect *drect, im_rect *prect, im_opt_t *opt);
-inline void rga_apply_rect(rga_buffer_t *image, im_rect *rect) {
+static inline void rga_apply_rect(rga_buffer_t *image, im_rect *rect) {
     if (rect->width > 0 && rect->height > 0) {
         image->width = rect->width;
         image->height = rect->height;

@@ -15,10 +15,10 @@
  */
 
 /*  --------------------------------------------------------------------------------------------------------
- *  File:   platform_gralloc4.h
+ *  File:   platform_gralloc5.h
  *
  *  Desc:   声明对 buffer_handle_t 实例的 get metadata, import_buffer/free_buffer, lock_buffer/unlock_buffer 等接口.
- *          这些接口都将基于 IMapper 4.0 (gralloc 4.0) 实现.
+ *          这些接口都将基于 stablec_mapper (gralloc 5.0) 实现.
  *
  *          -----------------------------------------------------------------------------------
  *          < 习语 和 缩略语 > :
@@ -32,15 +32,13 @@
  *
  *  Log:
  *      init.
-    ----Fri Aug 28 10:10:14 2020
+    ----Tue Sep 16 18:05:07 2025
  *
  *  --------------------------------------------------------------------------------------------------------
  */
 
-
-#ifndef __PLATFORM_GRALLOC4_H__
-#define __PLATFORM_GRALLOC4_H__
-
+#ifndef __PLATFORM_GRALLOC5_H__
+#define __PLATFORM_GRALLOC5_H__
 
 /* ---------------------------------------------------------------------------------------------------------
  *  Include Files
@@ -54,28 +52,37 @@
 #include <utils/Errors.h>
 
 #include <ui/PixelFormat.h>
-
+#include <vector>
 /* ---------------------------------------------------------------------------------------------------------
  *  Macros Definition
  * ---------------------------------------------------------------------------------------------------------
  */
 
-
-namespace gralloc4 {
+namespace gralloc5 {
 /* ---------------------------------------------------------------------------------------------------------
  *  Types and Structures Definition
  * ---------------------------------------------------------------------------------------------------------
  */
-
 
 /* ---------------------------------------------------------------------------------------------------------
  *  Global Functions' Prototype
  * ---------------------------------------------------------------------------------------------------------
  */
 
+/*
+ * 获取 'handle' 引用的 graphic_buffer 的 internal_format.
+ */
+uint64_t get_format_modifier(buffer_handle_t handle);
+
+uint32_t get_fourcc_format(buffer_handle_t handle);
+
 int get_width(buffer_handle_t handle, uint64_t* width);
 
 int get_height(buffer_handle_t handle, uint64_t* height);
+
+int get_height_stride(buffer_handle_t handle, uint64_t* height_stride);
+
+int get_bit_per_pixel(buffer_handle_t handle, int* bit_per_pixel);
 
 int get_pixel_stride(buffer_handle_t handle, int* pixel_stride);
 
@@ -89,23 +96,13 @@ int get_allocation_size(buffer_handle_t handle, uint64_t* usage);
 
 int get_share_fd(buffer_handle_t handle, int* share_fd);
 
-uint32_t get_fourcc_format(buffer_handle_t handle);
-
-uint64_t get_format_modifier(buffer_handle_t handle);
-
 using android::status_t;
 
 status_t importBuffer(buffer_handle_t rawHandle, buffer_handle_t* outHandle);
 
-void freeBuffer(buffer_handle_t handle);
+status_t freeBuffer(buffer_handle_t handle);
 
-status_t lock(buffer_handle_t bufferHandle,
-              uint64_t usage,
-              int x,
-              int y,
-              int w,
-              int h,
-              void** outData);
+status_t lock(buffer_handle_t bufferHandle, uint64_t usage, int x, int y, int w, int h, void** outData);
 
 void unlock(buffer_handle_t bufferHandle);
 
@@ -114,7 +111,6 @@ void unlock(buffer_handle_t bufferHandle);
  * ---------------------------------------------------------------------------------------------------------
  */
 
-}
+}  // namespace gralloc5
 
-#endif /* __PLATFORM_GRALLOC4_H__ */
-
+#endif /* __PLATFORM_GRALLOC5_H__ */

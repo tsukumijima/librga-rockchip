@@ -29,20 +29,22 @@
 using namespace std;
 #endif
 
-#ifdef ANDROID
+#if (defined(ANDROID) || defined(ANDROID_VNDK))
 #include <android/log.h>
 #include <sys/system_properties.h>
 #endif
 
+#include "im2d_context.h"
+#include "im2d_version.h"
 #include "im2d_log.h"
 
-static int rga_log_property_get(void);
+static int rga_log_enable_property_get(void);
 static int rga_log_level_property_get(void);
 
-__thread char g_rga_err_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
+RGA_THREAD_LOCAL char g_rga_err_str[IM_ERR_MSG_LEN] = "The current error message is empty!";
 
 #ifdef __cplusplus
-static atomic_int g_log_en = ATOMIC_VAR_INIT(rga_log_property_get());
+static atomic_int g_log_en = ATOMIC_VAR_INIT(rga_log_enable_property_get());
 static atomic_int g_log_level = ATOMIC_VAR_INIT(rga_log_level_property_get());
 static size_t g_start_time = rga_get_current_time_ms();
 #else
@@ -51,7 +53,7 @@ static atomic_int g_log_level = 0;
 static size_t g_start_time = 0;
 
 __attribute__((constructor)) static void rga_set_start_time_ms() {
-    g_log_en = ATOMIC_VAR_INIT(rga_log_property_get());
+    g_log_en = ATOMIC_VAR_INIT(rga_log_enable_property_get());
     g_log_level = ATOMIC_VAR_INIT(rga_log_level_property_get());
     g_start_time = rga_get_current_time_ms();
 }
@@ -85,8 +87,8 @@ int rga_error_msg_set(const char* format, ...) {
     return ret;
 }
 
-static int inline rga_log_property_get(void) {
-#ifdef ANDROID
+static int inline rga_log_enable_property_get(void) {
+#if (defined(ANDROID) || defined(ANDROID_VNDK))
     char level[PROP_VALUE_MAX];
     __system_property_get("vendor.rga.log" ,level);
 #else
@@ -99,7 +101,7 @@ static int inline rga_log_property_get(void) {
 }
 
 static int inline rga_log_level_property_get(void) {
-#ifdef ANDROID
+#if (defined(ANDROID) || defined(ANDROID_VNDK))
     char level[PROP_VALUE_MAX];
     __system_property_get("vendor.rga.log_level" ,level);
 #else
@@ -111,20 +113,30 @@ static int inline rga_log_level_property_get(void) {
     return atoi(level);
 }
 
-int rga_log_level_init(void) {
-    return rga_log_level_get();
+void rga_version_update(void) {
+#if (defined(ANDROID) || defined(ANDROID_VNDK))
+    __system_property_set("vendor.rga_api.version", RGA_API_VERSION);
+#elif (!defined(RT_THREAD))
+    setenv("ROCKCHIP_RGA_API_VERSION", RGA_API_VERSION, 1);
+#endif
 }
 
-void rga_log_level_update(void) {
-    g_log_level = rga_log_level_get();
+int rga_log_enable_update(void) {
+    atomic_store(&g_log_en, rga_log_enable_property_get());
+    return atomic_load(&g_log_en);
+}
+
+int rga_log_level_update(void) {
+    atomic_store(&g_log_level, rga_log_level_property_get());
+    return atomic_load(&g_log_level);
 }
 
 int rga_log_level_get(void) {
-    return g_log_level;
+    return atomic_load(&g_log_level);
 }
 
 int rga_log_enable_get(void) {
-    return g_log_en;
+    return atomic_load(&g_log_en);
 }
 
 size_t rga_get_current_time_ms(void) {

@@ -19,6 +19,8 @@
 #ifndef _rockchip_normal_rga_context_h_
 #define _rockchip_normal_rga_context_h_
 
+#include <stdio.h>
+
 #include "rga_ioctl.h"
 #include "src/im2d_context.h"
 
